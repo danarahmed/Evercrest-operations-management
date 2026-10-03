@@ -44,6 +44,7 @@ assert.match(inv, /1,636,250/);
 // Driver pay statement: put the settled trip on a statement, see the full calculation, pay it
 await page.goto(`${base}/en/statements`);
 const driverForm = page.locator("details:has(summary:has-text('New driver statement'))");
+assert.match(await driverForm.locator("tr:has-text('TRP-2026-00001')").innerText(), /Zagros/, "driver list shows the transporter");
 await driverForm.locator("tr:has-text('TRP-2026-00001') input[type=checkbox]").check();
 await driverForm.locator("button.primary").click();
 await page.waitForSelector("h1:has-text('PST-2026-')");

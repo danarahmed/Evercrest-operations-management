@@ -39,6 +39,8 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
   const payeeName = (pid: string) => v.payees.find((p) => p.partnerId === pid)?.name ?? (isDriver ? groups.get(pid)![0].driver : groups.get(pid)![0].transporter) ?? "";
   const cols = isDriver ? 12 : 7;
   const unpaid = v.payees.filter((p) => !p.payment && dec(p.total).gt(0));
+  // Payees who owe the company on this statement and have not cleared it (not brought forward, repaid or written off).
+  const debtors = v.payees.filter((p) => p.debt && dec(p.debt.open).gt(0));
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/statements/${id}`}>
@@ -49,7 +51,7 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
       <dl className="kv card">
         <dt>{t("party")}</dt><dd>{t(`party_${st.party}`)}</dd>
         <dt>{t("date")}</dt><dd>{st.statementDate}</dd>
-        <dt>{t("status")}</dt><dd><span className={`badge ${st.status === "paid" ? "state-verified" : ""}`}>{t(`status_${st.status}`)}</span></dd>
+        <dt>{t("status")}</dt><dd><span className={`badge ${st.status === "paid" ? "state-verified" : ""}`}>{t(`status_${st.status === "paid" && !dec(st.total).gt(0) ? "nothing" : st.status}`)}</span></dd>
         <dt>{t("total")}</dt><dd className="num"><strong>{m(st.total)}</strong></dd>
         {st.notes && <><dt>{t("notes")}</dt><dd>{st.notes}</dd></>}
       </dl>
@@ -93,10 +95,16 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
                   </tr>
                 );
               })}
-              {(lines.length > 1 || !isDriver) && (
+              {v.broughtForward.filter((b) => b.payeeId === pid).map((b) => (
+                <tr key={b.fromId}>
+                  <td colSpan={cols - 1}>{t("broughtForward", { statement: b.fromNo })}</td>
+                  <td className="num"><strong>{m(b.amount)}</strong></td>
+                </tr>
+              ))}
+              {(lines.length > 1 || !isDriver || v.broughtForward.some((b) => b.payeeId === pid)) && (
                 <tr className="subtotal">
                   <td colSpan={cols - 1}>{t("subtotal", { name: payeeName(pid) })}</td>
-                  <td className="num"><strong>{m(toStr(lines.reduce((s, l) => s.plus(dec(l.amount)), dec("0"))))}</strong></td>
+                  <td className="num"><strong>{m(toStr([...lines, ...v.broughtForward.filter((b) => b.payeeId === pid)].reduce((sum, l) => sum.plus(dec(l.amount)), dec("0"))))}</strong></td>
                 </tr>
               )}
             </Fragment>
@@ -114,7 +122,19 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
         <tbody>{v.payees.map((p) => (
           <tr key={p.partnerId}>
             <td>{p.name}</td><td className="num">{m(p.total)}</td>
-            <td>{p.payment ? <span className="badge state-verified" dir="auto">{t("paid", { no: p.payment.no, date: p.payment.date })}</span> : dec(p.total).gt(0) ? t("unpaid") : t("owes")}</td>
+            <td>
+              {p.payment ? <span className="badge state-verified" dir="auto">{t("paid", { no: p.payment.no, date: p.payment.date })}</span>
+                : dec(p.total).gt(0) ? t("unpaid")
+                : !p.debt ? "—"
+                : (
+                  <span className="stack">
+                    <span className={dec(p.debt.open).gt(0) ? "state-missing" : ""}>{dec(p.debt.open).gt(0) ? t("owesOpen", { amount: m(p.debt.open) }) : t("debtCleared")}</span>
+                    {p.debt.carriedTo && <small>{t("carriedTo", { statement: p.debt.carriedTo.no })} <Link href={`/${locale}/statements/${p.debt.carriedTo.id}`} className="no-print">→</Link></small>}
+                    {p.repayments.map((r) => <small key={r.id} dir="auto">{t("repaid", { amount: m(r.amount), no: r.no, date: r.date })}</small>)}
+                    {dec(p.debt.writtenOff).gt(0) && <small>{t("writtenOff", { amount: m(p.debt.writtenOff) })}</small>}
+                  </span>
+                )}
+            </td>
           </tr>
         ))}</tbody>
       </table></div>
@@ -137,7 +157,37 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
           </ActionForm>
         </details>
       )}
-      {st.status === "open" && !v.payees.some((p) => p.payment) && can(actor, "settlements.reverse") && (
+      {debtors.length > 0 && can(actor, "payments.create") && (
+        <details className="panel no-print">
+          <summary>{t("collectTitle")}</summary>
+          <p className="muted">{t("collectHelp")}</p>
+          <ActionForm command="statements.collect_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("collectSubmit")}>
+            <input type="hidden" name="statementId" value={st.id} />
+            <div className="grid2">
+              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
+              <label>{f("amount")}<input name="amount" inputMode="decimal" dir="ltr" placeholder={t("allOpen")} /></label>
+              <label>{t("receivedIn")}<select name="moneyAccountId" required>{v.payFrom.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
+              <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
+              <label>{f("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
+            </div>
+          </ActionForm>
+        </details>
+      )}
+      {debtors.length > 0 && can(actor, "settlements.reverse") && (
+        <details className="panel no-print">
+          <summary>{t("writeOffTitle")}</summary>
+          <p className="muted">{t("writeOffHelp")}</p>
+          <ActionForm command="statements.write_off_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("writeOffSubmit")} summary={`${st.statementNo} write-off`}>
+            <input type="hidden" name="statementId" value={st.id} />
+            <div className="grid2">
+              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
+              <label>{f("date")}<input type="date" name="writeOffDate" required defaultValue={today} /></label>
+              <label>{t("reason")}<input name="reason" required /></label>
+            </div>
+          </ActionForm>
+        </details>
+      )}
+      {st.status !== "cancelled" && !v.payees.some((p) => p.payment || p.repayments.length) && can(actor, "settlements.reverse") && (
         <details className="panel no-print">
           <summary>{t("cancelTitle")}</summary>
           <ActionForm command="statements.cancel" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("cancelSubmit")}>

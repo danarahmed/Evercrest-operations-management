@@ -96,7 +96,8 @@
     "approvals_pending": "{count} request(s) waiting for approval.",
     "documents_unverified": "{count} document(s) received but not yet verified.",
     "transport_awaiting_settlement": "Settle {trip}",
-    "transport_awaiting_billing": "Bill {trip}"
+    "transport_awaiting_billing": "Bill {trip}",
+    "payee_owes": "{name} owes the company {amount} from {statement}. It will be deducted from their next statement, or record a repayment."
   },
   "Forms": {
     "saved": "Saved.",
@@ -293,7 +294,8 @@
     "posting_shortage_fines": "Shortage fines (income)",
     "posting_transport_revenue": "Transport revenue",
     "posting_demurrage_revenue": "Demurrage revenue",
-    "posting_rounding_differences": "Rounding differences"
+    "posting_rounding_differences": "Rounding differences",
+    "posting_bad_debts": "Debts written off"
   },
   "Finance": {
     "title": "Finance",
@@ -414,7 +416,28 @@
     "cancelSubmit": "Cancel statement",
     "reason": "Reason",
     "print": "Print",
-    "open": "Open"
+    "open": "Open",
+    "broughtForward": "Still owed from {statement} (deducted)",
+    "owesOpen": "Owes the company {amount}",
+    "debtCleared": "Debt cleared",
+    "carriedTo": "Deducted on {statement}",
+    "repaid": "Paid back {amount} ({no}, {date})",
+    "writtenOff": "Written off {amount}",
+    "collectTitle": "Record money paid back",
+    "collectHelp": "If the payee pays back now (all or part), record it here. Anything not paid back is deducted automatically from their next statement.",
+    "collectSubmit": "Record repayment",
+    "allOpen": "everything open",
+    "receivedIn": "Received into",
+    "writeOffTitle": "Write off the debt",
+    "writeOffHelp": "Only if the money cannot be recovered (e.g. the driver no longer works with us). This always needs approval and is booked as a cost.",
+    "writeOffSubmit": "Write off",
+    "filterTransporter": "Transporter",
+    "all": "All",
+    "direct": "Direct (no transporter)",
+    "debtsTitle": "Owed to the company",
+    "debtsHelp": "Advances were larger than pay. Each amount is deducted from the payee's next statement automatically, unless it is paid back or written off first.",
+    "debtAmount": "Owes",
+    "status_nothing": "Nothing to pay"
   },
   "Invoice": {
     "title": "Invoice {no}",

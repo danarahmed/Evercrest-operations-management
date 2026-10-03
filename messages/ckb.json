@@ -96,7 +96,8 @@
     "approvals_pending": "{count} داواکاری چاوەڕێی پەسەندکردنن.",
     "documents_unverified": "{count} بەڵگەنامە وەرگیراون بەڵام هێشتا پشتڕاست نەکراونەتەوە.",
     "transport_awaiting_settlement": "{trip} یەکلابکەرەوە",
-    "transport_awaiting_billing": "{trip} پسوولە بکە"
+    "transport_awaiting_billing": "{trip} پسوولە بکە",
+    "payee_owes": "{name} {amount} قەرزداری کۆمپانیایە لە {statement}. لە کەشفی داهاتوویدا دەبڕدرێت، یان دانەوەکەی تۆمار بکە."
   },
   "Forms": {
     "saved": "پاشەکەوت کرا.",
@@ -293,7 +294,8 @@
     "posting_shortage_fines": "سزای کەمی (داهات)",
     "posting_transport_revenue": "داهاتی گواستنەوە",
     "posting_demurrage_revenue": "داهاتی دیمەرج",
-    "posting_rounding_differences": "جیاوازی نزیککردنەوە"
+    "posting_rounding_differences": "جیاوازی نزیککردنەوە",
+    "posting_bad_debts": "قەرزی سڕاوە"
   },
   "Finance": {
     "title": "دارایی",
@@ -414,7 +416,28 @@
     "cancelSubmit": "هەڵوەشاندنەوەی کەشف",
     "reason": "هۆکار",
     "print": "چاپکردن",
-    "open": "کردنەوە"
+    "open": "کردنەوە",
+    "broughtForward": "ماوەی قەرز لە {statement} (بڕدرا)",
+    "owesOpen": "{amount} قەرزداری کۆمپانیایە",
+    "debtCleared": "قەرزەکە یەکلاکرایەوە",
+    "carriedTo": "لە {statement} بڕدرا",
+    "repaid": "{amount} گەڕاندەوە ({no}، {date})",
+    "writtenOff": "{amount} سڕایەوە",
+    "collectTitle": "تۆمارکردنی پارەی گەڕاوە",
+    "collectHelp": "ئەگەر وەرگر ئێستا پارەکە بگەڕێنێتەوە (هەمووی یان بەشێکی)، لێرە تۆماری بکە. ئەوەی نەگەڕێندرێتەوە بە شێوەی خۆکار لە کەشفی داهاتوویدا دەبڕدرێت.",
+    "collectSubmit": "تۆمارکردنی گەڕاندنەوە",
+    "allOpen": "هەموو ماوەکە",
+    "receivedIn": "وەرگیرا لە",
+    "writeOffTitle": "سڕینەوەی قەرز",
+    "writeOffHelp": "تەنها ئەگەر پارەکە ناگەڕێتەوە (بۆ نموونە شۆفێرەکە چیتر لەگەڵمان کار ناکات). هەمیشە پێویستی بە ڕەزامەندییە و وەک خەرجی تۆمار دەکرێت.",
+    "writeOffSubmit": "سڕینەوە",
+    "filterTransporter": "گواستنەوەچی",
+    "all": "هەموو",
+    "direct": "ڕاستەوخۆ (بێ گواستنەوەچی)",
+    "debtsTitle": "قەرزی سەر خەڵک بۆ کۆمپانیا",
+    "debtsHelp": "پێشەکی لە کرێ زیاتر بووە. هەر بڕێک بە شێوەی خۆکار لە کەشفی داهاتووی وەرگر دەبڕدرێت، مەگەر پێشتر بگەڕێندرێتەوە یان بسڕدرێتەوە.",
+    "debtAmount": "بڕی قەرز",
+    "status_nothing": "هیچ پارەیەک نادرێت"
   },
   "Invoice": {
     "title": "پسوولە {no}",

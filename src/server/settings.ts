@@ -38,6 +38,7 @@ export const SETTINGS = {
       transport_revenue: z.string(),
       demurrage_revenue: z.string(),
       rounding_differences: z.string(),
+      bad_debts: z.string(),
     })
     .partial(),
 } satisfies Record<string, z.ZodType>;

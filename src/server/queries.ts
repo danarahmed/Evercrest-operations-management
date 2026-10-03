@@ -4,7 +4,7 @@ import type { Db } from "@/db/client";
 import { accounts, approvalRequests, catalogItems, invoiceLines, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
-import { awaitingStatement, listStatements, statementDetail } from "@/domain/transport/statements";
+import { awaitingStatement, listStatements, openStatementDebts, statementDetail } from "@/domain/transport/statements";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { quantityDifference } from "@/domain/transport/trips";
@@ -242,12 +242,13 @@ export async function financeOptions(db: Db, actor: Actor) {
 /** Pay statements: settled trips waiting for one (per party), existing statements, and money accounts to pay from. */
 export async function statementsOverview(db: Db, actor: Actor) {
   requirePermission(actor, "settlements.create");
-  const [drivers, transporters, list] = await Promise.all([
+  const [drivers, transporters, list, debts] = await Promise.all([
     awaitingStatement(db, actor.companyId, "driver"),
     awaitingStatement(db, actor.companyId, "transporter"),
     listStatements(db, actor.companyId),
+    openStatementDebts(db, actor.companyId),
   ]);
-  return { awaiting: { driver: drivers, transporter: transporters }, list };
+  return { awaiting: { driver: drivers, transporter: transporters }, list, debts };
 }
 
 export async function statementView(db: Db, actor: Actor, statementId: string) {

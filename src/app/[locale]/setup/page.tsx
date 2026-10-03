@@ -13,7 +13,7 @@ import { Shell } from "../shell";
 export const dynamic = "force-dynamic";
 const POSTING_KEYS = [
   "advances", "customer_receivables", "supplier_payables", "payables_to_transporters", "payables_to_drivers", "currency_exchange",
-  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences",
+  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences", "bad_debts",
 ] as const;
 const RATE_TYPES = ["driver_pay", "transporter_fee", "customer_price", "shortage_fine", "allowance", "demurrage_pay", "demurrage_bill"] as const;
 const BASES = ["actual_qty", "per_trip", "per_day", "quantity"] as const;

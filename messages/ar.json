@@ -96,7 +96,8 @@
     "approvals_pending": "{count} طلب بانتظار الموافقة.",
     "documents_unverified": "{count} مستند مستلم لم يُتحقَّق منه بعد.",
     "transport_awaiting_settlement": "سوِّ {trip}",
-    "transport_awaiting_billing": "فوتر {trip}"
+    "transport_awaiting_billing": "فوتر {trip}",
+    "payee_owes": "{name} مدين للشركة بمبلغ {amount} من {statement}. سيُخصم من كشفه القادم، أو سجّل تسديدًا."
   },
   "Forms": {
     "saved": "تم الحفظ.",
@@ -293,7 +294,8 @@
     "posting_shortage_fines": "غرامات النقص (إيراد)",
     "posting_transport_revenue": "إيرادات النقل",
     "posting_demurrage_revenue": "إيرادات الديمرج",
-    "posting_rounding_differences": "فروقات التقريب"
+    "posting_rounding_differences": "فروقات التقريب",
+    "posting_bad_debts": "الديون المشطوبة"
   },
   "Finance": {
     "title": "المالية",
@@ -414,7 +416,28 @@
     "cancelSubmit": "إلغاء الكشف",
     "reason": "السبب",
     "print": "طباعة",
-    "open": "فتح"
+    "open": "فتح",
+    "broughtForward": "المتبقي من {statement} (مخصوم)",
+    "owesOpen": "مدين للشركة بمبلغ {amount}",
+    "debtCleared": "تمت تسوية الدين",
+    "carriedTo": "خُصم في {statement}",
+    "repaid": "سدّد {amount} ({no}، {date})",
+    "writtenOff": "شُطب {amount}",
+    "collectTitle": "تسجيل مبلغ مُسترد",
+    "collectHelp": "إذا سدّد المستفيد الآن (كليًا أو جزئيًا) فسجّله هنا. ما لا يُسدَّد يُخصم تلقائيًا من كشفه القادم.",
+    "collectSubmit": "تسجيل التسديد",
+    "allOpen": "كامل المتبقي",
+    "receivedIn": "استُلم في",
+    "writeOffTitle": "شطب الدين",
+    "writeOffHelp": "فقط إذا تعذّر استرداد المبلغ (مثلًا السائق لم يعد يعمل معنا). يحتاج دائمًا إلى موافقة ويُسجَّل كمصروف.",
+    "writeOffSubmit": "شطب",
+    "filterTransporter": "الناقل",
+    "all": "الكل",
+    "direct": "مباشر (بدون ناقل)",
+    "debtsTitle": "مستحقات للشركة",
+    "debtsHelp": "السلف كانت أكبر من الأجرة. يُخصم كل مبلغ تلقائيًا من الكشف القادم للمستفيد، ما لم يُسدَّد أو يُشطب قبل ذلك.",
+    "debtAmount": "المبلغ المستحق عليه",
+    "status_nothing": "لا يوجد ما يُدفع"
   },
   "Invoice": {
     "title": "فاتورة {no}",

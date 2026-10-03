@@ -8,7 +8,11 @@ import { createPartner } from "@/domain/masterdata/partners";
 import { billTrips } from "@/domain/transport/billing";
 import { defineRate } from "@/domain/transport/rates";
 import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
-import { awaitingStatement, cancelPayStatement, createPayStatement, payStatement, statementDetail } from "@/domain/transport/statements";
+import { awaitingStatement, cancelPayStatement, collectStatementDebt, createPayStatement, payStatement, statementDetail, writeOffStatementDebt } from "@/domain/transport/statements";
+import { decideApproval, submitForApproval } from "@/domain/approvals/approvals";
+import { exceptions } from "@/domain/management/exceptions";
+import { assignRole, createUser, defineRole } from "@/domain/org/commands";
+import { loadActor } from "@/server/actor";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { runCommand } from "@/server/command";
 import { setSetting } from "@/server/settings";
@@ -23,9 +27,9 @@ beforeAll(async () => {
   env = await freshDb();
   const acc = async (code: string, type: string, currency?: string) => (ids[code] = (await run(createAccount, { code, name: code, type, currency })).id);
   for (const [c, t, cur] of [["1011", "asset", "USD"], ["1012", "asset", "IQD"], ["1100", "asset"], ["1300", "asset"], ["2200", "liability"], ["2300", "liability"],
-    ["4000", "income"], ["4100", "income"], ["4200", "income"], ["5000", "expense"], ["5010", "expense"], ["5900", "expense"]] as const) await acc(c, t, cur);
+    ["4000", "income"], ["4100", "income"], ["4200", "income"], ["5000", "expense"], ["5010", "expense"], ["5900", "expense"], ["5950", "expense"]] as const) await acc(c, t, cur);
   await run(setSetting, { key: "accounting.posting_accounts", reason: "setup", value: {
-    advances: "1300", customer_receivables: "1100", payables_to_transporters: "2200", payables_to_drivers: "2300",
+    bad_debts: "5950", advances: "1300", customer_receivables: "1100", payables_to_transporters: "2200", payables_to_drivers: "2300",
     transport_revenue: "4000", shortage_fines: "4100", demurrage_revenue: "4200", driver_costs: "5000", transporter_costs: "5010", rounding_differences: "5900",
   } });
   await run(setSetting, { key: "rounding.final_increment", value: { IQD: "250" }, reason: "we pay in 250 IQD steps" });
@@ -150,5 +154,73 @@ describe("customer invoice detail", () => {
     expect(d).toMatchObject({ partner: "North Oil", tripCount: 2, driverCount: 2 });
     expect(d.lines.map((l) => [l.driver, l.line.quantity, l.line.amount])).toEqual([["Ahmed", "29.75", "1636250"], ["Karwan", "20", "1100000"]]);
     expect(d.invoice.total).toBe("2736250");
+  });
+});
+
+describe("when a payee owes the company (advances larger than pay)", () => {
+  let driver: string;
+  let s1: string;
+  const advance = (tripId: string, amount: string) =>
+    run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: ids.iqdCash, amount, currency: "IQD", paymentDate: "2026-09-10", method: "cash", tripId });
+
+  it("shows the debt on the statement and as a management exception", async () => {
+    driver = (await run(createPartner, { kind: "person", name: "Rebwar", roles: ["driver"] })).id;
+    const t = await run(createTrip, { jobId: ids.job, driverId: driver, truckPlate: `T-${++plate}`, productId: ids.diesel });
+    await run(recordLoading, { tripId: t.id, loadingDate: "2026-09-10", loadedQty: "5", loadedUnit: "MT" });
+    await advance(t.id, "300000");
+    await run(recordDischarge, { tripId: t.id, dischargeDate: "2026-09-12", dischargedQty: "5", dischargedUnit: "MT" });
+    const s = await run(settleTrip, { tripId: t.id, settlementDate: "2026-09-13" }); // 200,000 pay − 300,000 advance = −100,000
+    s1 = (await run(createPayStatement, { party: "driver", settlementIds: [s.id], statementDate: "2026-09-14" })).id;
+    const d = await statementDetail(env.db, env.companyId, s1);
+    expect(d.statement).toMatchObject({ total: "-100000", status: "paid" }); // nothing to pay out
+    expect(d.payees[0]).toMatchObject({ name: "Rebwar", total: "-100000", payment: null, debt: { open: "100000" } });
+    expect(await partnerBalances(env.db, env.companyId, driver)).toEqual({ IQD: "100000" }); // he owes us
+    const ex = await exceptions(env.db, env.companyId, "2026-09-15");
+    expect(ex.find((e) => e.code === "payee.owes")).toMatchObject({ params: { name: "Rebwar", amount: "100000", statement: d.statement.statementNo } });
+  });
+
+  it("deducts the debt from the payee's next statement automatically", async () => {
+    const next = await settledTrip(driver, "20", "20"); // 800,000
+    const s2 = await run(createPayStatement, { party: "driver", settlementIds: [next.settlementId], statementDate: "2026-09-20" });
+    const d2 = await statementDetail(env.db, env.companyId, s2.id);
+    expect(d2.statement.total).toBe("700000");
+    expect(d2.broughtForward).toMatchObject([{ name: "Rebwar", amount: "-100000" }]);
+    expect((await statementDetail(env.db, env.companyId, s1)).payees[0].debt).toMatchObject({ open: "0", carriedTo: { id: s2.id } });
+    await expect(run(cancelPayStatement, { statementId: s1, reason: "x" })).rejects.toThrow(/deducted on/);
+
+    // Cancelling the later statement puts the debt back; a new statement deducts it again.
+    await run(cancelPayStatement, { statementId: s2.id, reason: "redo" });
+    expect((await statementDetail(env.db, env.companyId, s1)).payees[0].debt).toMatchObject({ open: "100000", carriedTo: null });
+    const s3 = await run(createPayStatement, { party: "driver", settlementIds: [next.settlementId], statementDate: "2026-09-21" });
+    const r = await run<{ payments: { amount: string }[] }>(payStatement, { statementId: s3.id, moneyAccountId: ids.iqdCash, paymentDate: "2026-09-21", method: "cash" });
+    expect(r.payments).toMatchObject([{ amount: "700000" }]);
+    expect(await partnerBalances(env.db, env.companyId, driver)).toEqual({});
+    expect((await exceptions(env.db, env.companyId, "2026-09-22")).some((e) => e.code === "payee.owes")).toBe(false);
+  });
+
+  it("can be paid back in cash, in part; write-off of the rest needs approval", async () => {
+    const other = (await run(createPartner, { kind: "person", name: "Sherzad", roles: ["driver"] })).id;
+    const t = await run(createTrip, { jobId: ids.job, driverId: other, truckPlate: `T-${++plate}`, productId: ids.diesel });
+    await run(recordLoading, { tripId: t.id, loadingDate: "2026-09-10", loadedQty: "5", loadedUnit: "MT" });
+    await advance(t.id, "250000");
+    await run(recordDischarge, { tripId: t.id, dischargeDate: "2026-09-12", dischargedQty: "5", dischargedUnit: "MT" });
+    const s = await run(settleTrip, { tripId: t.id, settlementDate: "2026-09-13" }); // −50,000
+    const st = await run(createPayStatement, { party: "driver", settlementIds: [s.id], statementDate: "2026-09-14" });
+    const collect = (amount?: string) => run(collectStatementDebt, { statementId: st.id, partnerId: other, moneyAccountId: ids.iqdCash, amount, paymentDate: "2026-09-15", method: "cash" });
+    await expect(collect("60000")).rejects.toThrow(/cannot be more/);
+    await collect("20000");
+    expect((await statementDetail(env.db, env.companyId, st.id)).payees[0]).toMatchObject({ debt: { repaid: "20000", open: "30000" }, repayments: [{ amount: "20000" }] });
+    expect(await partnerBalances(env.db, env.companyId, other)).toEqual({ IQD: "30000" });
+
+    await expect(run(writeOffStatementDebt, { statementId: st.id, partnerId: other, writeOffDate: "2026-09-30", reason: "driver left" })).rejects.toMatchObject({ code: "approval_required" });
+    const u = await run(createUser, { email: "ops@test.local", displayName: "Ops" });
+    const role = await run(defineRole, { code: "ops", name: "Ops", permissions: ["settlements.reverse"], reason: "setup" });
+    await run(assignRole, { userId: u.id, roleId: role.id, grant: true, reason: "setup" });
+    const ops = await loadActor(env.db, u.id);
+    const req = await runCommand(env.db, ops, submitForApproval as never, { command: "statements.write_off_debt", input: { statementId: st.id, partnerId: other, writeOffDate: "2026-09-30", reason: "driver left" }, summary: "write off" } as never) as { id: string };
+    const decided = await run<{ status: string }>(decideApproval, { requestId: req.id, decision: "approve", note: "agreed" });
+    expect(decided.status).toBe("approved");
+    expect((await statementDetail(env.db, env.companyId, st.id)).payees[0].debt).toMatchObject({ writtenOff: "30000", open: "0" });
+    expect(await partnerBalances(env.db, env.companyId, other)).toEqual({});
   });
 });

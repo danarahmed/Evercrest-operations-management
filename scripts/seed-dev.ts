@@ -32,12 +32,12 @@ for (const [code, name, type, currency] of [
   ["2200", "Payables to transporters", "liability"], ["3000", "Capital", "equity"], ["4000", "Transport revenue", "income"],
   ["5000", "Transport costs", "expense"], ["5100", "Field expenses", "expense"],
   ["2300", "Payables to drivers", "liability"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"],
-  ["5010", "Transporter costs", "expense"], ["5900", "Rounding differences", "expense"],
+  ["5010", "Transporter costs", "expense"], ["5900", "Rounding differences", "expense"], ["5950", "Bad debts written off", "expense"],
 ] as const) acc[code] = (await run(createAccount, { code, name, type, currency })).id;
 await run(setSetting, { key: "accounting.posting_accounts", value: {
   advances: "1300", customer_receivables: "1100", supplier_payables: "2100", payables_to_transporters: "2200", payables_to_drivers: "2300",
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
-  demurrage_revenue: "4200", rounding_differences: "5900",
+  demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950",
 }, reason: "dev setup" });
 await run(setSetting, { key: "alerts.trip_transit_days", value: 3, reason: "dev setup" });
 const capitalDate = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);

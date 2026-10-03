@@ -2,6 +2,7 @@ import { and, eq, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { approvalRequests, documents, invoices, jobs, journalLines, moneyAccounts, payments, trips } from "@/db/schema";
 import { postingAccount } from "../accounting/posting";
+import { statementDebts } from "../transport/statement-debts";
 import { dec, toStr } from "../money";
 import { getSetting } from "@/server/settings";
 
@@ -74,6 +75,17 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
     for (const a of open.filter((a) => !dec(a.bal).isZero()))
       out.push({ severity: "warning", code: "advance.unreconciled", params: { job: a.jobNo, amount: toStr(dec(a.bal)), currency: a.currency }, message: `${a.jobNo} is completed but ${toStr(dec(a.bal))} ${a.currency} of advances is not settled.`, entity: { type: "job", id: a.jobId, label: a.jobNo } });
   }
+
+  // Drivers or transporters whose advances were larger than their pay, and the debt is not yet recovered.
+  for (const d of await statementDebts(db, companyId))
+    if (dec(d.open).gt(0))
+      out.push({
+        severity: "warning",
+        code: "payee.owes",
+        params: { name: d.name, amount: d.open, currency: d.currency, statement: d.statementNo },
+        message: `${d.name} owes the company ${d.open} ${d.currency} from ${d.statementNo}. It will be deducted from their next statement, or record a repayment.`,
+        entity: { type: "pay_statement", id: d.statementId, label: d.statementNo },
+      });
 
   // Work waiting on someone.
   const [pending] = await db.select({ n: sql<number>`count(*)::int` }).from(approvalRequests).where(and(eq(approvalRequests.companyId, companyId), eq(approvalRequests.status, "pending")));

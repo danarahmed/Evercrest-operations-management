@@ -15,6 +15,7 @@ import { getJob } from "../jobs/commands";
 import { getTrip, isSettled } from "../transport/trips";
 import { D, dec, toStr } from "../money";
 import { nextNumber } from "../sequences";
+import { openDebt } from "../transport/statement-debts";
 import { registerApprovable } from "../approvals/approvals";
 
 const uuid = z.string().uuid();
@@ -168,13 +169,24 @@ async function statementPayment(
   partnerId: string | null,
 ) {
   if (input.purpose !== "settlement" || !input.statementId) throw new ValidationError("Settlement balances are paid through a pay statement");
-  if (input.direction !== "out") throw new ValidationError("A settlement payment is money paid out");
   if (input.tripId || input.invoiceId) throw new ValidationError("A statement payment is not linked to a single trip or invoice");
   if (!partnerId) throw new ValidationError("Choose who is paid");
   const [st] = await tx.select().from(payStatements).where(and(eq(payStatements.id, input.statementId), eq(payStatements.companyId, companyId)));
   if (!st) throw new NotFound("pay_statement", input.statementId);
   if (st.status === "cancelled") throw new Conflict(`${st.statementNo} is cancelled`);
   if (st.currency !== input.currency) throw new ValidationError(`${st.statementNo} is in ${st.currency}; pay it in ${st.currency}`);
+  // Serialize money movements for the same payee on the same statement.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`statement:${st.id}:${partnerId}`}))`);
+  const counter = () => postingAccount(tx, companyId, st.party === "driver" ? "payables_to_drivers" : "payables_to_transporters");
+
+  if (input.direction === "in") {
+    // The payee pays back what they owe on this statement (advances larger than pay).
+    const open = await openDebt(tx, companyId, st.id, partnerId);
+    if (!open.gt(0)) throw new ValidationError(`This payee owes nothing open on ${st.statementNo}`);
+    if (dec(input.amount).gt(open)) throw new ValidationError(`This payee owes ${toStr(open)} ${st.currency} on ${st.statementNo}; the repayment cannot be more`);
+    return counter();
+  }
+
   const [owed] = await tx
     .select({ total: sql<string>`coalesce(sum(${payStatementItems.amount}), 0)` })
     .from(payStatementItems)
@@ -185,9 +197,9 @@ async function statementPayment(
   const [already] = await tx
     .select({ no: payments.paymentNo })
     .from(payments)
-    .where(and(eq(payments.statementId, st.id), eq(payments.partnerId, partnerId), eq(payments.status, "posted")));
+    .where(and(eq(payments.statementId, st.id), eq(payments.partnerId, partnerId), eq(payments.direction, "out"), eq(payments.status, "posted")));
   if (already) throw new Conflict(`Already paid on ${st.statementNo} (${already.no})`);
-  return postingAccount(tx, companyId, st.party === "driver" ? "payables_to_drivers" : "payables_to_transporters");
+  return counter();
 }
 
 /**
@@ -240,7 +252,7 @@ export const reversePayment = defineCommand({
     const rev = await reverseEntry(ctx, p.journalEntryId, reversalDate, `${p.paymentNo}: ${reason}`);
     await tx.update(payments).set({ status: "reversed", reversalEntryId: rev.id }).where(eq(payments.id, paymentId));
     // The payee is owed again, so the statement is open again.
-    if (p.statementId) await tx.update(payStatements).set({ status: "open" }).where(and(eq(payStatements.id, p.statementId), eq(payStatements.status, "paid")));
+    if (p.statementId && p.direction === "out") await tx.update(payStatements).set({ status: "open" }).where(and(eq(payStatements.id, p.statementId), eq(payStatements.status, "paid")));
     await audit({ action: "payments.reverse", entityType: "payment", entityId: paymentId, before: { status: "posted" }, after: { status: "reversed", reversalEntryId: rev.id }, reason });
     return { paymentId, reversalEntryId: rev.id };
   },

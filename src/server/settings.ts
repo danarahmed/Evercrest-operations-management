@@ -16,6 +16,8 @@ export const SETTINGS = {
    * person. A currency with no limit configured needs no approval.
    */
   "approvals.payment_out_limits": z.record(z.string().regex(/^[A-Z]{3}$/), z.string().regex(/^\d+(\.\d+)?$/)),
+  /** Flag a loaded trip that has not been discharged after this many days. Unset = no alert. */
+  "alerts.trip_transit_days": z.number().int().positive(),
   /**
    * Which ledger account (by code) each kind of automatic posting uses.
    * Nothing is posted to a default: a missing mapping stops the operation.

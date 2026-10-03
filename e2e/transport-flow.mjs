@@ -57,10 +57,32 @@ await dis.locator("input[name=dischargedQty]").fill("30");
 await dis.locator("button.primary").click();
 await page.waitForSelector("text=Discharge date cannot be before the loading date");
 
+// Advance above the limit → held for approval → approved by a different person
 await page.reload();
+await page.click("summary:has-text('Pay an advance')");
+const big = page.locator("form:has(input[name=amount])");
+await big.locator("select[name=moneyAccountId]").selectOption({ label: "Main safe USD (USD)" });
+await big.locator("input[name=amount]").fill("2500");
+await big.locator("button.primary").click();
+await page.waitForSelector("text=Approval needed");
+await big.locator("button:has-text('Send for approval')").click();
+await page.waitForSelector("text=Saved.");
+const jobUrl = page.url();
+await page.goto(`${base}/en/approvals`);
+await page.waitForSelector("text=another person must decide");
+await page.click("button:has-text('Sign out')");
+await page.waitForURL(`${base}/en/login`);
+await page.click("button:has-text('Finance Manager')");
+await page.waitForURL(`${base}/en`);
+await page.goto(`${base}/en/approvals`);
+await page.locator("form:has(input[name=requestId])").first().locator("button.primary").click();
+await page.waitForSelector("text=Nothing is waiting for approval.");
+await page.goto(jobUrl);
+
 const row = await page.locator("table tbody tr:has-text('Hemin Aziz')").innerText();
 assert.match(row, /30 MT/);
 assert.match(row, /150,000/);
+assert.match(row, /\$2,500/, "approved advance is posted");
 assert.deepEqual(errors, []);
 console.log("e2e transport flow: OK");
 await browser.close();

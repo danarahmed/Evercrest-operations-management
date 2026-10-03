@@ -19,7 +19,7 @@ export default async function NewJob({ params }: { params: Promise<{ locale: str
   const o = await formOptions(db, actor);
   const t = await getTranslations({ locale, namespace: "Forms" });
   return (
-    <Shell locale={locale} userName={user.displayName} path="/jobs/new">
+    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/jobs/new">
       <h1>{t("newJob")}</h1>
       <ActionForm command="jobs.create" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("createJob")} redirectTo={`/${locale}/jobs/{id}`}>
         <div className="grid2">

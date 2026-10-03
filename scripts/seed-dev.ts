@@ -12,6 +12,7 @@ import { createMoneyAccount, recordPayment } from "@/domain/finance/payments";
 import { createJob, defineJobType } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
+import { assignRole, createUser, defineRole } from "@/domain/org/commands";
 import { loadActor } from "@/server/actor";
 import { setupCompany } from "@/server/bootstrap";
 import { runCommand } from "@/server/command";
@@ -58,5 +59,10 @@ await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId:
 await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: iqd, amount: "250000", currency: "IQD", paymentDate: d(6), method: "cash", tripId: t2.id });
 await run(createInvoice, { kind: "sales", partnerId: northOil, currency: "USD", invoiceDate: d(7), dueDate: d(2), lines: [{ description: "Transport 30 MT", quantity: "30", unit: "MT", unitPrice: "100", accountId: acc["4000"], tripId: t1.id }] });
 await run(createInvoice, { kind: "bill", billFrom: "transporter", partnerId: zagros, currency: "USD", invoiceDate: d(7), lines: [{ description: "Haulage 30 MT", quantity: "30", unit: "MT", unitPrice: "70", accountId: acc["5000"], tripId: t1.id }] });
+// A second person so approvals (four-eyes) can be tried, and a payment limit that triggers them.
+const finance = await run<{ id: string }>(createUser, { email: "finance@evercrest.local", displayName: "Finance Manager" });
+const role = await run<{ id: string }>(defineRole, { code: "finance", name: "Finance", permissions: ["jobs.view", "approvals.decide", "documents.verify", "payments.create", "reports.financial.view"], reason: "dev setup" });
+await run(assignRole, { userId: finance.id, roleId: role.id, grant: true, reason: "dev setup" });
+await run(setSetting, { key: "approvals.payment_out_limits", value: { USD: "1000", IQD: "1500000" }, reason: "dev setup" });
 console.log("dev data ready; admin user id:", adminUserId);
 process.exit(0);

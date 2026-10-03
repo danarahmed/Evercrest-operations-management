@@ -25,7 +25,7 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
   const [alerts, jobList] = await Promise.all([exceptions(db, actor.companyId, today), activeJobs(db, actor)]);
 
   return (
-    <Shell locale={locale} userName={user.displayName} path="">
+    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="">
       <h2>{t("attention")}</h2>
       {alerts.length === 0 ? (
         <p className="card muted">{t("allClear")}</p>

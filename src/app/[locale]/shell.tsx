@@ -6,14 +6,25 @@ import { signOut } from "./login/actions";
 
 const LANG_NAMES: Record<string, string> = { en: "English", ar: "العربية", ckb: "کوردی" };
 
-export async function Shell({ locale, userName, path, children }: { locale: string; userName: string; path: string; children: ReactNode }) {
+export async function Shell({ locale, userName, path, permissions, children }: {
+  locale: string;
+  userName: string;
+  path: string;
+  /** Links the user cannot use are not shown (the server still enforces). */
+  permissions: ReadonlySet<string>;
+  children: ReactNode;
+}) {
   const t = await getTranslations({ locale, namespace: "Nav" });
   const app = await getTranslations({ locale, namespace: "App" });
+  const nl = await getTranslations({ locale, namespace: "NavLinks" });
   return (
     <>
       <header className="top">
         <Link href={`/${locale}`}><strong>{app("title")}</strong></Link>
         <nav>
+          {permissions.has("approvals.decide") && <Link href={`/${locale}/approvals`}>{nl("approvals")}</Link>}
+          {permissions.has("documents.verify") && <Link href={`/${locale}/documents`}>{nl("documents")}</Link>}
+          <span aria-hidden>|</span>
           {routing.locales.filter((l) => l !== locale).map((l) => (
             <Link key={l} href={`/${l}${path}`}>{LANG_NAMES[l]}</Link>
           ))}

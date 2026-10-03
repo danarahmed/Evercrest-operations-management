@@ -150,5 +150,28 @@
     "changeStatus": "Change status",
     "newStatus": "New status",
     "reason": "Reason"
+  },
+  "Approvals": {
+    "title": "Approvals",
+    "empty": "Nothing is waiting for approval.",
+    "requestedBy": "Requested by {name}",
+    "ownRequest": "Your own request — another person must decide.",
+    "decision": "Decision",
+    "approve": "Approve",
+    "reject": "Reject",
+    "note": "Note (required to reject)"
+  },
+  "Verify": {
+    "title": "Documents to verify",
+    "empty": "No documents are waiting for verification.",
+    "receivedBy": "Received by {name}",
+    "decision": "Decision",
+    "verify": "Verified — correct",
+    "reject": "Reject",
+    "note": "Note (required to reject)"
+  },
+  "NavLinks": {
+    "approvals": "Approvals",
+    "documents": "Documents"
   }
 }

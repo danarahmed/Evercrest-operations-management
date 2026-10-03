@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useActionState } from "react";
+import { type FormEvent, type ReactNode, startTransition, useActionState, useEffect, useRef } from "react";
 import { type FormState, submitCommand } from "@/app/[locale]/actions";
 
 /**
@@ -20,10 +20,23 @@ export function ActionForm({ command, locale, idempotencyKey, submitLabel, summa
 }) {
   const t = useTranslations("Forms");
   const [state, action, pending] = useActionState<FormState, FormData>(submitCommand, {});
+  const formRef = useRef<HTMLFormElement>(null);
+  // Submit manually instead of via the form "action" prop: React would otherwise clear
+  // the fields after every submission, losing what the user typed when a save fails.
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+    const data = new FormData(e.currentTarget, submitter);
+    startTransition(() => action(data));
+  };
+  // Clear the fields only after a successful save.
+  useEffect(() => {
+    if (state.ok) formRef.current?.reset();
+  }, [state]);
   // After a success, the next submission is a new operation and needs a new key.
   const key = state.nextKey ?? idempotencyKey;
   return (
-    <form action={action} className="form">
+    <form ref={formRef} onSubmit={onSubmit} className="form">
       <input type="hidden" name="__command" value={command} />
       <input type="hidden" name="__key" value={key} />
       <input type="hidden" name="__locale" value={locale} />

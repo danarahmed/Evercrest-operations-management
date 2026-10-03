@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { moneyAccounts } from "@/db/schema";
+import { decideApproval } from "@/domain/approvals/approvals";
 import { defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
 import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
@@ -34,4 +35,5 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "documents.record": { command: recordDocument },
   "documents.review": { command: reviewDocument },
   "documents.define_type": { command: defineDocumentType },
+  "approvals.decide": { command: decideApproval },
 };

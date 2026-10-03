@@ -27,7 +27,7 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
   const options = await formOptions(db, actor);
 
   return (
-    <Shell locale={locale} userName={user.displayName} path={`/jobs/${id}`}>
+    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/jobs/${id}`}>
       <p><Link href={`/${locale}`}>{t("back")}</Link></p>
       <div className="card">
         <h1>{w.job.jobNo} · {w.job.name}</h1>

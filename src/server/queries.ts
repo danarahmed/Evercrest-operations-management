@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { businessPartners, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { approvalRequests, businessPartners, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { jobProfitability } from "@/domain/finance/invoices";
 import { tripAdvances } from "@/domain/finance/payments";
@@ -75,3 +75,51 @@ export async function formOptions(db: Db, actor: Actor) {
   };
 }
 export type FormOptions = Awaited<ReturnType<typeof formOptions>>;
+
+/** Requests waiting for a decision. The requester's own requests are shown but cannot be approved by them. */
+export async function pendingApprovals(db: Db, actor: Actor) {
+  requirePermission(actor, "approvals.decide");
+  const rows = await db
+    .select({ req: approvalRequests, requester: users.displayName })
+    .from(approvalRequests)
+    .innerJoin(users, eq(users.id, approvalRequests.requestedBy))
+    .where(and(eq(approvalRequests.companyId, actor.companyId), eq(approvalRequests.status, "pending")))
+    .orderBy(approvalRequests.createdAt);
+  return rows.map(({ req, requester }) => {
+    const input = req.input as Record<string, unknown>;
+    return {
+      id: req.id,
+      command: req.command,
+      summary: req.summary,
+      requester,
+      own: req.requestedBy === actor.userId,
+      createdAt: req.createdAt,
+      amount: typeof input.amount === "string" ? input.amount : null,
+      currency: typeof input.currency === "string" ? input.currency : null,
+    };
+  });
+}
+
+/** Documents received and waiting for verification, with what they belong to. */
+export async function documentsToVerify(db: Db, actor: Actor) {
+  requirePermission(actor, "documents.verify");
+  const rows = await db
+    .select({ doc: documents, type: documentTypes.name, jobNo: jobs.jobNo, jobId: jobs.id, receivedBy: users.displayName })
+    .from(documents)
+    .innerJoin(documentTypes, eq(documentTypes.id, documents.documentTypeId))
+    .innerJoin(users, eq(users.id, documents.receivedBy))
+    .leftJoin(jobs, eq(jobs.id, documents.jobId))
+    .where(and(eq(documents.companyId, actor.companyId), eq(documents.status, "received")))
+    .orderBy(documents.createdAt);
+  const tripIds = rows.filter((r) => r.doc.entityType === "trip").map((r) => r.doc.entityId);
+  const tripNos = tripIds.length ? await db.select({ id: trips.id, no: trips.tripNo }).from(trips).where(inArray(trips.id, tripIds)) : [];
+  return rows.map((r) => ({
+    id: r.doc.id,
+    type: r.type,
+    reference: r.doc.reference,
+    jobId: r.jobId,
+    target: r.doc.entityType === "trip" ? tripNos.find((x) => x.id === r.doc.entityId)?.no ?? "" : r.jobNo ?? "",
+    receivedBy: r.receivedBy,
+    receivedAt: r.doc.createdAt,
+  }));
+}

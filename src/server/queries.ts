@@ -1,12 +1,13 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { accounts, approvalRequests, invoices, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { accounts, approvalRequests, catalogItems, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { jobProfitability } from "@/domain/finance/invoices";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { quantityDifference } from "@/domain/transport/trips";
+import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
 import { balanceSheet, profitAndLoss } from "@/domain/accounting/statements";
@@ -38,12 +39,21 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     .innerJoin(trucks, eq(trucks.id, trips.truckId))
     .where(eq(trips.jobId, job.id))
     .orderBy(trips.tripNo);
+  const showMoney = can(actor, "reports.financial.view") || can(actor, "settlements.create");
+  const billed = await billedTripIds(db, tripRows.map((t) => t.trip.id));
   const tripsView = await Promise.all(
-    tripRows.map(async (t) => ({
-      ...t,
-      difference: await quantityDifference(db, t.trip),
-      advances: await tripAdvances(db, actor.companyId, t.trip.id),
-    })),
+    tripRows.map(async (t) => {
+      const settlement = await postedSettlement(db, t.trip.id);
+      return {
+        ...t,
+        difference: await quantityDifference(db, t.trip),
+        advances: await tripAdvances(db, actor.companyId, t.trip.id),
+        billed: billed.has(t.trip.id),
+        settlement: settlement ? { no: settlement.settlementNo, calc: settlement.calculation as SettlementCalculation } : null,
+        // What settling now would produce, or what is missing (only for discharged, unsettled trips).
+        preview: showMoney && !settlement && t.trip.status === "discharged" ? await calculateSettlement(db, actor.companyId, t.trip) : null,
+      };
+    }),
   );
   return {
     job,
@@ -74,6 +84,7 @@ export async function formOptions(db: Db, actor: Actor) {
     moneyAccounts: await db.select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency }).from(moneyAccounts).where(and(eq(moneyAccounts.companyId, actor.companyId), eq(moneyAccounts.active, true))).orderBy(moneyAccounts.name),
     documentTypes: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, actor.companyId)).orderBy(documentTypes.name),
     units: await db.select({ code: units.code, name: units.name }).from(units).orderBy(units.code),
+    products: await db.select({ id: catalogItems.id, name: catalogItems.name }).from(catalogItems).where(and(eq(catalogItems.companyId, actor.companyId), eq(catalogItems.kind, "product"), eq(catalogItems.active, true))).orderBy(catalogItems.name),
     users: await db.select({ id: users.id, name: users.displayName }).from(users).where(and(eq(users.companyId, actor.companyId), eq(users.active, true))).orderBy(users.displayName),
   };
 }
@@ -151,8 +162,13 @@ export async function setupData(db: Db, actor: Actor) {
           posting: (await getSetting(db, c, "accounting.posting_accounts")) ?? {},
           limits: (await getSetting(db, c, "approvals.payment_out_limits")) ?? {},
           transitDays: (await getSetting(db, c, "alerts.trip_transit_days")) ?? null,
+          rounding: (await getSetting(db, c, "rounding.final_increment")) ?? {},
         }
       : null,
+    rates: has("rates.manage")
+      ? await db.select({ r: rates, product: catalogItems.name }).from(rates).leftJoin(catalogItems, eq(catalogItems.id, rates.productId)).where(eq(rates.companyId, c)).orderBy(rates.rateType, desc(rates.effectiveFrom))
+      : null,
+    products: has("rates.manage") || has("catalog.manage") ? await db.select().from(catalogItems).where(eq(catalogItems.companyId, c)).orderBy(catalogItems.name) : null,
     jobTypes: has("job_types.manage") ? await db.select().from(jobTypes).where(eq(jobTypes.companyId, c)).orderBy(jobTypes.name) : null,
     documentTypes: has("documents.configure") ? await db.select().from(documentTypes).where(eq(documentTypes.companyId, c)).orderBy(documentTypes.name) : null,
     documentRules: has("documents.configure")

@@ -13,6 +13,11 @@ import { createAccount } from "@/domain/accounting/ledger";
 import { createMoneyAccount } from "@/domain/finance/payments";
 import { defineJobType } from "@/domain/jobs/commands";
 import { setDocumentRequirement } from "@/domain/documents/documents";
+import { createCatalogItem } from "@/domain/masterdata/catalog";
+import { billTrips } from "@/domain/transport/billing";
+import { defineRate, endRate } from "@/domain/transport/rates";
+import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
+import { recordArrival } from "@/domain/transport/trips";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
 import type { Command } from "./command";
@@ -91,6 +96,14 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   },
   "settings.posting_accounts": { command: setSetting, prepare: settingFromFields("accounting.posting_accounts") },
   "settings.payment_limits": { command: setSetting, prepare: settingFromFields("approvals.payment_out_limits") },
+  "settings.rounding": { command: setSetting, prepare: settingFromFields("rounding.final_increment") },
+  "catalog.create_item": { command: createCatalogItem },
+  "rates.define": { command: defineRate },
+  "rates.end": { command: endRate },
+  "trips.record_arrival": { command: recordArrival },
+  "settlements.create": { command: settleTrip },
+  "settlements.reverse": { command: reverseSettlement },
+  "billing.bill_trips": { command: billTrips },
   "settings.trip_transit_days": {
     command: setSetting,
     prepare: async (_db, _a, i) => ({ key: "alerts.trip_transit_days", value: Number(i.days), reason: i.reason }),

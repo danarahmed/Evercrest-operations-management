@@ -37,6 +37,7 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("orNewDriver")}<input name="newDriverName" /></label>
               <label>{t("truckPlate")}<input name="truckPlate" required dir="ltr" /></label>
               <label>{t("transporter")}<select name="transporterId" defaultValue=""><option value="">{t("direct")}</option>{options.transporters.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
+              <label>{t("product")}<select name="productId" defaultValue=""><option value="">{t("choose")}</option>{options.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
               <label>{t("loadingLocation")}<input name="loadingLocation" /></label>
               <label>{t("destination")}<input name="destination" /></label>
             </div>
@@ -53,6 +54,19 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("date")}<input type="date" name="loadingDate" required defaultValue={today()} /></label>
               <label>{t("quantity")}<input name="loadedQty" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("unit")}{unitSelect("loadedUnit")}</label>
+              <label>{t("correctionReason")}<input name="reason" /></label>
+            </div>
+          </ActionForm>
+        </details>
+      )}
+
+      {tripList.some((x) => x.status === "loaded") && (
+        <details className="panel">
+          <summary>{t("recordArrival")}</summary>
+          <ActionForm command="trips.record_arrival" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+            <div className="grid2">
+              <label>{t("trip")}<select name="tripId" required>{tripList.filter((x) => x.status === "loaded").map((x) => <option key={x.id} value={x.id}>{x.tripNo}</option>)}</select></label>
+              <label>{t("date")}<input type="date" name="arrivalDate" required defaultValue={today()} /></label>
               <label>{t("correctionReason")}<input name="reason" /></label>
             </div>
           </ActionForm>

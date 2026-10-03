@@ -11,7 +11,12 @@ import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
 
 export const dynamic = "force-dynamic";
-const POSTING_KEYS = ["advances", "customer_receivables", "supplier_payables", "payables_to_transporters", "payables_to_drivers", "currency_exchange"] as const;
+const POSTING_KEYS = [
+  "advances", "customer_receivables", "supplier_payables", "payables_to_transporters", "payables_to_drivers", "currency_exchange",
+  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences",
+] as const;
+const RATE_TYPES = ["driver_pay", "transporter_fee", "customer_price", "shortage_fine", "allowance", "demurrage_pay", "demurrage_bill"] as const;
+const BASES = ["actual_qty", "loaded_qty", "discharged_qty", "per_trip", "per_day", "quantity"] as const;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -124,6 +129,14 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
               <label>{f("reason")}<input name="reason" required /></label>
             </div>
           </ActionForm>
+          <ActionForm command="settings.rounding" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+            <strong>{t("roundingTitle")}</strong>
+            <p className="muted">{t("roundingHelp")}</p>
+            <div className="grid2">
+              {["IQD", "USD"].map((cur) => <label key={cur}>{cur}<input name={`v_${cur}`} inputMode="decimal" dir="ltr" defaultValue={(d.settings!.rounding as Record<string, string>)[cur] ?? ""} /></label>)}
+              <label>{f("reason")}<input name="reason" required /></label>
+            </div>
+          </ActionForm>
           <ActionForm command="settings.trip_transit_days" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
             <strong>{t("transitDays")}</strong>
             <div className="grid2">
@@ -131,6 +144,64 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
               <label>{f("reason")}<input name="reason" required /></label>
             </div>
           </ActionForm>
+        </Section>
+      )}
+
+      {d.products && (
+        <Section title={t("products")}>
+          <ActionForm command="catalog.create_item" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
+            <input type="hidden" name="kind" value="product" />
+            <div className="grid2">
+              <label>{t("code")}<input name="code" required dir="ltr" /></label>
+              <label>{f("name")}<input name="name" required /></label>
+              <label>{f("unit")}<select name="defaultUnit" defaultValue="MT">{["MT", "KG", "L", "M3", "EA"].map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+            </div>
+          </ActionForm>
+          <ul>{d.products.map((p) => <li key={p.id}>{p.name} <span className="muted" dir="ltr">{p.code}</span></li>)}</ul>
+        </Section>
+      )}
+
+      {d.rates && d.products && (
+        <Section title={t("rates")}>
+          <p className="muted">{t("ratesHelp")}</p>
+          <details className="panel">
+            <summary>{t("addRate")}</summary>
+            <ActionForm command="rates.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+              <div className="grid2">
+                <label>{t("rateType")}<select name="rateType" required>{RATE_TYPES.map((x) => <option key={x} value={x}>{t(`rt_${x}`)}</option>)}</select></label>
+                <label>{t("basis")}<select name="basis" required>{BASES.map((x) => <option key={x} value={x}>{t(`basis_${x}`)}</option>)}</select></label>
+                <label>{t("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
+                <label>{t("currency")}<select name="currency" defaultValue="IQD"><option value="">— ({t("rt_allowance")})</option><option value="IQD">IQD</option><option value="USD">USD</option></select></label>
+                <label>{t("perUnit")}<select name="unit" defaultValue="MT"><option value="">—</option>{["MT", "KG", "L", "M3"].map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+                <label>{t("product")}<select name="productId" defaultValue=""><option value="">{t("allProducts")}</option>{d.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+                <label>{t("customerOnly")}<select name="customerId" defaultValue=""><option value="">{t("all")}</option>{(d.partners ?? []).filter((p) => (p.roles ?? []).includes("customer")).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+                <label>{t("transporterOnly")}<select name="transporterId" defaultValue=""><option value="">{t("all")}</option>{(d.partners ?? []).filter((p) => (p.roles ?? []).includes("transporter")).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+                <label>{t("freeDays")}<input name="freeDays" type="number" min={0} /></label>
+                <label>{t("startEvent")}<select name="startEvent" defaultValue=""><option value="">—</option><option value="loading">{t("fromLoading")}</option><option value="arrival">{t("fromArrival")}</option></select></label>
+                <label>{t("from")}<input type="date" name="effectiveFrom" required /></label>
+                <label>{t("to")}<input type="date" name="effectiveTo" /></label>
+                <label>{f("reason")}<input name="reason" required /></label>
+              </div>
+            </ActionForm>
+          </details>
+          <div className="table-wrap"><table>
+            <thead><tr><th>{t("rateType")}</th><th>{t("product")}</th><th>{t("amount")}</th><th>{t("basis")}</th><th>{t("from")}</th><th>{t("to")}</th><th /></tr></thead>
+            <tbody>{d.rates.map(({ r, product }) => (
+              <tr key={r.id}>
+                <td>{t(`rt_${r.rateType}`)}</td>
+                <td>{product ?? t("allProducts")}</td>
+                <td className="num" dir="ltr">{Number(r.amount).toLocaleString(locale)} {r.currency ?? r.unit}{r.currency && r.unit ? ` / ${r.unit}` : ""}{r.freeDays !== null ? ` · ${t("freeDays")} ${r.freeDays}` : ""}</td>
+                <td>{t(`basis_${r.basis}`)}{r.startEvent ? ` · ${t(r.startEvent === "arrival" ? "fromArrival" : "fromLoading")}` : ""}</td>
+                <td>{r.effectiveFrom}</td><td>{r.effectiveTo ?? "—"}</td>
+                <td>{!r.effectiveTo && (
+                  <ActionForm command="rates.end" locale={locale} idempotencyKey={k()} submitLabel={t("endRule")}>
+                    <input type="hidden" name="rateId" value={r.id} />
+                    <div className="row"><input type="date" name="effectiveTo" required aria-label={t("to")} /><input name="reason" required placeholder={f("reason")} /></div>
+                  </ActionForm>
+                )}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
         </Section>
       )}
 

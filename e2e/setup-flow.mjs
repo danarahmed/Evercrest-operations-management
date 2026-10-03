@@ -22,13 +22,13 @@ await pf.locator("button.primary").click();
 await page.waitForSelector("td:has-text('Kurdistan Haulage')");
 assert.match(await page.locator("tr:has-text('Kurdistan Haulage')").innerText(), /Supplier, Transporter/);
 
-const lf = page.locator("form:has(input[name=v_USD])");
+const lf = page.locator("form:has-text('Approval limits')");
 await lf.locator("input[name=v_USD]").fill("750");
 await lf.locator("input[name=reason]").fill("tighter control");
 await lf.locator("button.primary").click();
 await page.waitForSelector("text=Saved.");
 await page.reload();
-assert.equal(await page.locator("input[name=v_USD]").inputValue(), "750");
+assert.equal(await page.locator("form:has-text('Approval limits') input[name=v_USD]").inputValue(), "750");
 
 // A change without a reason is refused
 const tf = page.locator("form:has(input[name=days])");

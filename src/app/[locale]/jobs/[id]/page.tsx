@@ -6,6 +6,8 @@ import { users } from "@/db/schema";
 import { describe, formatMoney, formatQty } from "@/lib/format";
 import { formOptions, jobWorkspace } from "@/server/queries";
 import { JobForms } from "./forms";
+import { SettlementSection } from "./settlement";
+import { can } from "@/server/authz";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
 
@@ -66,6 +68,8 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
           </div>
         </>
       )}
+
+      <SettlementSection locale={locale} jobId={w.job.id} trips={w.trips} canSettle={can(actor, "settlements.create")} canBill={can(actor, "billing.create") && caps.includes("billing")} />
 
       {w.documents.length > 0 && (
         <>

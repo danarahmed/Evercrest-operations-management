@@ -26,6 +26,8 @@ npm run dev
 npm run db:generate -- --name <change>   # new migration from schema changes (src/db/schema)
 npx drizzle-kit generate --custom --name <x>   # hand-written SQL migration (triggers, seed data)
 DATABASE_URL=... npm run db:migrate      # apply migrations to a real database
+DATABASE_URL=... npx tsx scripts/seed-dev.ts   # development data only (never production)
+DATABASE_URL=... AUTH_MODE=dev npm run dev     # run the app with the temporary development sign-in
 ```
 
 **Architecture:** see `docs/architecture.md` (layers, shared engines, phase plan). Key rules:
@@ -33,6 +35,9 @@ DATABASE_URL=... npm run db:migrate      # apply migrations to a real database
 - Journal rows are written only by `postEntry` (`src/domain/accounting/ledger.ts`). Operational modules call it inside their own command.
 - Database triggers (`src/db/migrations/0001_foundation_guards.sql`) enforce append-only audit/ledger/rates, per-currency balance, and period locks.
 - Money: `numeric` columns, `decimal.js` in code (`src/domain/money.ts`); never JS floats.
+- Specialized modules plug into the job engine via `registerCapabilityModule` (blockers → next action, inUse); every entry point imports `src/domain/register.ts`.
+- Screens read through `src/server/queries.ts` (permission-checked) and translate domain codes via `describe()` (`src/lib/format.ts`); message keys in `messages/*.json` use `_` instead of `.`.
+- Authentication: only `AUTH_MODE=dev` exists (cookie with user id) until Supabase Auth is approved and connected. Never enable dev mode in production.
 
 ---
 

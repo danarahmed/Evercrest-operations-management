@@ -182,6 +182,7 @@ registerCapabilityModule({
       .map((c) => ({
         code: `documents.${c.state}`,
         action: `${ACTION[c.state as Exclude<RequirementState, "verified">]} ${c.documentType} for ${c.target.label}`,
+        params: { doc: c.documentType, target: c.target.label },
         blocks: c.requiredBefore,
       }));
   },

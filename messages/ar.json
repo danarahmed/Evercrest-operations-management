@@ -1,1 +1,98 @@
-{ "App": { "title": "إيفركرست للعمليات", "status": "الأساس جاهز. يجري بناء وحدات الأعمال." } }
+{
+  "App": {
+    "title": "إيفركرست للعمليات",
+    "status": "الأساس جاهز. يجري بناء وحدات الأعمال."
+  },
+  "Nav": {
+    "dashboard": "لوحة التحكم",
+    "signOut": "تسجيل الخروج",
+    "signedInAs": "مسجّل الدخول باسم {name}"
+  },
+  "Login": {
+    "title": "تسجيل الدخول",
+    "devNotice": "تسجيل دخول تجريبي للتطوير. سيُستبدل بتسجيل الدخول الحقيقي.",
+    "as": "المتابعة باسم {name}",
+    "noUsers": "لا يوجد مستخدمون بعد. شغّل سكربت الإعداد أولاً."
+  },
+  "Dashboard": {
+    "attention": "يحتاج إلى متابعة",
+    "allClear": "لا يوجد ما يحتاج إلى متابعة الآن.",
+    "activeJobs": "الأعمال الجارية",
+    "noJobs": "لا توجد أعمال جارية.",
+    "job": "العمل",
+    "customer": "العميل",
+    "type": "النوع",
+    "status": "الحالة",
+    "nextAction": "الإجراء التالي"
+  },
+  "Severity": {
+    "critical": "حرج",
+    "warning": "تحذير",
+    "info": "معلومة"
+  },
+  "JobStatus": {
+    "draft": "مسودة",
+    "open": "مفتوح",
+    "in_progress": "قيد التنفيذ",
+    "pending": "معلّق",
+    "completed": "مكتمل",
+    "financially_closed": "مغلق مالياً",
+    "cancelled": "ملغى"
+  },
+  "TripStatus": {
+    "planned": "مخطط",
+    "loaded": "محمّل",
+    "discharged": "مُفرَّغ",
+    "cancelled": "ملغى"
+  },
+  "DocState": {
+    "verified": "مُتحقَّق منه",
+    "awaiting_verification": "بانتظار التحقق",
+    "rejected": "مرفوض",
+    "expired": "منتهي الصلاحية",
+    "missing": "مفقود"
+  },
+  "Job": {
+    "back": "العودة إلى لوحة التحكم",
+    "nextAction": "الإجراء التالي",
+    "none": "لا يوجد شيء معلّق",
+    "trips": "الرحلات",
+    "trip": "الرحلة",
+    "driver": "السائق",
+    "truck": "الشاحنة",
+    "loaded": "المحمّل",
+    "discharged": "المُفرَّغ",
+    "difference": "الفرق",
+    "advances": "السُلف",
+    "missing": "غير متوفر",
+    "notComparable": "غير قابل للمقارنة",
+    "documents": "المستندات",
+    "document": "المستند",
+    "for": "لـ",
+    "state": "الحالة",
+    "profit": "الربحية",
+    "currency": "العملة",
+    "revenue": "الإيرادات",
+    "costs": "التكاليف",
+    "profitCol": "الربح",
+    "noMoney": "لم تُسجَّل إيرادات أو تكاليف بعد."
+  },
+  "Codes": {
+    "transport_awaiting_loading": "بانتظار تحميل {trip}",
+    "transport_awaiting_discharge": "بانتظار تفريغ {trip}",
+    "documents_missing": "بانتظار {doc} لـ {target}",
+    "documents_awaiting_verification": "تحقّق من {doc} لـ {target}",
+    "documents_rejected": "استبدل {doc} المرفوض لـ {target}",
+    "documents_expired": "استبدل {doc} المنتهي الصلاحية لـ {target}",
+    "job_open_it": "افتح العمل",
+    "job_ready_to_complete": "جاهز للإكمال",
+    "job_ready_to_close": "جاهز للإغلاق المالي",
+    "cash_negative": "يُظهر {account} رصيداً قدره {amount}: سُجّل صرف أموال أكثر مما دخل. راجع الدفعات الأخيرة.",
+    "receivable_overdue": "{invoice}: لم يُستلم مبلغ {amount} منذ {since}.",
+    "payable_overdue": "{invoice}: لم يُدفع مبلغ {amount} منذ {since}.",
+    "trip_delayed": "حُمّلت {trip} بتاريخ {date} ولم تُفرَّغ بعد مرور {days} أيام.",
+    "advance_unreconciled": "اكتمل {job} لكن سُلفاً بقيمة {amount} لم تُسوَّ بعد.",
+    "approvals_pending": "{count} طلب بانتظار الموافقة.",
+    "documents_unverified": "{count} مستند مستلم لم يُتحقَّق منه بعد."
+  }
+}

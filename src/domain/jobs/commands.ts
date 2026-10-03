@@ -195,11 +195,25 @@ export const changeJobStatus = defineCommand({
   },
 });
 
-/** The single most useful thing to tell a user about an active job. */
-export async function nextAction(tx: Db, job: Job): Promise<string | null> {
+export interface NextAction {
+  code: string;
+  params: Record<string, string>;
+  /** English fallback. */
+  text: string;
+}
+
+/** The single most useful thing to tell a user about an active job (translatable). */
+export async function nextActionInfo(tx: Db, job: Job): Promise<NextAction | null> {
   if (LOCKED.includes(job.status)) return null;
   const blockers = await jobBlockers(tx, job);
-  if (blockers.length) return blockers[0].action;
-  if (job.status === "completed") return "Ready to close financially";
-  return job.status === "draft" ? "Open the job" : "Ready to complete";
+  if (blockers.length) return { code: blockers[0].code, params: blockers[0].params ?? {}, text: blockers[0].action };
+  if (job.status === "completed") return { code: "job.ready_to_close", params: {}, text: "Ready to close financially" };
+  return job.status === "draft"
+    ? { code: "job.open_it", params: {}, text: "Open the job" }
+    : { code: "job.ready_to_complete", params: {}, text: "Ready to complete" };
+}
+
+/** English text of the next action. */
+export async function nextAction(tx: Db, job: Job): Promise<string | null> {
+  return (await nextActionInfo(tx, job))?.text ?? null;
 }

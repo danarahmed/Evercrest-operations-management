@@ -8,8 +8,10 @@ import { getSetting } from "@/server/settings";
 export interface Exception {
   severity: "critical" | "warning" | "info";
   code: string;
-  /** What is wrong, why it matters, what to do. */
+  /** What is wrong, why it matters, what to do (English fallback). */
   message: string;
+  /** Values for the translated message (keyed by `code`). */
+  params: Record<string, string>;
   entity: { type: string; id: string; label: string };
 }
 
@@ -25,7 +27,7 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
   for (const m of money) {
     const [r] = await db.select({ bal: sql<string>`coalesce(sum(${journalLines.debit} - ${journalLines.credit}), 0)` }).from(journalLines).where(eq(journalLines.accountId, m.ledgerAccountId));
     if (dec(r.bal).lt(0))
-      out.push({ severity: "critical", code: "cash.negative", message: `${m.name} shows ${toStr(dec(r.bal))} ${m.currency}: more money was recorded as paid out than came in. Check recent payments.`, entity: { type: "money_account", id: m.id, label: m.name } });
+      out.push({ severity: "critical", code: "cash.negative", params: { account: m.name, amount: toStr(dec(r.bal)), currency: m.currency }, message: `${m.name} shows ${toStr(dec(r.bal))} ${m.currency}: more money was recorded as paid out than came in. Check recent payments.`, entity: { type: "money_account", id: m.id, label: m.name } });
   }
 
   // Overdue invoices and bills (outstanding > 0, past due date).
@@ -40,6 +42,7 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
       out.push({
         severity: "warning",
         code: inv.kind === "sales" ? "receivable.overdue" : "payable.overdue",
+        params: { invoice: inv.no, amount: toStr(outstanding), currency: inv.currency, since: inv.dueDate! },
         message: `${inv.no}: ${toStr(outstanding)} ${inv.currency} ${inv.kind === "sales" ? "not received" : "not paid"} since ${inv.dueDate}.`,
         entity: { type: "invoice", id: inv.id, label: inv.no },
       });
@@ -51,7 +54,7 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
     const cutoff = new Date(Date.parse(today) - transitDays * 86400000).toISOString().slice(0, 10);
     const late = await db.select().from(trips).where(and(eq(trips.companyId, companyId), eq(trips.status, "loaded"), lte(trips.loadingDate, cutoff)));
     for (const t of late)
-      out.push({ severity: "warning", code: "trip.delayed", message: `${t.tripNo} was loaded on ${t.loadingDate} and has no discharge after ${transitDays} days.`, entity: { type: "trip", id: t.id, label: t.tripNo } });
+      out.push({ severity: "warning", code: "trip.delayed", params: { trip: t.tripNo, date: t.loadingDate!, days: String(transitDays) }, message: `${t.tripNo} was loaded on ${t.loadingDate} and has no discharge after ${transitDays} days.`, entity: { type: "trip", id: t.id, label: t.tripNo } });
   }
 
   // Advances still open on jobs that are already completed or closed.
@@ -69,14 +72,14 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
       .where(and(eq(journalLines.accountId, advancesAcc.id), eq(jobs.companyId, companyId), inArray(jobs.status, ["completed", "financially_closed"])))
       .groupBy(jobs.id, jobs.jobNo, journalLines.currency);
     for (const a of open.filter((a) => !dec(a.bal).isZero()))
-      out.push({ severity: "warning", code: "advance.unreconciled", message: `${a.jobNo} is completed but ${toStr(dec(a.bal))} ${a.currency} of advances is not settled.`, entity: { type: "job", id: a.jobId, label: a.jobNo } });
+      out.push({ severity: "warning", code: "advance.unreconciled", params: { job: a.jobNo, amount: toStr(dec(a.bal)), currency: a.currency }, message: `${a.jobNo} is completed but ${toStr(dec(a.bal))} ${a.currency} of advances is not settled.`, entity: { type: "job", id: a.jobId, label: a.jobNo } });
   }
 
   // Work waiting on someone.
   const [pending] = await db.select({ n: sql<number>`count(*)::int` }).from(approvalRequests).where(and(eq(approvalRequests.companyId, companyId), eq(approvalRequests.status, "pending")));
-  if (pending.n) out.push({ severity: "info", code: "approvals.pending", message: `${pending.n} request(s) waiting for approval.`, entity: { type: "approvals", id: companyId, label: "Approvals" } });
+  if (pending.n) out.push({ severity: "info", code: "approvals.pending", params: { count: String(pending.n) }, message: `${pending.n} request(s) waiting for approval.`, entity: { type: "approvals", id: companyId, label: "Approvals" } });
   const [unverified] = await db.select({ n: sql<number>`count(*)::int` }).from(documents).where(and(eq(documents.companyId, companyId), eq(documents.status, "received")));
-  if (unverified.n) out.push({ severity: "info", code: "documents.unverified", message: `${unverified.n} document(s) received but not yet verified.`, entity: { type: "documents", id: companyId, label: "Documents" } });
+  if (unverified.n) out.push({ severity: "info", code: "documents.unverified", params: { count: String(unverified.n) }, message: `${unverified.n} document(s) received but not yet verified.`, entity: { type: "documents", id: companyId, label: "Documents" } });
 
   const rank = { critical: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]);

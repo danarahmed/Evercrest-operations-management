@@ -1,1 +1,98 @@
-{ "App": { "title": "ئێڤەرکرێست بۆ کارەکان", "status": "بنچینەکە ئامادەیە. مۆدیولەکانی کار بنیات دەنرێن." } }
+{
+  "App": {
+    "title": "ئێڤەرکرێست بۆ کارەکان",
+    "status": "بنچینەکە ئامادەیە. مۆدیولەکانی کار بنیات دەنرێن."
+  },
+  "Nav": {
+    "dashboard": "داشبۆرد",
+    "signOut": "چوونەدەرەوە",
+    "signedInAs": "چوویتە ژوورەوە وەک {name}"
+  },
+  "Login": {
+    "title": "چوونەژوورەوە",
+    "devNotice": "چوونەژوورەوەی تاقیکاری بۆ پەرەپێدان. دواتر چوونەژوورەوەی ڕاستەقینە جێگەی دەگرێتەوە.",
+    "as": "بەردەوامبوون وەک {name}",
+    "noUsers": "هێشتا هیچ بەکارهێنەرێک نییە. سەرەتا سکریپتی دامەزراندن کاربکە."
+  },
+  "Dashboard": {
+    "attention": "پێویستی بە سەرنجە",
+    "allClear": "ئێستا هیچ شتێک پێویستی بە سەرنج نییە.",
+    "activeJobs": "کارە چالاکەکان",
+    "noJobs": "هیچ کارێکی چالاک نییە.",
+    "job": "کار",
+    "customer": "کڕیار",
+    "type": "جۆر",
+    "status": "دۆخ",
+    "nextAction": "هەنگاوی داهاتوو"
+  },
+  "Severity": {
+    "critical": "مەترسیدار",
+    "warning": "ئاگاداری",
+    "info": "زانیاری"
+  },
+  "JobStatus": {
+    "draft": "ڕەشنووس",
+    "open": "کراوە",
+    "in_progress": "لە جێبەجێکردندایە",
+    "pending": "چاوەڕوانە",
+    "completed": "تەواوبوو",
+    "financially_closed": "بە دارایی داخراوە",
+    "cancelled": "هەڵوەشێنراوە"
+  },
+  "TripStatus": {
+    "planned": "پلان بۆ دانراو",
+    "loaded": "بارکراو",
+    "discharged": "داگیراو",
+    "cancelled": "هەڵوەشێنراوە"
+  },
+  "DocState": {
+    "verified": "پشتڕاستکراوە",
+    "awaiting_verification": "چاوەڕێی پشتڕاستکردنەوەیە",
+    "rejected": "ڕەتکراوە",
+    "expired": "بەسەرچووە",
+    "missing": "نییە"
+  },
+  "Job": {
+    "back": "گەڕانەوە بۆ داشبۆرد",
+    "nextAction": "هەنگاوی داهاتوو",
+    "none": "هیچ شتێک چاوەڕوان نییە",
+    "trips": "گەشتەکان",
+    "trip": "گەشت",
+    "driver": "شۆفێر",
+    "truck": "بارهەڵگر",
+    "loaded": "بارکراو",
+    "discharged": "داگیراو",
+    "difference": "جیاوازی",
+    "advances": "پێشەکییەکان",
+    "missing": "نییە",
+    "notComparable": "بەراورد ناکرێت",
+    "documents": "بەڵگەنامەکان",
+    "document": "بەڵگەنامە",
+    "for": "بۆ",
+    "state": "دۆخ",
+    "profit": "قازانج",
+    "currency": "دراو",
+    "revenue": "داهات",
+    "costs": "تێچوون",
+    "profitCol": "قازانج",
+    "noMoney": "هێشتا هیچ داهات یان تێچوونێک تۆمار نەکراوە."
+  },
+  "Codes": {
+    "transport_awaiting_loading": "چاوەڕێی بارکردنی {trip}",
+    "transport_awaiting_discharge": "چاوەڕێی داگرتنی {trip}",
+    "documents_missing": "چاوەڕێی {doc} بۆ {target}",
+    "documents_awaiting_verification": "{doc} بۆ {target} پشتڕاست بکەرەوە",
+    "documents_rejected": "{doc}ی ڕەتکراوە بۆ {target} بگۆڕە",
+    "documents_expired": "{doc}ی بەسەرچوو بۆ {target} بگۆڕە",
+    "job_open_it": "کارەکە بکەرەوە",
+    "job_ready_to_complete": "ئامادەیە بۆ تەواوکردن",
+    "job_ready_to_close": "ئامادەیە بۆ داخستنی دارایی",
+    "cash_negative": "{account} بڕی {amount} پیشان دەدات: پارەی زیاتر وەک دەرچوو تۆمارکراوە لەوەی هاتووەتە ژوورەوە. پارەدانە دواییەکان بپشکنە.",
+    "receivable_overdue": "{invoice}: بڕی {amount} لە {since}ەوە وەرنەگیراوە.",
+    "payable_overdue": "{invoice}: بڕی {amount} لە {since}ەوە نەدراوە.",
+    "trip_delayed": "{trip} لە {date} بارکراوە و دوای {days} ڕۆژ هێشتا دانەگیراوە.",
+    "advance_unreconciled": "{job} تەواوبووە بەڵام {amount} پێشەکی هێشتا یەکلانەکراوەتەوە.",
+    "approvals_pending": "{count} داواکاری چاوەڕێی پەسەندکردنن.",
+    "documents_unverified": "{count} بەڵگەنامە وەرگیراون بەڵام هێشتا پشتڕاست نەکراونەتەوە."
+  }
+}

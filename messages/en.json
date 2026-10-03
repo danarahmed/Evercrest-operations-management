@@ -1,1 +1,98 @@
-{ "App": { "title": "Evercrest Operations", "status": "Foundation is ready. Business modules are being built." } }
+{
+  "App": {
+    "title": "Evercrest Operations",
+    "status": "Foundation is ready. Business modules are being built."
+  },
+  "Nav": {
+    "dashboard": "Dashboard",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as {name}"
+  },
+  "Login": {
+    "title": "Sign in",
+    "devNotice": "Development sign-in. Real sign-in will replace this.",
+    "as": "Continue as {name}",
+    "noUsers": "No users yet. Run the setup script first."
+  },
+  "Dashboard": {
+    "attention": "Needs attention",
+    "allClear": "Nothing needs attention right now.",
+    "activeJobs": "Active jobs",
+    "noJobs": "No active jobs.",
+    "job": "Job",
+    "customer": "Customer",
+    "type": "Type",
+    "status": "Status",
+    "nextAction": "Next action"
+  },
+  "Severity": {
+    "critical": "Critical",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "JobStatus": {
+    "draft": "Draft",
+    "open": "Open",
+    "in_progress": "In progress",
+    "pending": "Pending",
+    "completed": "Completed",
+    "financially_closed": "Financially closed",
+    "cancelled": "Cancelled"
+  },
+  "TripStatus": {
+    "planned": "Planned",
+    "loaded": "Loaded",
+    "discharged": "Discharged",
+    "cancelled": "Cancelled"
+  },
+  "DocState": {
+    "verified": "Verified",
+    "awaiting_verification": "Awaiting verification",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "missing": "Missing"
+  },
+  "Job": {
+    "back": "Back to dashboard",
+    "nextAction": "Next action",
+    "none": "Nothing pending",
+    "trips": "Trips",
+    "trip": "Trip",
+    "driver": "Driver",
+    "truck": "Truck",
+    "loaded": "Loaded",
+    "discharged": "Discharged",
+    "difference": "Difference",
+    "advances": "Advances",
+    "missing": "Missing",
+    "notComparable": "Not comparable",
+    "documents": "Documents",
+    "document": "Document",
+    "for": "For",
+    "state": "State",
+    "profit": "Profitability",
+    "currency": "Currency",
+    "revenue": "Revenue",
+    "costs": "Costs",
+    "profitCol": "Profit",
+    "noMoney": "No revenue or costs recorded yet."
+  },
+  "Codes": {
+    "transport_awaiting_loading": "Waiting for loading of {trip}",
+    "transport_awaiting_discharge": "Waiting for discharge of {trip}",
+    "documents_missing": "Waiting for {doc} for {target}",
+    "documents_awaiting_verification": "Verify {doc} for {target}",
+    "documents_rejected": "Replace rejected {doc} for {target}",
+    "documents_expired": "Replace expired {doc} for {target}",
+    "job_open_it": "Open the job",
+    "job_ready_to_complete": "Ready to complete",
+    "job_ready_to_close": "Ready to close financially",
+    "cash_negative": "{account} shows {amount}: more money was recorded as paid out than came in. Check recent payments.",
+    "receivable_overdue": "{invoice}: {amount} not received since {since}.",
+    "payable_overdue": "{invoice}: {amount} not paid since {since}.",
+    "trip_delayed": "{trip} was loaded on {date} and has no discharge after {days} days.",
+    "advance_unreconciled": "{job} is completed but {amount} of advances is not settled.",
+    "approvals_pending": "{count} request(s) waiting for approval.",
+    "documents_unverified": "{count} document(s) received but not yet verified."
+  }
+}

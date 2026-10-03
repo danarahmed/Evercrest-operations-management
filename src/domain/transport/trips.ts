@@ -203,6 +203,7 @@ registerCapabilityModule({
     return open.map((t) => ({
       code: t.status === "planned" ? "transport.awaiting_loading" : "transport.awaiting_discharge",
       action: t.status === "planned" ? `Waiting for loading of ${t.tripNo}` : `Waiting for discharge of ${t.tripNo}`,
+      params: { trip: t.tripNo },
       blocks: "completed" as const,
     }));
   },

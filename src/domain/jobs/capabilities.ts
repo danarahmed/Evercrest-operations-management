@@ -21,8 +21,10 @@ export type Job = typeof jobs.$inferSelect;
 export interface Blocker {
   /** Stable code, translated in the UI, e.g. "transport.manifest_missing". */
   code: string;
-  /** Human-readable next action in English (fallback). */
+  /** Human-readable next action in English (fallback when a translation is missing). */
   action: string;
+  /** Values for the translated message (keyed by `code`). */
+  params?: Record<string, string>;
   /** Which status this blocks. */
   blocks: "completed" | "financially_closed";
 }

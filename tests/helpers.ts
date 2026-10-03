@@ -5,6 +5,7 @@ import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { loadActor } from "@/server/actor";
 import { setupCompany } from "@/server/bootstrap";
+import "@/domain/register";
 
 /** Fresh in-process Postgres with all real migrations applied, plus a company and admin actor. */
 export async function freshDb() {

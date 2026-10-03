@@ -24,6 +24,7 @@ export const PERMISSIONS = [
   "jobs.create",
   "jobs.manage",
   "jobs.financial_close",
+  "trips.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

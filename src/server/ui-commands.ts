@@ -8,7 +8,12 @@ import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
+import { createAccount } from "@/domain/accounting/ledger";
+import { createMoneyAccount } from "@/domain/finance/payments";
+import { defineJobType } from "@/domain/jobs/commands";
+import { setDocumentRequirement } from "@/domain/documents/documents";
 import type { Actor } from "./authz";
+import { setSetting } from "./settings";
 import type { Command } from "./command";
 
 type Prepare = (db: Db, actor: Actor, input: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -21,6 +26,18 @@ const currencyFromMoneyAccount: Prepare = async (db, actor, input) => {
     .where(and(eq(moneyAccounts.id, String(input.moneyAccountId ?? "")), eq(moneyAccounts.companyId, actor.companyId)));
   return { ...input, currency: m?.currency };
 };
+
+/** Build a settings value from prefixed form fields, e.g. "v_advances" → { advances }. Empty fields are dropped. */
+const settingFromFields =
+  (key: string, map: (v: string) => unknown = (v) => v): Prepare =>
+  async (_db, _actor, input) => {
+    const value = Object.fromEntries(
+      Object.entries(input)
+        .filter(([k]) => k.startsWith("v_"))
+        .map(([k, v]) => [k.slice(2), map(String(v))]),
+    );
+    return { key, value, reason: input.reason };
+  };
 
 /** Commands that screens may submit. Anything not listed here cannot be called from a form. */
 export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?: Prepare }> = {
@@ -36,4 +53,17 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "documents.review": { command: reviewDocument },
   "documents.define_type": { command: defineDocumentType },
   "approvals.decide": { command: decideApproval },
+  "ledger.create_account": { command: createAccount },
+  "money_accounts.create": { command: createMoneyAccount },
+  "job_types.define": { command: defineJobType },
+  "documents.set_requirement": {
+    command: setDocumentRequirement,
+    prepare: async (_db, _a, i) => ({ ...i, active: i.active !== "false" }),
+  },
+  "settings.posting_accounts": { command: setSetting, prepare: settingFromFields("accounting.posting_accounts") },
+  "settings.payment_limits": { command: setSetting, prepare: settingFromFields("approvals.payment_out_limits") },
+  "settings.trip_transit_days": {
+    command: setSetting,
+    prepare: async (_db, _a, i) => ({ key: "alerts.trip_transit_days", value: Number(i.days), reason: i.reason }),
+  },
 };

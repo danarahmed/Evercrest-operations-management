@@ -1,13 +1,14 @@
 import "server-only";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { approvalRequests, businessPartners, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { accounts, approvalRequests, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { jobProfitability } from "@/domain/finance/invoices";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { quantityDifference } from "@/domain/transport/trips";
 import { type Actor, can, requirePermission } from "./authz";
+import { getSetting } from "./settings";
 
 /** Read models for screens. Every read checks permission server-side, like commands. */
 
@@ -122,4 +123,38 @@ export async function documentsToVerify(db: Db, actor: Actor) {
     receivedBy: r.receivedBy,
     receivedAt: r.doc.createdAt,
   }));
+}
+
+/** Everything the setup page shows. Each section is only loaded for users allowed to manage it. */
+export async function setupData(db: Db, actor: Actor) {
+  const c = actor.companyId;
+  const has = (p: Parameters<typeof can>[1]) => can(actor, p);
+  const partners = has("partners.manage")
+    ? await db.select({ id: businessPartners.id, name: businessPartners.name, phone: businessPartners.phone, roles: sql<string[]>`array_agg(${partnerRoles.role} order by ${partnerRoles.role})` })
+        .from(businessPartners).leftJoin(partnerRoles, eq(partnerRoles.partnerId, businessPartners.id))
+        .where(eq(businessPartners.companyId, c)).groupBy(businessPartners.id).orderBy(businessPartners.name).limit(500)
+    : null;
+  const accountList = has("accounts.manage") || has("settings.manage") || has("money_accounts.manage")
+    ? await db.select().from(accounts).where(eq(accounts.companyId, c)).orderBy(accounts.code)
+    : [];
+  return {
+    partners,
+    accounts: has("accounts.manage") ? accountList : null,
+    moneyAccounts: has("money_accounts.manage") ? await db.select().from(moneyAccounts).where(eq(moneyAccounts.companyId, c)).orderBy(moneyAccounts.name) : null,
+    /** Asset accounts restricted to one currency: the only valid backing for a cash box or bank account. */
+    cashLedgerAccounts: accountList.filter((a) => a.type === "asset" && a.postable && a.currency),
+    postableAccounts: accountList.filter((a) => a.postable && a.active),
+    settings: has("settings.manage")
+      ? {
+          posting: (await getSetting(db, c, "accounting.posting_accounts")) ?? {},
+          limits: (await getSetting(db, c, "approvals.payment_out_limits")) ?? {},
+          transitDays: (await getSetting(db, c, "alerts.trip_transit_days")) ?? null,
+        }
+      : null,
+    jobTypes: has("job_types.manage") ? await db.select().from(jobTypes).where(eq(jobTypes.companyId, c)).orderBy(jobTypes.name) : null,
+    documentTypes: has("documents.configure") ? await db.select().from(documentTypes).where(eq(documentTypes.companyId, c)).orderBy(documentTypes.name) : null,
+    documentRules: has("documents.configure")
+      ? await db.select({ r: documentRequirements, type: documentTypes.name }).from(documentRequirements).innerJoin(documentTypes, eq(documentTypes.id, documentRequirements.documentTypeId)).where(eq(documentRequirements.companyId, c))
+      : null,
+  };
 }

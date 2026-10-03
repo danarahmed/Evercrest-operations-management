@@ -64,6 +64,13 @@
       "when": 1791040892763,
       "tag": "0008_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791041199398,
+      "tag": "0009_currency_exchange",
+      "breakpoints": true
     }
   ]
 }

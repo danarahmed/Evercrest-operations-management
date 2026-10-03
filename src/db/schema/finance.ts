@@ -124,3 +124,37 @@ export const invoiceLines = pgTable(
   },
   (t) => [unique().on(t.invoiceId, t.lineNo), index().on(t.jobId), index().on(t.tripId)],
 );
+
+/**
+ * Money converted between currencies (e.g. USD cash sold for IQD cash).
+ * Stores both real amounts and the rate actually obtained; never recomputed.
+ */
+export const currencyExchanges = pgTable(
+  "currency_exchanges",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    exchangeNo: text("exchange_no").notNull(),
+    fromMoneyAccountId: uuid("from_money_account_id").notNull().references(() => moneyAccounts.id),
+    toMoneyAccountId: uuid("to_money_account_id").notNull().references(() => moneyAccounts.id),
+    fromAmount: numeric("from_amount", { precision: 20, scale: 4 }).notNull(),
+    fromCurrency: char("from_currency", { length: 3 }).notNull().references(() => currencies.code),
+    toAmount: numeric("to_amount", { precision: 20, scale: 4 }).notNull(),
+    toCurrency: char("to_currency", { length: 3 }).notNull().references(() => currencies.code),
+    /** Units of toCurrency received per 1 unit of fromCurrency. */
+    rate: numeric("rate", { precision: 24, scale: 10 }).notNull(),
+    exchangeDate: date("exchange_date", { mode: "string" }).notNull(),
+    counterpartyId: uuid("counterparty_id").references(() => businessPartners.id),
+    reference: text("reference"),
+    status: text("status", { enum: ["posted", "reversed"] }).notNull().default("posted"),
+    journalEntryId: uuid("journal_entry_id").notNull().references(() => journalEntries.id),
+    reversalEntryId: uuid("reversal_entry_id").references(() => journalEntries.id),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.companyId, t.exchangeNo),
+    check("fx_amounts_positive", sql`${t.fromAmount} > 0 and ${t.toAmount} > 0`),
+    check("fx_currencies_differ", sql`${t.fromCurrency} <> ${t.toCurrency}`),
+  ],
+);

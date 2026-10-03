@@ -4,7 +4,7 @@ import { accounts } from "@/db/schema";
 import { ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
 
-export type PostingKey = "advances" | "customer_receivables" | "supplier_payables" | "payables_to_drivers" | "payables_to_transporters";
+export type PostingKey = "advances" | "customer_receivables" | "supplier_payables" | "payables_to_drivers" | "payables_to_transporters" | "currency_exchange";
 
 /** Resolve a configured posting account. Never falls back to a guess. */
 export async function postingAccount(tx: Db, companyId: string, key: PostingKey) {

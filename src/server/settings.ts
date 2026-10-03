@@ -22,6 +22,7 @@ export const SETTINGS = {
       supplier_payables: z.string(),
       payables_to_drivers: z.string(),
       payables_to_transporters: z.string(),
+      currency_exchange: z.string(),
     })
     .partial(),
 } satisfies Record<string, z.ZodType>;

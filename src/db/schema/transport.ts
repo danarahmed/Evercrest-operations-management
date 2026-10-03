@@ -48,6 +48,8 @@ export const trips = pgTable(
     loadingDate: date("loading_date", { mode: "string" }),
     loadedQty: numeric("loaded_qty", { precision: 20, scale: 4 }),
     loadedUnit: text("loaded_unit").references(() => units.code),
+    /** Arrival at destination/parking (some demurrage rules count from here). */
+    arrivalDate: date("arrival_date", { mode: "string" }),
     dischargeDate: date("discharge_date", { mode: "string" }),
     dischargedQty: numeric("discharged_qty", { precision: 20, scale: 4 }),
     dischargedUnit: text("discharged_unit").references(() => units.code),

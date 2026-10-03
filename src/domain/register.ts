@@ -3,3 +3,4 @@
 import "./transport/trips";
 import "./finance/payments";
 import "./documents/documents";
+import "./transport/billing";

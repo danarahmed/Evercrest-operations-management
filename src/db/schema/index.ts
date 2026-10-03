@@ -6,3 +6,4 @@ export * from "./transport";
 export * from "./finance";
 export * from "./documents";
 export * from "./approvals";
+export * from "./rates";

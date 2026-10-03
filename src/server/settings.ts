@@ -16,6 +16,8 @@ export const SETTINGS = {
    * person. A currency with no limit configured needs no approval.
    */
   "approvals.payment_out_limits": z.record(z.string().regex(/^[A-Z]{3}$/), z.string().regex(/^\d+(\.\d+)?$/)),
+  /** Final amounts are rounded to a multiple of this, per currency (e.g. IQD: "250"). Unset = currency precision. */
+  "rounding.final_increment": z.record(z.string().regex(/^[A-Z]{3}$/), z.string().regex(/^\d+(\.\d+)?$/)),
   /** Flag a loaded trip that has not been discharged after this many days. Unset = no alert. */
   "alerts.trip_transit_days": z.number().int().positive(),
   /**
@@ -30,6 +32,12 @@ export const SETTINGS = {
       payables_to_drivers: z.string(),
       payables_to_transporters: z.string(),
       currency_exchange: z.string(),
+      driver_costs: z.string(),
+      transporter_costs: z.string(),
+      shortage_fines: z.string(),
+      transport_revenue: z.string(),
+      demurrage_revenue: z.string(),
+      rounding_differences: z.string(),
     })
     .partial(),
 } satisfies Record<string, z.ZodType>;

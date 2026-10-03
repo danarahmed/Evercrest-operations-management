@@ -42,17 +42,20 @@ export interface CapabilityModule {
   inUse(tx: Db, job: Job): Promise<boolean>;
 }
 
-const registry = new Map<Capability, CapabilityModule>();
+/** Several modules may serve one capability (e.g. transportation: trips, settlement). */
+const registry: CapabilityModule[] = [];
 
 export function registerCapabilityModule(m: CapabilityModule) {
-  registry.set(m.capability, m);
+  registry.push(m);
 }
 
-export function capabilityModule(c: Capability): CapabilityModule | undefined {
-  return registry.get(c);
+/** True if any module of this capability holds records for the job. */
+export async function capabilityInUse(tx: Db, c: Capability, job: Job): Promise<boolean> {
+  for (const m of registry.filter((x) => x.capability === c)) if (await m.inUse(tx, job)) return true;
+  return false;
 }
 
 /** Modules whose blockers apply to this job: its capabilities plus always-checked controls. */
 export function modulesFor(job: { capabilities: string[] }): CapabilityModule[] {
-  return [...registry.values()].filter((m) => m.alwaysCheck || job.capabilities.includes(m.capability));
+  return registry.filter((m) => m.alwaysCheck || job.capabilities.includes(m.capability));
 }

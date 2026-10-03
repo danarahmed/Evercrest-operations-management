@@ -1,7 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, catalogItems, partnerRoles, trips, trucks } from "@/db/schema";
+import { businessPartners, catalogItems, partnerRoles, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { type Capability, type Job, registerCapabilityModule } from "../jobs/capabilities";
@@ -117,6 +117,12 @@ export const createTrip = defineCommand({
   },
 });
 
+/** A posted settlement freezes the trip's quantities and dates. */
+export async function isSettled(tx: Db, tripId: string): Promise<boolean> {
+  const [s] = await tx.select({ id: tripSettlements.id }).from(tripSettlements).where(and(eq(tripSettlements.tripId, tripId), eq(tripSettlements.status, "posted"))).limit(1);
+  return !!s;
+}
+
 export async function getTrip(tx: Db, companyId: string, tripId: string) {
   const [trip] = await tx.select().from(trips).where(and(eq(trips.id, tripId), eq(trips.companyId, companyId)));
   if (!trip) throw new NotFound("trip", tripId);
@@ -132,6 +138,7 @@ export const recordLoading = defineCommand({
     const trip = await getTrip(tx, actor.companyId, tripId);
     if (trip.status === "cancelled" || trip.status === "discharged") throw new Conflict(`Trip is ${trip.status}`);
     if (trip.status === "loaded" && !reason) throw new ValidationError("A reason is required to correct loading");
+    if (await isSettled(tx, tripId)) throw new Conflict("Trip is settled; reverse the settlement before correcting the loading");
     await getUnit(tx, loadedUnit);
     const before = { loadingDate: trip.loadingDate, loadedQty: trip.loadedQty, loadedUnit: trip.loadedUnit };
     await tx.update(trips).set({ loadingDate, loadedQty, loadedUnit, status: "loaded" }).where(eq(trips.id, tripId));
@@ -150,10 +157,29 @@ export const recordDischarge = defineCommand({
     if (trip.status === "cancelled") throw new Conflict("Trip is cancelled");
     if (trip.status === "discharged" && !reason) throw new ValidationError("A reason is required to correct the discharge");
     if (trip.loadingDate && dischargeDate < trip.loadingDate) throw new ValidationError("Discharge date cannot be before the loading date");
+    if (trip.arrivalDate && dischargeDate < trip.arrivalDate) throw new ValidationError("Discharge date cannot be before the arrival date");
+    if (await isSettled(tx, tripId)) throw new Conflict("Trip is settled; reverse the settlement before correcting the discharge");
     await getUnit(tx, dischargedUnit);
     const before = { dischargeDate: trip.dischargeDate, dischargedQty: trip.dischargedQty, dischargedUnit: trip.dischargedUnit };
     await tx.update(trips).set({ dischargeDate, dischargedQty, dischargedUnit, status: "discharged" }).where(eq(trips.id, tripId));
     await audit({ action: "trips.record_discharge", entityType: "trip", entityId: tripId, before, after: { dischargeDate, dischargedQty, dischargedUnit }, reason });
+    return { tripId };
+  },
+});
+
+/** Arrival at destination/parking. Needed when a demurrage rule counts from arrival. */
+export const recordArrival = defineCommand({
+  name: "trips.record_arrival",
+  permission: "trips.manage",
+  input: z.object({ tripId: uuid, arrivalDate: isoDate, reason: z.string().optional() }),
+  async handler({ tx, actor, audit }, { tripId, arrivalDate, reason }) {
+    const trip = await getTrip(tx, actor.companyId, tripId);
+    if (trip.status === "cancelled" || trip.status === "planned") throw new Conflict(`Trip is ${trip.status}`);
+    if (trip.loadingDate && arrivalDate < trip.loadingDate) throw new ValidationError("Arrival date cannot be before the loading date");
+    if (trip.dischargeDate && arrivalDate > trip.dischargeDate) throw new ValidationError("Arrival date cannot be after the discharge date");
+    if (trip.arrivalDate && !reason) throw new ValidationError("A reason is required to correct the arrival date");
+    await tx.update(trips).set({ arrivalDate }).where(eq(trips.id, tripId));
+    await audit({ action: "trips.record_arrival", entityType: "trip", entityId: tripId, before: { arrivalDate: trip.arrivalDate }, after: { arrivalDate }, reason });
     return { tripId };
   },
 });

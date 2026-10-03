@@ -89,6 +89,8 @@ export const invoices = pgTable(
     /** The partner's own number (supplier bill number). */
     externalRef: text("external_ref"),
     total: numeric("total", { precision: 20, scale: 4 }).notNull(),
+    /** Lines sum − total: amount removed (or added) by rounding the final amount. */
+    rounding: numeric("rounding", { precision: 20, scale: 4 }).notNull().default("0"),
     status: text("status", { enum: ["posted", "cancelled"] }).notNull().default("posted"),
     journalEntryId: uuid("journal_entry_id").notNull().references(() => journalEntries.id),
     reversalEntryId: uuid("reversal_entry_id").references(() => journalEntries.id),

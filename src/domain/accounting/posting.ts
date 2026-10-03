@@ -4,7 +4,13 @@ import { accounts } from "@/db/schema";
 import { ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
 
-export type PostingKey = "advances" | "customer_receivables" | "supplier_payables" | "payables_to_drivers" | "payables_to_transporters" | "currency_exchange";
+export type PostingKey = "advances" | "customer_receivables" | "supplier_payables" | "payables_to_drivers" | "payables_to_transporters" | "currency_exchange"
+  | "driver_costs"
+  | "transporter_costs"
+  | "shortage_fines"
+  | "transport_revenue"
+  | "demurrage_revenue"
+  | "rounding_differences";
 
 /** Resolve a configured posting account. Never falls back to a guess. */
 export async function postingAccount(tx: Db, companyId: string, key: PostingKey) {

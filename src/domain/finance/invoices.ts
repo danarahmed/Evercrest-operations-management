@@ -8,7 +8,8 @@ import { postEntry, reverseEntry } from "../accounting/ledger";
 import { type PostingKey, postingAccount } from "../accounting/posting";
 import { amountString, currencyCode } from "../currency";
 import { getJob } from "../jobs/commands";
-import { D, dec, roundTo, toStr } from "../money";
+import { D, dec, roundTo, roundToIncrement, toStr } from "../money";
+import { getSetting } from "@/server/settings";
 import { nextNumber } from "../sequences";
 import { getTrip } from "../transport/trips";
 
@@ -43,6 +44,8 @@ export const createInvoice = defineCommand({
     externalRef: z.string().trim().nullish(),
     notes: z.string().nullish(),
     lines: z.array(lineInput).min(1),
+    /** Round the final total to the configured increment for this currency (e.g. 250 IQD). */
+    roundTotal: z.boolean().optional(),
   }),
   async handler(ctx, input) {
     const { tx, actor, audit } = ctx;
@@ -84,7 +87,19 @@ export const createInvoice = defineCommand({
       if (amount.lte(0)) throw new ValidationError(`Line ${i + 1}: amount must be greater than zero`);
       lines.push({ ...l, jobId, tripId: l.tripId ?? null, amount });
     }
-    const total = lines.reduce((s, l) => s.plus(l.amount), new D(0));
+    const linesTotal = lines.reduce((s, l) => s.plus(l.amount), new D(0));
+    let total = linesTotal;
+    let rounding = new D(0);
+    let roundingAcc: { id: string } | null = null;
+    if (input.roundTotal) {
+      const inc = ((await getSetting(tx, actor.companyId, "rounding.final_increment")) ?? {})[input.currency];
+      if (inc) {
+        total = roundToIncrement(linesTotal, inc);
+        rounding = linesTotal.minus(total);
+        if (!rounding.isZero()) roundingAcc = await postingAccount(tx, actor.companyId, "rounding_differences");
+      }
+    }
+    if (total.lte(0)) throw new ValidationError("Invoice total must be greater than zero");
 
     const balanceAcc =
       input.kind === "sales"
@@ -102,10 +117,13 @@ export const createInvoice = defineCommand({
           ? [
               { ...balanceLine, debit: toStr(total) },
               ...lines.map((l) => ({ accountId: l.accountId, currency: input.currency, jobId: l.jobId, credit: toStr(l.amount), memo: l.description })),
+              // Rounded down: the difference is a debit to rounding; rounded up: a credit.
+              ...(roundingAcc ? [{ accountId: roundingAcc.id, currency: input.currency, ...(rounding.gt(0) ? { debit: toStr(rounding) } : { credit: toStr(rounding.neg()) }), memo: "rounding" }] : []),
             ]
           : [
               ...lines.map((l) => ({ accountId: l.accountId, currency: input.currency, jobId: l.jobId, debit: toStr(l.amount), memo: l.description })),
               { ...balanceLine, credit: toStr(total) },
+              ...(roundingAcc ? [{ accountId: roundingAcc.id, currency: input.currency, ...(rounding.gt(0) ? { credit: toStr(rounding) } : { debit: toStr(rounding.neg()) }), memo: "rounding" }] : []),
             ],
     });
     const [inv] = await tx
@@ -122,6 +140,7 @@ export const createInvoice = defineCommand({
         externalRef: input.externalRef ?? null,
         notes: input.notes ?? null,
         total: toStr(total),
+        rounding: toStr(rounding),
         journalEntryId: entry.id,
         createdBy: actor.userId,
       })

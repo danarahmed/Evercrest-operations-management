@@ -53,12 +53,19 @@ describe("document requirements", () => {
     await run(reviewDocument, { documentId: d.id, decision: "verified" });
     // Manifest done → can complete, but the customer's certificate still blocks financial close
     await run(changeJobStatus, { jobId: j.id, status: "completed" });
-    await expect(run(changeJobStatus, { jobId: j.id, status: "financially_closed" })).rejects.toMatchObject({
-      details: { blockers: [{ code: "documents.missing" }] },
-    });
+    const closeBlockers = async () => {
+      try {
+        await run(changeJobStatus, { jobId: j.id, status: "financially_closed" });
+        return [];
+      } catch (e) {
+        return ((e as { details?: { blockers?: { code: string }[] } }).details?.blockers ?? []).map((b) => b.code);
+      }
+    };
+    expect(await closeBlockers()).toEqual(expect.arrayContaining(["documents.missing", "transport.awaiting_settlement"]));
     const c = await run(recordDocument, { documentTypeId: ids.cert, entityType: "job", entityId: j.id });
     await run(reviewDocument, { documentId: c.id, decision: "verified" });
-    await run(changeJobStatus, { jobId: j.id, status: "financially_closed" });
+    // The certificate no longer blocks; the trip still has to be settled (see settlement tests).
+    expect(await closeBlockers()).toEqual(["transport.awaiting_settlement"]);
   });
 
   it("applies customer requirements even if the job did not enable documents", async () => {

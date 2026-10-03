@@ -12,7 +12,7 @@ import { postingAccount } from "../accounting/posting";
 import { amountString, currencyCode } from "../currency";
 import { type Capability, type Job, registerCapabilityModule } from "../jobs/capabilities";
 import { getJob } from "../jobs/commands";
-import { getTrip } from "../transport/trips";
+import { getTrip, isSettled } from "../transport/trips";
 import { D, dec, toStr } from "../money";
 import { nextNumber } from "../sequences";
 import { registerApprovable } from "../approvals/approvals";
@@ -80,6 +80,8 @@ export const recordPayment = defineCommand({
     if (input.tripId) {
       const trip = await getTrip(tx, actor.companyId, input.tripId);
       if (trip.status === "cancelled") throw new Conflict("Trip is cancelled");
+      if (input.purpose === "advance" && (await isSettled(tx, trip.id)))
+        throw new Conflict(`${trip.tripNo} is already settled; pay the settlement balance instead of a new advance`);
       if (jobId && jobId !== trip.jobId) throw new ValidationError("Trip belongs to a different job");
       jobId = trip.jobId;
       if (input.purpose === "advance" && partnerId && partnerId !== trip.driverId && partnerId !== trip.transporterId)

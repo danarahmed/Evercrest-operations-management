@@ -1,0 +1,1 @@
+ALTER TABLE "invoices" ADD COLUMN "rounding" numeric(20, 4) DEFAULT '0' NOT NULL;

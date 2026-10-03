@@ -7,7 +7,7 @@ import { requirePermission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { nextNumber } from "../sequences";
-import { type Blocker, CAPABILITIES, type Capability, capabilityModule, type Job, modulesFor } from "./capabilities";
+import { type Blocker, CAPABILITIES, type Capability, capabilityInUse, type Job, modulesFor } from "./capabilities";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const uuid = z.string().uuid();
@@ -139,7 +139,7 @@ export const setJobCapabilities = defineCommand({
     if (LOCKED.includes(job.status)) throw new Conflict(`Job is ${job.status}`);
     const removed = (job.capabilities as Capability[]).filter((c) => !capabilities.includes(c));
     for (const c of removed) {
-      if (await capabilityModule(c)?.inUse(tx, job))
+      if (await capabilityInUse(tx, c, job))
         throw new Conflict(`Cannot remove "${c}": the job already has ${c} records`, { capability: c });
     }
     await tx.update(jobs).set({ capabilities }).where(eq(jobs.id, jobId));
@@ -186,7 +186,7 @@ export const changeJobStatus = defineCommand({
     }
     if (status === "cancelled") {
       for (const c of job.capabilities as Capability[])
-        if (await capabilityModule(c)?.inUse(tx, job))
+        if (await capabilityInUse(tx, c, job))
           throw new Conflict(`Job has ${c} records; cancel or reverse them first`, { capability: c });
     }
     await tx.update(jobs).set({ status }).where(eq(jobs.id, jobId));

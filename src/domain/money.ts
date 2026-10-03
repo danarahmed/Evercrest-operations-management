@@ -39,3 +39,13 @@ export function convert(amount: string | Dec, rate: string | Dec, targetMinorUni
 export function toStr(value: Dec): string {
   return value.toFixed();
 }
+
+/**
+ * Round to the nearest multiple of `increment` (half up), e.g. IQD to 250:
+ * 1,234,566 → 1,234,500; 1,234,625 → 1,234,750.
+ */
+export function roundToIncrement(value: Dec, increment: string | Dec): Dec {
+  const inc = dec(increment);
+  if (inc.lte(0)) return value;
+  return value.dividedBy(inc).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).times(inc);
+}

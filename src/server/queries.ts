@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { accounts, approvalRequests, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { accounts, approvalRequests, invoices, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { jobProfitability } from "@/domain/finance/invoices";
 import { tripAdvances } from "@/domain/finance/payments";
@@ -9,6 +9,8 @@ import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { quantityDifference } from "@/domain/transport/trips";
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
+import { balanceSheet, profitAndLoss } from "@/domain/accounting/statements";
+import { dec, toStr } from "@/domain/money";
 
 /** Read models for screens. Every read checks permission server-side, like commands. */
 
@@ -156,5 +158,54 @@ export async function setupData(db: Db, actor: Actor) {
     documentRules: has("documents.configure")
       ? await db.select({ r: documentRequirements, type: documentTypes.name }).from(documentRequirements).innerJoin(documentTypes, eq(documentTypes.id, documentRequirements.documentTypeId)).where(eq(documentRequirements.companyId, c))
       : null,
+  };
+}
+
+/** Posted invoices/bills that still have an amount outstanding, with that amount. */
+export async function openInvoices(db: Db, actor: Actor) {
+  requirePermission(actor, "reports.financial.view");
+  const rows = await db
+    .select({
+      id: invoices.id,
+      no: invoices.invoiceNo,
+      kind: invoices.kind,
+      partner: businessPartners.name,
+      currency: invoices.currency,
+      total: invoices.total,
+      dueDate: invoices.dueDate,
+      paid: sql<string>`coalesce((select sum(p.amount) from payments p where p.invoice_id = ${invoices.id} and p.status = 'posted'), 0)`,
+    })
+    .from(invoices)
+    .innerJoin(businessPartners, eq(businessPartners.id, invoices.partnerId))
+    .where(and(eq(invoices.companyId, actor.companyId), eq(invoices.status, "posted")))
+    .orderBy(invoices.invoiceDate);
+  return rows
+    .map((r) => ({ ...r, outstanding: toStr(dec(r.total).minus(dec(r.paid))) }))
+    .filter((r) => dec(r.outstanding).gt(0));
+}
+
+export async function financeReports(db: Db, actor: Actor, from: string, to: string) {
+  requirePermission(actor, "reports.financial.view");
+  return {
+    pl: await profitAndLoss(db, actor.companyId, from, to),
+    bs: await balanceSheet(db, actor.companyId, to),
+  };
+}
+
+export async function financeOptions(db: Db, actor: Actor) {
+  requirePermission(actor, "invoices.create");
+  const c = actor.companyId;
+  return {
+    partners: await db
+      .select({ id: businessPartners.id, name: businessPartners.name, roles: sql<string[]>`array_agg(${partnerRoles.role})` })
+      .from(businessPartners)
+      .innerJoin(partnerRoles, eq(partnerRoles.partnerId, businessPartners.id))
+      .where(and(eq(businessPartners.companyId, c), eq(businessPartners.active, true)))
+      .groupBy(businessPartners.id)
+      .orderBy(businessPartners.name),
+    incomeAccounts: await db.select().from(accounts).where(and(eq(accounts.companyId, c), eq(accounts.type, "income"), eq(accounts.postable, true), eq(accounts.active, true))).orderBy(accounts.code),
+    costAccounts: await db.select().from(accounts).where(and(eq(accounts.companyId, c), inArray(accounts.type, ["expense", "asset"]), eq(accounts.postable, true), eq(accounts.active, true))).orderBy(accounts.code),
+    openJobs: await db.select({ id: jobs.id, jobNo: jobs.jobNo, name: jobs.name }).from(jobs).where(and(eq(jobs.companyId, c), inArray(jobs.status, ["open", "in_progress", "pending", "completed"]))).orderBy(desc(jobs.createdAt)).limit(200),
+    moneyAccounts: await db.select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency }).from(moneyAccounts).where(and(eq(moneyAccounts.companyId, c), eq(moneyAccounts.active, true))),
   };
 }

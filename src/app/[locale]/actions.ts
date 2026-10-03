@@ -29,8 +29,9 @@ function toInput(form: FormData): Record<string, unknown> {
   for (const [k, v] of form.entries()) {
     if (k.startsWith("__") || typeof v !== "string") continue;
     if (k.endsWith("[]")) {
+      // Arrays keep empty entries so parallel columns (e.g. invoice lines) stay aligned.
       const key = k.slice(0, -2);
-      out[key] = [...((out[key] as string[]) ?? []), v];
+      out[key] = [...((out[key] as string[]) ?? []), v.trim()];
     } else if (v.trim() !== "") out[k] = v.trim();
   }
   return out;

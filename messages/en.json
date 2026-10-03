@@ -173,7 +173,8 @@
   "NavLinks": {
     "approvals": "Approvals",
     "documents": "Documents",
-    "setup": "Setup"
+    "setup": "Setup",
+    "finance": "Finance"
   },
   "Setup": {
     "title": "Setup",
@@ -247,5 +248,45 @@
     "ruleActive": "Rule",
     "on": "On",
     "off": "Off"
+  },
+  "Finance": {
+    "title": "Finance",
+    "newInvoice": "New invoice or bill",
+    "kind": "Type",
+    "salesInvoice": "Customer invoice",
+    "bill": "Bill (we owe)",
+    "billFrom": "Bill from",
+    "supplier": "Supplier",
+    "transporter": "Transporter",
+    "driver": "Driver",
+    "partner": "Partner",
+    "currency": "Currency",
+    "dueDate": "Due date",
+    "externalRef": "Their invoice number",
+    "unitPrice": "Unit price",
+    "account": "Account",
+    "job": "Job",
+    "incomeAccounts": "Income",
+    "costAccounts": "Costs / recoverable",
+    "open": "Open invoices and bills",
+    "noneOpen": "Nothing outstanding.",
+    "number": "Number",
+    "total": "Total",
+    "outstanding": "Outstanding",
+    "recordPayment": "Record a payment",
+    "invoice": "Invoice / bill",
+    "reports": "Reports",
+    "from": "From",
+    "to": "To",
+    "show": "Show",
+    "pl": "Profit and loss",
+    "totalIncome": "Total income",
+    "totalExpenses": "Total expenses",
+    "netProfit": "Net profit",
+    "bs": "Balance sheet at {date}",
+    "unbalanced": "Not balanced",
+    "totalAssets": "Total assets",
+    "retainedEarnings": "Profit not yet closed",
+    "totalLE": "Liabilities + equity + profit"
   }
 }

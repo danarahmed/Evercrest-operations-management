@@ -1,9 +1,10 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { moneyAccounts } from "@/db/schema";
+import { invoices, moneyAccounts } from "@/db/schema";
 import { decideApproval } from "@/domain/approvals/approvals";
 import { defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
+import { createInvoice } from "@/domain/finance/invoices";
 import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
@@ -25,6 +26,32 @@ const currencyFromMoneyAccount: Prepare = async (db, actor, input) => {
     .from(moneyAccounts)
     .where(and(eq(moneyAccounts.id, String(input.moneyAccountId ?? "")), eq(moneyAccounts.companyId, actor.companyId)));
   return { ...input, currency: m?.currency };
+};
+
+/** Invoice lines arrive as parallel arrays (l_description[], l_quantity[], ...); empty rows are dropped. */
+const invoiceLines: Prepare = async (_db, _a, input) => {
+  const col = (k: string) => (input[k] as string[] | undefined) ?? [];
+  const desc = col("l_description");
+  const lines = desc
+    .map((description, i) => ({
+      description,
+      quantity: col("l_quantity")[i],
+      unitPrice: col("l_unitPrice")[i],
+      accountId: col("l_accountId")[i],
+      jobId: col("l_jobId")[i] || undefined,
+    }))
+    .filter((l) => l.description && l.quantity && l.unitPrice);
+  const rest = Object.fromEntries(Object.entries(input).filter(([k]) => !k.startsWith("l_")));
+  return { ...rest, lines };
+};
+
+/** Paying/receiving against an invoice: direction, purpose and currency follow the invoice and the chosen account. */
+const invoicePayment: Prepare = async (db, actor, input) => {
+  const [inv] = await db.select().from(invoices).where(and(eq(invoices.id, String(input.invoiceId ?? "")), eq(invoices.companyId, actor.companyId)));
+  const withCurrency = await currencyFromMoneyAccount(db, actor, input);
+  return inv
+    ? { ...withCurrency, direction: inv.kind === "sales" ? "in" : "out", purpose: inv.kind === "sales" ? "customer_receipt" : "supplier_payment" }
+    : withCurrency;
 };
 
 /** Build a settings value from prefixed form fields, e.g. "v_advances" → { advances }. Empty fields are dropped. */
@@ -53,6 +80,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "documents.review": { command: reviewDocument },
   "documents.define_type": { command: defineDocumentType },
   "approvals.decide": { command: decideApproval },
+  "invoices.create": { command: createInvoice, prepare: invoiceLines },
+  "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
   "money_accounts.create": { command: createMoneyAccount },
   "job_types.define": { command: defineJobType },

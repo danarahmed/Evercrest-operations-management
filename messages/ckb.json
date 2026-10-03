@@ -173,7 +173,8 @@
   "NavLinks": {
     "approvals": "پەسەندکردنەکان",
     "documents": "بەڵگەنامەکان",
-    "setup": "ڕێکخستن"
+    "setup": "ڕێکخستن",
+    "finance": "دارایی"
   },
   "Setup": {
     "title": "ڕێکخستن",
@@ -247,5 +248,45 @@
     "ruleActive": "یاسا",
     "on": "چالاک",
     "off": "ناچالاک"
+  },
+  "Finance": {
+    "title": "دارایی",
+    "newInvoice": "پسوولەی نوێ",
+    "kind": "جۆر",
+    "salesInvoice": "پسوولەی کڕیار",
+    "bill": "پسوولەی قەرزی ئێمە",
+    "billFrom": "لەلایەن",
+    "supplier": "دابینکەر",
+    "transporter": "گواستنەوەکار",
+    "driver": "شۆفێر",
+    "partner": "لایەن",
+    "currency": "دراو",
+    "dueDate": "بەرواری کۆتایی",
+    "externalRef": "ژمارەی پسوولەی ئەوان",
+    "unitPrice": "نرخی یەکە",
+    "account": "هەژمار",
+    "job": "کار",
+    "incomeAccounts": "داهات",
+    "costAccounts": "تێچوون / گەڕاوە",
+    "open": "پسوولە کراوەکان",
+    "noneOpen": "هیچ بڕێکی ماوە نییە.",
+    "number": "ژمارە",
+    "total": "کۆی گشتی",
+    "outstanding": "ماوە",
+    "recordPayment": "تۆمارکردنی پارەدان",
+    "invoice": "پسوولە",
+    "reports": "ڕاپۆرتەکان",
+    "from": "لە",
+    "to": "بۆ",
+    "show": "پیشاندان",
+    "pl": "قازانج و زیان",
+    "totalIncome": "کۆی داهات",
+    "totalExpenses": "کۆی خەرجی",
+    "netProfit": "قازانجی پوخت",
+    "bs": "باڵانسی گشتی لە {date}",
+    "unbalanced": "هاوسەنگ نییە",
+    "totalAssets": "کۆی سامان",
+    "retainedEarnings": "قازانجی دانەخراو",
+    "totalLE": "قەرز + خاوەندارێتی + قازانج"
   }
 }

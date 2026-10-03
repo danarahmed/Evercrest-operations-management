@@ -173,7 +173,8 @@
   "NavLinks": {
     "approvals": "الموافقات",
     "documents": "المستندات",
-    "setup": "الإعدادات"
+    "setup": "الإعدادات",
+    "finance": "المالية"
   },
   "Setup": {
     "title": "الإعدادات",
@@ -247,5 +248,45 @@
     "ruleActive": "القاعدة",
     "on": "مفعّلة",
     "off": "معطّلة"
+  },
+  "Finance": {
+    "title": "المالية",
+    "newInvoice": "فاتورة جديدة",
+    "kind": "النوع",
+    "salesInvoice": "فاتورة عميل",
+    "bill": "فاتورة مستحقة علينا",
+    "billFrom": "صادرة من",
+    "supplier": "مورد",
+    "transporter": "ناقل",
+    "driver": "سائق",
+    "partner": "الطرف",
+    "currency": "العملة",
+    "dueDate": "تاريخ الاستحقاق",
+    "externalRef": "رقم فاتورتهم",
+    "unitPrice": "سعر الوحدة",
+    "account": "الحساب",
+    "job": "العمل",
+    "incomeAccounts": "الإيرادات",
+    "costAccounts": "التكاليف / المستردة",
+    "open": "الفواتير المفتوحة",
+    "noneOpen": "لا توجد مبالغ مستحقة.",
+    "number": "الرقم",
+    "total": "الإجمالي",
+    "outstanding": "المتبقي",
+    "recordPayment": "تسجيل دفعة",
+    "invoice": "الفاتورة",
+    "reports": "التقارير",
+    "from": "من",
+    "to": "إلى",
+    "show": "عرض",
+    "pl": "الأرباح والخسائر",
+    "totalIncome": "إجمالي الإيرادات",
+    "totalExpenses": "إجمالي المصاريف",
+    "netProfit": "صافي الربح",
+    "bs": "الميزانية العمومية في {date}",
+    "unbalanced": "غير متوازنة",
+    "totalAssets": "إجمالي الأصول",
+    "retainedEarnings": "ربح لم يُقفل بعد",
+    "totalLE": "الالتزامات + حقوق الملكية + الربح"
   }
 }

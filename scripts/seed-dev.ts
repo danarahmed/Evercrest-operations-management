@@ -30,7 +30,7 @@ for (const [code, name, type, currency] of [
   ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"],
   ["1300", "Advances to drivers/transporters", "asset"], ["1900", "Currency exchange", "asset"], ["2100", "Supplier payables", "liability"],
   ["2200", "Payables to transporters", "liability"], ["3000", "Capital", "equity"], ["4000", "Transport revenue", "income"],
-  ["5000", "Transport costs", "expense"], ["5100", "Field expenses", "expense"],
+  ["5000", "Transport costs", "expense"], ["5100", "Field expenses", "expense"], ["5200", "Fuel and vehicle costs", "expense"], ["5300", "Permits and fees", "expense"],
   ["2300", "Payables to drivers", "liability"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"],
   ["5010", "Transporter costs", "expense"], ["5900", "Rounding differences", "expense"], ["5950", "Bad debts written off", "expense"],
 ] as const) acc[code] = (await run(createAccount, { code, name, type, currency })).id;
@@ -58,7 +58,8 @@ await rate({ rateType: "allowance", basis: "quantity", amount: "0.20", unit: "MT
 await rate({ rateType: "shortage_fine", basis: "quantity", amount: "600000", currency: "IQD", unit: "MT" });
 await rate({ rateType: "customer_price", basis: "actual_qty", amount: "55000", currency: "IQD", unit: "MT", customerId: northOil });
 await rate({ rateType: "transporter_fee", basis: "per_trip", amount: "100000", currency: "IQD", transporterId: zagros });
-const ptr = (await run(defineJobType, { code: "PTR", name: "Petroleum transportation", defaultCapabilities: ["transportation", "advances", "documents", "billing"] })).id;
+const ptr = (await run(defineJobType, { code: "PTR", name: "Petroleum transportation", defaultCapabilities: ["transportation", "advances", "documents", "billing", "expenses"] })).id;
+const kurdSupply = (await run(createPartner, { kind: "organization", name: "Kurd Supply Co", roles: ["supplier"] })).id;
 const manifest = (await run(defineDocumentType, { code: "MANIFEST", name: "Manifest" })).id;
 await run(setDocumentRequirement, { documentTypeId: manifest, scope: "job_type", scopeId: ptr, appliesTo: "trip", requiredBefore: "completed", active: true, reason: "policy" });
 
@@ -74,6 +75,8 @@ await run(recordLoading, { tripId: t2.id, loadingDate: d(6), loadedQty: "36000",
 await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: usd, amount: "200", currency: "USD", paymentDate: d(9), method: "cash", tripId: t1.id });
 await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: iqd, amount: "250000", currency: "IQD", paymentDate: d(6), method: "cash", tripId: t2.id });
 await run(createInvoice, { kind: "sales", partnerId: northOil, currency: "USD", invoiceDate: d(7), dueDate: d(2), lines: [{ description: "Site support", quantity: "1", unitPrice: "3000", accountId: acc["4000"], jobId: job.id }] });
+await run(recordPayment, { direction: "out", purpose: "expense", moneyAccountId: iqd, amount: "175000", currency: "IQD", paymentDate: d(8), method: "cash", jobId: job.id, counterAccountId: acc["5300"], notes: "Field entry permit", reference: "R-554" });
+await run(createInvoice, { kind: "bill", billFrom: "supplier", partnerId: kurdSupply, currency: "IQD", invoiceDate: d(5), dueDate: d(-25), externalRef: "KS-88", lines: [{ description: "Truck tyre repair", quantity: "1", unitPrice: "120000", accountId: acc["5200"], jobId: job.id }] });
 // A second person so approvals (four-eyes) can be tried, and a payment limit that triggers them.
 const finance = await run<{ id: string }>(createUser, { email: "finance@evercrest.local", displayName: "Finance Manager" });
 const role = await run<{ id: string }>(defineRole, { code: "finance", name: "Finance", permissions: ["jobs.view", "approvals.decide", "documents.verify", "payments.create", "reports.financial.view"], reason: "dev setup" });

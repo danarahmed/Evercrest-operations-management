@@ -91,6 +91,37 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
         </>
       )}
 
+      {w.transactions && (w.transactions.expenses.length > 0 || w.transactions.bills.length > 0 || w.transactions.invoices.length > 0) && (
+        <>
+          <h2>{t("transactions")}</h2>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t("txDate")}</th><th>{t("txType")}</th><th>{t("txNumber")}</th><th>{t("txDetail")}</th><th>{t("txParty")}</th><th className="num">{t("txAmount")}</th></tr></thead>
+              <tbody>
+                {w.transactions.invoices.map((x) => (
+                  <tr key={x.id} className={x.status !== "posted" ? "muted" : ""}>
+                    <td>{x.date}</td><td>{t("txInvoice")}</td><td dir="ltr"><Link href={`/${locale}/finance/invoices/${x.id}`}>{x.no}</Link></td><td>—</td><td>{x.partner}</td>
+                    <td className="num">{formatMoney(x.amount, x.currency, locale)}</td>
+                  </tr>
+                ))}
+                {w.transactions.bills.map((x) => (
+                  <tr key={x.id} className={x.status !== "posted" ? "muted" : ""}>
+                    <td>{x.date}</td><td>{t("txBill")}</td><td dir="ltr"><Link href={`/${locale}/finance/invoices/${x.id}`}>{x.no}</Link></td><td>—</td><td>{x.partner}</td>
+                    <td className="num">{formatMoney(`-${x.amount}`, x.currency, locale)}</td>
+                  </tr>
+                ))}
+                {w.transactions.expenses.map((x) => (
+                  <tr key={x.id} className={x.status !== "posted" ? "muted" : ""}>
+                    <td>{x.date}</td><td>{t("txExpense")}</td><td dir="ltr">{x.no}</td><td>{x.account}{x.notes ? ` · ${x.notes}` : ""}{x.reference ? ` (${x.reference})` : ""}</td><td>{x.partner ?? "—"}</td>
+                    <td className="num">{formatMoney(`-${x.amount}`, x.currency, locale)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       {w.profitability && (
         <>
           <h2>{t("profit")}</h2>
@@ -112,6 +143,25 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
                 </tbody>
               </table>
             </div>
+          )}
+          {w.breakdown && w.breakdown.length > 0 && (
+            <details className="panel">
+              <summary>{t("breakdown")}</summary>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>{t("currency")}</th><th>{t("account")}</th><th className="num">{t("revenue")}</th><th className="num">{t("costs")}</th></tr></thead>
+                  <tbody>
+                    {w.breakdown.map((b) => (
+                      <tr key={`${b.code}${b.currency}`}>
+                        <td>{b.currency}</td><td>{b.code} · {b.name}</td>
+                        <td className="num">{b.type === "income" ? formatMoney(b.amount, b.currency, locale) : ""}</td>
+                        <td className="num">{b.type === "expense" ? formatMoney(b.amount, b.currency, locale) : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           )}
         </>
       )}

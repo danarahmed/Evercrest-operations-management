@@ -4,6 +4,7 @@ import type { Db } from "@/db/client";
 import { accounts, approvalRequests, catalogItems, invoiceLines, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
+import { jobBreakdown, jobProfitReport, jobTransactions, monthlySummary, totalsByCurrency, workQueues } from "@/domain/management/reports";
 import { awaitingStatement, listStatements, openStatementDebts, statementDetail } from "@/domain/transport/statements";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
@@ -77,6 +78,8 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     documents: await documentChecklist(db, job),
     // Financial figures only for people allowed to see them.
     profitability: can(actor, "reports.financial.view") ? await jobProfitability(db, job.id) : null,
+    breakdown: can(actor, "reports.financial.view") ? await jobBreakdown(db, job.id) : null,
+    transactions: can(actor, "reports.financial.view") ? await jobTransactions(db, job.id) : null,
   };
 }
 
@@ -98,6 +101,17 @@ export async function formOptions(db: Db, actor: Actor) {
     documentTypes: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, actor.companyId)).orderBy(documentTypes.name),
     units: await db.select({ code: units.code, name: units.name }).from(units).orderBy(units.code),
     products: await db.select({ id: catalogItems.id, name: catalogItems.name }).from(catalogItems).where(and(eq(catalogItems.companyId, actor.companyId), eq(catalogItems.kind, "product"), eq(catalogItems.active, true))).orderBy(catalogItems.name),
+    suppliers: await db
+      .selectDistinct({ id: businessPartners.id, name: businessPartners.name })
+      .from(businessPartners)
+      .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "supplier")))
+      .where(and(eq(businessPartners.companyId, actor.companyId), eq(businessPartners.active, true)))
+      .orderBy(businessPartners.name),
+    expenseAccounts: await db
+      .select({ id: accounts.id, code: accounts.code, name: accounts.name })
+      .from(accounts)
+      .where(and(eq(accounts.companyId, actor.companyId), eq(accounts.type, "expense"), eq(accounts.postable, true), eq(accounts.active, true)))
+      .orderBy(accounts.code),
     users: await db.select({ id: users.id, name: users.displayName }).from(users).where(and(eq(users.companyId, actor.companyId), eq(users.active, true))).orderBy(users.displayName),
   };
 }
@@ -266,4 +280,22 @@ export async function statementView(db: Db, actor: Actor, statementId: string) {
 export async function invoiceView(db: Db, actor: Actor, invoiceId: string) {
   requirePermission(actor, "reports.financial.view");
   return invoiceDetail(db, actor.companyId, invoiceId);
+}
+
+/** Reports page: job profitability for a period (optionally one customer), monthly summary, waiting work. */
+export async function reportsData(db: Db, actor: Actor, opts: { from: string; to: string; customerId?: string }) {
+  requirePermission(actor, "reports.financial.view");
+  const jobsReport = await jobProfitReport(db, actor.companyId, opts);
+  return {
+    jobs: jobsReport,
+    totals: totalsByCurrency(jobsReport),
+    monthly: await monthlySummary(db, actor.companyId, opts.from, opts.to),
+    queues: await workQueues(db, actor.companyId),
+    customers: await db
+      .select({ id: businessPartners.id, name: businessPartners.name })
+      .from(businessPartners)
+      .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "customer")))
+      .where(eq(businessPartners.companyId, actor.companyId))
+      .orderBy(businessPartners.name),
+  };
 }

@@ -76,7 +76,19 @@
     "revenue": "Revenue",
     "costs": "Costs",
     "profitCol": "Profit",
-    "noMoney": "No revenue or costs recorded yet."
+    "noMoney": "No revenue or costs recorded yet.",
+    "transactions": "Costs and income",
+    "txDate": "Date",
+    "txType": "Type",
+    "txNumber": "Number",
+    "txDetail": "Detail",
+    "txParty": "Party",
+    "txAmount": "Amount",
+    "txInvoice": "Customer invoice",
+    "txBill": "Supplier bill",
+    "txExpense": "Expense",
+    "breakdown": "Where the money comes from and goes",
+    "account": "Account"
   },
   "Codes": {
     "transport_awaiting_loading": "Waiting for loading of {trip}",
@@ -154,7 +166,18 @@
     "newStatus": "New status",
     "reason": "Reason",
     "recordArrival": "Record arrival",
-    "product": "Product"
+    "product": "Product",
+    "recordExpense": "Record an expense (paid now)",
+    "expenseType": "Expense type",
+    "paidTo": "Paid to",
+    "receiptNo": "Receipt no.",
+    "supplierBill": "Supplier bill for this job (pay later)",
+    "supplierBillHelp": "The supplier is paid later from Finance; the cost counts on this job now.",
+    "supplier": "Supplier",
+    "supplierBillNo": "Supplier's bill no.",
+    "unitPrice": "Unit price",
+    "currency": "Currency",
+    "dueDate": "Due date"
   },
   "Approvals": {
     "title": "Approvals",
@@ -180,7 +203,8 @@
     "documents": "Documents",
     "setup": "Setup",
     "finance": "Finance",
-    "statements": "Pay statements"
+    "statements": "Pay statements",
+    "reports": "Reports"
   },
   "Setup": {
     "title": "Setup",
@@ -463,5 +487,34 @@
     "outstanding": "Outstanding",
     "cancelled": "Cancelled",
     "print": "Print"
+  },
+  "Reports": {
+    "title": "Reports",
+    "print": "Print",
+    "from": "From",
+    "to": "To",
+    "customer": "Customer",
+    "allCustomers": "All customers",
+    "show": "Show",
+    "jobProfit": "Job profitability",
+    "jobProfitHelp": "Revenue minus direct costs of each job in the period, from the books. Each currency is shown separately.",
+    "noData": "Nothing recorded in this period.",
+    "job": "Job",
+    "status": "Status",
+    "currency": "Currency",
+    "revenue": "Revenue",
+    "costs": "Costs",
+    "profit": "Profit",
+    "margin": "Margin",
+    "total": "Total",
+    "monthly": "Monthly results",
+    "monthlyHelp": "All income and costs of the company per month (with or without a job).",
+    "month": "Month",
+    "unsettled": "Discharged, not settled ({count})",
+    "unbilled": "Discharged, not invoiced ({count})",
+    "allDone": "Nothing waiting.",
+    "trip": "Trip",
+    "driver": "Driver",
+    "discharged": "Discharged"
   }
 }

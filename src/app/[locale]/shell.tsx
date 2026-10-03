@@ -26,6 +26,7 @@ export async function Shell({ locale, userName, path, permissions, wide, childre
         <nav>
           {(permissions.has("reports.financial.view") || permissions.has("invoices.create")) && <Link href={`/${locale}/finance`}>{nl("finance")}</Link>}
           {permissions.has("settlements.create") && <Link href={`/${locale}/statements`}>{nl("statements")}</Link>}
+          {permissions.has("reports.financial.view") && <Link href={`/${locale}/reports`}>{nl("reports")}</Link>}
           {permissions.has("approvals.decide") && <Link href={`/${locale}/approvals`}>{nl("approvals")}</Link>}
           {permissions.has("documents.verify") && <Link href={`/${locale}/documents`}>{nl("documents")}</Link>}
           {["partners.manage", "accounts.manage", "settings.manage", "job_types.manage", "documents.configure", "rates.manage", "catalog.manage"].some((p) => permissions.has(p)) && (

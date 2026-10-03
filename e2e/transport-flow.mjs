@@ -42,7 +42,7 @@ await page.waitForSelector("text=Saved.");
 // Advance in IQD
 await page.reload();
 await page.click("summary:has-text('Pay an advance')");
-const adv = page.locator("form:has(input[name=amount])");
+const adv = page.locator("form:has(input[name=purpose][value=advance])");
 await adv.locator("select[name=moneyAccountId]").selectOption({ label: "Main safe IQD (IQD)" });
 await adv.locator("input[name=amount]").fill("150000");
 await adv.locator("button.primary").click();
@@ -60,7 +60,7 @@ await page.waitForSelector("text=Discharge date cannot be before the loading dat
 // Advance above the limit → held for approval → approved by a different person
 await page.reload();
 await page.click("summary:has-text('Pay an advance')");
-const big = page.locator("form:has(input[name=amount])");
+const big = page.locator("form:has(input[name=purpose][value=advance])");
 await big.locator("select[name=moneyAccountId]").selectOption({ label: "Main safe USD (USD)" });
 await big.locator("input[name=amount]").fill("2500");
 await big.locator("button.primary").click();

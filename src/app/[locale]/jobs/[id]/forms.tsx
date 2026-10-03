@@ -105,6 +105,50 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
         </details>
       )}
 
+      {capabilities.includes("expenses") && options.moneyAccounts.length > 0 && options.expenseAccounts.length > 0 && (
+        <details className="panel">
+          <summary>{t("recordExpense")}</summary>
+          <ActionForm command="payments.record" locale={locale} idempotencyKey={key()} submitLabel={t("save")} summary={`Expense for ${jobNo}`}>
+            <input type="hidden" name="direction" value="out" />
+            <input type="hidden" name="purpose" value="expense" />
+            <input type="hidden" name="jobId" value={jobId} />
+            <div className="grid2">
+              <label>{t("expenseType")}<select name="counterAccountId" required>{options.expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
+              <label>{t("description")}<input name="notes" required /></label>
+              <label>{t("paidTo")}<select name="partnerId" defaultValue=""><option value="">—</option>{options.suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+              <label>{t("receiptNo")}<input name="reference" dir="ltr" /></label>
+              <label>{t("paidFrom")}<select name="moneyAccountId" required>{options.moneyAccounts.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.currency})</option>)}</select></label>
+              <label>{t("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
+              <label>{t("date")}<input type="date" name="paymentDate" required defaultValue={today()} /></label>
+              <label>{t("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((m) => <option key={m} value={m}>{t(m)}</option>)}</select></label>
+            </div>
+          </ActionForm>
+        </details>
+      )}
+
+      {capabilities.includes("expenses") && options.suppliers.length > 0 && options.expenseAccounts.length > 0 && (
+        <details className="panel">
+          <summary>{t("supplierBill")}</summary>
+          <p className="muted">{t("supplierBillHelp")}</p>
+          <ActionForm command="invoices.create" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+            <input type="hidden" name="kind" value="bill" />
+            <input type="hidden" name="billFrom" value="supplier" />
+            <input type="hidden" name="l_jobId[]" value={jobId} />
+            <div className="grid2">
+              <label>{t("supplier")}<select name="partnerId" required>{options.suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+              <label>{t("supplierBillNo")}<input name="externalRef" dir="ltr" /></label>
+              <label>{t("expenseType")}<select name="l_accountId[]" required>{options.expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
+              <label>{t("description")}<input name="l_description[]" required /></label>
+              <label>{t("quantity")}<input name="l_quantity[]" required inputMode="decimal" dir="ltr" defaultValue="1" /></label>
+              <label>{t("unitPrice")}<input name="l_unitPrice[]" required inputMode="decimal" dir="ltr" /></label>
+              <label>{t("currency")}<select name="currency" required><option value="IQD">IQD</option><option value="USD">USD</option></select></label>
+              <label>{t("date")}<input type="date" name="invoiceDate" required defaultValue={today()} /></label>
+              <label>{t("dueDate")}<input type="date" name="dueDate" /></label>
+            </div>
+          </ActionForm>
+        </details>
+      )}
+
       {options.documentTypes.length > 0 && (
         <details className="panel">
           <summary>{t("recordDocument")}</summary>

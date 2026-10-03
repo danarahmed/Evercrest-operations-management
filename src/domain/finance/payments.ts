@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, invoices, journalLines, moneyAccounts, payments, payStatementItems, payStatements } from "@/db/schema";
+import { accounts, invoiceLines, invoices, journalLines, moneyAccounts, payments, payStatementItems, payStatements } from "@/db/schema";
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
@@ -292,5 +292,26 @@ registerCapabilityModule({
   },
 });
 
+
+// Expenses on a job: paid now (payment) or on credit (supplier bill lines carrying the job).
+registerCapabilityModule({
+  capability: "expenses",
+  blockers: async () => [],
+  async inUse(tx: Db, job: Job) {
+    const [p] = await tx
+      .select({ id: payments.id })
+      .from(payments)
+      .where(and(eq(payments.jobId, job.id), eq(payments.purpose, "expense"), eq(payments.status, "posted")))
+      .limit(1);
+    if (p) return true;
+    const [b] = await tx
+      .select({ id: invoiceLines.id })
+      .from(invoiceLines)
+      .innerJoin(invoices, eq(invoices.id, invoiceLines.invoiceId))
+      .where(and(eq(invoiceLines.jobId, job.id), eq(invoices.kind, "bill"), eq(invoices.status, "posted")))
+      .limit(1);
+    return !!b;
+  },
+});
 
 registerApprovable(recordPayment);

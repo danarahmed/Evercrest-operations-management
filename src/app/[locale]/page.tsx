@@ -39,7 +39,10 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
         </ul>
       )}
 
-      <h2>{t("activeJobs")}</h2>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h2>{t("activeJobs")}</h2>
+        <Link href={`/${locale}/jobs/new`}>+ {t("newJob")}</Link>
+      </div>
       {jobList.length === 0 ? (
         <p className="card muted">{t("noJobs")}</p>
       ) : (

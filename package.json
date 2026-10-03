@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "e2e": "node e2e/transport-flow.mjs"
   },
   "dependencies": {
     "decimal.js": "^10.6.0",

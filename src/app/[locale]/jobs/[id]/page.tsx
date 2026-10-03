@@ -4,7 +4,8 @@ import Link from "next/link";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { describe, formatMoney, formatQty } from "@/lib/format";
-import { jobWorkspace } from "@/server/queries";
+import { formOptions, jobWorkspace } from "@/server/queries";
+import { JobForms } from "./forms";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
 
@@ -23,6 +24,7 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
   const ds = await getTranslations({ locale, namespace: "DocState" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const caps = w.job.capabilities as string[];
+  const options = await formOptions(db, actor);
 
   return (
     <Shell locale={locale} userName={user.displayName} path={`/jobs/${id}`}>
@@ -32,6 +34,9 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
         <p className="muted">{w.customer} · <span className="badge">{st(w.job.status)}</span></p>
         <p>{t("nextAction")}: <span className="next">{w.nextAction ? describe(codes, w.nextAction.code, w.nextAction.params, w.nextAction.text, locale) : t("none")}</span></p>
       </div>
+      {!["financially_closed", "cancelled"].includes(w.job.status) && (
+        <JobForms locale={locale} jobId={w.job.id} jobNo={w.job.jobNo} capabilities={caps} tripList={w.trips.map((x) => x.trip)} options={options} />
+      )}
 
       {(caps.includes("transportation") || w.trips.length > 0) && (
         <>

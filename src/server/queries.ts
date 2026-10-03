@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { businessPartners, jobs, jobTypes, trips, trucks } from "@/db/schema";
+import { businessPartners, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { jobProfitability } from "@/domain/finance/invoices";
 import { tripAdvances } from "@/domain/finance/payments";
@@ -53,3 +53,25 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     profitability: can(actor, "reports.financial.view") ? await jobProfitability(db, job.id) : null,
   };
 }
+
+/** Choices for forms. Only active records. */
+export async function formOptions(db: Db, actor: Actor) {
+  const partnersWith = async (role: "driver" | "transporter" | "customer") =>
+    db
+      .select({ id: businessPartners.id, name: businessPartners.name })
+      .from(businessPartners)
+      .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, role)))
+      .where(and(eq(businessPartners.companyId, actor.companyId), eq(businessPartners.active, true)))
+      .orderBy(businessPartners.name);
+  return {
+    drivers: await partnersWith("driver"),
+    transporters: await partnersWith("transporter"),
+    customers: await partnersWith("customer"),
+    jobTypes: await db.select({ id: jobTypes.id, name: jobTypes.name }).from(jobTypes).where(eq(jobTypes.companyId, actor.companyId)).orderBy(jobTypes.name),
+    moneyAccounts: await db.select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency }).from(moneyAccounts).where(and(eq(moneyAccounts.companyId, actor.companyId), eq(moneyAccounts.active, true))).orderBy(moneyAccounts.name),
+    documentTypes: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, actor.companyId)).orderBy(documentTypes.name),
+    units: await db.select({ code: units.code, name: units.name }).from(units).orderBy(units.code),
+    users: await db.select({ id: users.id, name: users.displayName }).from(users).where(and(eq(users.companyId, actor.companyId), eq(users.active, true))).orderBy(users.displayName),
+  };
+}
+export type FormOptions = Awaited<ReturnType<typeof formOptions>>;

@@ -4,13 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # COMPANY ERP — FLEXIBLE PROJECT / JOB ARCHITECTURE
 
-## 0. Repository Status
+## 0. Repository Status, Stack and Commands
 
-The repository currently contains no application code. The technology stack, build/lint/test commands, and code layout have **not yet been decided**.
+**Scope:** this repository is the **Evercrest Operations ERP** only. Every instruction given in this repository is for this ERP. Never mix in requirements, entities or code from any other project (e.g. café/bakery/POS systems).
 
-- Do not assume a stack. Propose one (with reasoning against sections 36–38) and get confirmation before scaffolding.
-- Once code exists, replace this section with: the stack, how to install, run, lint, test (including how to run a single test), and the actual module layout.
-- Before any large build-out, record the build/integrate decision for accounting, inventory and CRM and the system of record for each data category (sections 36–38).
+**Decisions (confirmed by the owner):**
+- Stack: Next.js 16 (TypeScript) + PostgreSQL (Supabase in production) + Drizzle ORM; deployed on Vercel.
+- Accounting is **built in-house** (double-entry ledger inside the ERP; no Zoho).
+- Currencies: **IQD and USD**, both first-class. Every amount stores its currency. Reports keep each currency separate; nothing is converted into a single total. Journal entries must balance **per currency**; cross-currency deals go through a currency-exchange account.
+- Languages: English (`en`), Arabic (`ar`, RTL), Kurdish Sorani (`ckb`, RTL).
+- Up to ~20 users.
+
+**Commands:**
+```
+npm install
+npm test                         # all tests (Vitest, in-process Postgres via PGlite, real migrations)
+npx vitest run tests/ledger.test.ts -t "reversal"   # one file / one test
+npm run typecheck
+npm run build
+npm run dev
+npm run db:generate -- --name <change>   # new migration from schema changes (src/db/schema)
+npx drizzle-kit generate --custom --name <x>   # hand-written SQL migration (triggers, seed data)
+DATABASE_URL=... npm run db:migrate      # apply migrations to a real database
+```
+
+**Architecture:** see `docs/architecture.md` (layers, shared engines, phase plan). Key rules:
+- Every state change is a command run through `runCommand` (`src/server/command.ts`): validation, server-side permission check, idempotency key, one DB transaction, mandatory audit event.
+- Journal rows are written only by `postEntry` (`src/domain/accounting/ledger.ts`). Operational modules call it inside their own command.
+- Database triggers (`src/db/migrations/0001_foundation_guards.sql`) enforce append-only audit/ledger/rates, per-currency balance, and period locks.
+- Money: `numeric` columns, `decimal.js` in code (`src/domain/money.ts`); never JS floats.
 
 ---
 

@@ -1,7 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, journalLines, moneyAccounts, payments } from "@/db/schema";
+import { accounts, invoices, journalLines, moneyAccounts, payments } from "@/db/schema";
+import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
@@ -57,6 +58,10 @@ export const recordPayment = defineCommand({
     partnerId: uuid.nullish(),
     jobId: uuid.nullish(),
     tripId: uuid.nullish(),
+    /** Settle this invoice (customer receipt or bill payment). */
+    invoiceId: uuid.nullish(),
+    /** Expense account for a direct expense paid now. */
+    counterAccountId: uuid.nullish(),
     reference: z.string().nullish(),
     notes: z.string().nullish(),
   }),
@@ -86,7 +91,32 @@ export const recordPayment = defineCommand({
         throw new ValidationError("Advances are not enabled for this job");
     }
 
-    const counter = await counterAccount(tx, actor.companyId, input.purpose, input.direction);
+    let counter: typeof accounts.$inferSelect;
+    if (input.invoiceId) {
+      // Row lock: concurrent payments on one invoice are serialized, so it cannot be overpaid.
+      const [inv] = await tx.select().from(invoices).where(and(eq(invoices.id, input.invoiceId), eq(invoices.companyId, actor.companyId))).for("update");
+      if (!inv) throw new NotFound("invoice", input.invoiceId);
+      if (inv.status !== "posted") throw new Conflict("Invoice is cancelled");
+      const expected = inv.kind === "sales" ? { direction: "in", purpose: "customer_receipt" } : { direction: "out", purpose: "supplier_payment" };
+      if (input.direction !== expected.direction || input.purpose !== expected.purpose)
+        throw new ValidationError(`An ${inv.kind === "sales" ? "invoice is settled by a customer receipt" : "bill is settled by a supplier payment"}`);
+      if (inv.currency !== input.currency)
+        throw new ValidationError(`${inv.invoiceNo} is in ${inv.currency}; pay it in ${inv.currency} (or record a currency exchange first)`);
+      if (partnerId && partnerId !== inv.partnerId) throw new ValidationError("Payment partner differs from the invoice partner");
+      partnerId = inv.partnerId;
+      const outstanding = dec(await invoiceOutstanding(tx, inv.id));
+      if (dec(input.amount).gt(outstanding))
+        throw new ValidationError(`Payment exceeds the outstanding ${toStr(outstanding)} ${inv.currency} on ${inv.invoiceNo}`);
+      [counter] = await tx.select().from(accounts).where(eq(accounts.id, inv.balanceAccountId));
+    } else if (input.purpose === "expense") {
+      if (input.direction !== "out") throw new ValidationError("An expense is money paid out");
+      if (!input.counterAccountId) throw new ValidationError("Choose the expense account");
+      const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, input.counterAccountId), eq(accounts.companyId, actor.companyId)));
+      if (!acc || acc.type !== "expense" || !acc.postable) throw new ValidationError("Choose a postable expense account");
+      counter = acc;
+    } else {
+      counter = await counterAccount(tx, actor.companyId, input.purpose, input.direction);
+    }
     if (input.purpose === "advance") {
       if (input.direction !== "out") throw new ValidationError("An advance is money paid out");
       if (!partnerId) throw new ValidationError("An advance needs a payee");
@@ -94,7 +124,8 @@ export const recordPayment = defineCommand({
 
     const paymentNo = await nextNumber(tx, actor.companyId, input.direction === "out" ? "PAY" : "RCV", Number(input.paymentDate.slice(0, 4)));
     const cashSide = { accountId: money.ledgerAccountId, currency: input.currency, jobId };
-    const otherSide = { accountId: counter.id, currency: input.currency, partnerId, jobId };
+    // Expenses carry the job (cost) but no partner balance; balance-sheet sides carry the partner.
+    const otherSide = { accountId: counter.id, currency: input.currency, partnerId: counter.type === "expense" ? null : partnerId, jobId };
     const entry = await postEntry(ctx, {
       entryDate: input.paymentDate,
       description: `${paymentNo} ${input.purpose}${input.reference ? ` (${input.reference})` : ""}`,
@@ -107,7 +138,7 @@ export const recordPayment = defineCommand({
     });
     const [row] = await tx
       .insert(payments)
-      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
+      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, invoiceId: input.invoiceId ?? null, counterAccountId: counter.id, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
       .returning();
     await audit({ action: "payments.record", entityType: "payment", entityId: row.id, after: { paymentNo, ...input, partnerId, jobId } });
     return { id: row.id, paymentNo, journalEntryId: entry.id };

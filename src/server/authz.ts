@@ -31,6 +31,8 @@ export const PERMISSIONS = [
   "documents.configure",
   "documents.record",
   "documents.verify",
+  "invoices.create",
+  "invoices.cancel",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

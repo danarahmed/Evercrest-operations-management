@@ -64,3 +64,10 @@ td.wrap, td.next { white-space: normal; }
 td .form { padding: 0; border: 0; background: none; box-shadow: none; margin: 0; }
 td .form button { padding: 4px 10px; font-size: 13px; }
 td details summary { cursor: pointer; font-size: 13px; }
+/* Sub-navigation (finance area) */
+.subnav { display: flex; gap: 4px; flex-wrap: wrap; margin-block-end: 12px; border-block-end: 1px solid var(--border); }
+.subnav a { padding: 8px 12px; text-decoration: none; border-block-end: 2px solid transparent; }
+.subnav a.active { border-block-end-color: var(--accent); font-weight: 600; }
+td .form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+td .form input, td .form select { padding: 4px 8px; font-size: 13px; }
+td .form .alert { flex-basis: 100%; }

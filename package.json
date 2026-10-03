@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "e2e": "node e2e/settlement-flow.mjs && node e2e/transport-flow.mjs && node e2e/setup-flow.mjs && node e2e/finance-flow.mjs"
+    "e2e": "node e2e/settlement-flow.mjs && node e2e/transport-flow.mjs && node e2e/setup-flow.mjs && node e2e/finance-flow.mjs && node e2e/books-flow.mjs"
   },
   "dependencies": {
     "decimal.js": "^10.6.0",

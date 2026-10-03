@@ -124,6 +124,15 @@ export const recordPayment = defineCommand({
       const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, input.counterAccountId), eq(accounts.companyId, actor.companyId)));
       if (!acc || acc.type !== "expense" || !acc.postable) throw new ValidationError("Choose a postable expense account");
       counter = acc;
+    } else if (input.purpose === "other") {
+      // Other money in or out (e.g. miscellaneous income, owner deposit, bank charges): the user picks the account.
+      if (!input.counterAccountId) throw new ValidationError("Choose the account this money is for");
+      const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, input.counterAccountId), eq(accounts.companyId, actor.companyId)));
+      if (!acc || !acc.postable || !acc.active) throw new ValidationError("Choose a postable account");
+      if (acc.id === money.ledgerAccountId) throw new ValidationError("Choose a different account than the cash or bank account itself");
+      const [isMoney] = await tx.select({ id: moneyAccounts.id }).from(moneyAccounts).where(eq(moneyAccounts.ledgerAccountId, acc.id));
+      if (isMoney) throw new ValidationError("To move money between your own cash and bank accounts, use a transfer");
+      counter = acc;
     } else {
       counter = await counterAccount(tx, actor.companyId, input.purpose, input.direction);
     }
@@ -238,6 +247,42 @@ async function counterAccount(tx: Db, companyId: string, purpose: (typeof PAYMEN
       throw new ValidationError(`Payments for "${purpose}" (${direction}) are not supported yet`);
   }
 }
+
+/**
+ * Move money between two of the company's own cash/bank accounts in the same
+ * currency (e.g. bank → safe). Different currencies go through a currency exchange.
+ */
+export const transferMoney = defineCommand({
+  name: "transfers.create",
+  permission: "payments.create",
+  input: z.object({ fromMoneyAccountId: uuid, toMoneyAccountId: uuid, amount: amountString, transferDate: isoDate, reference: z.string().nullish() }),
+  async handler(ctx, input) {
+    const { tx, actor, audit } = ctx;
+    if (input.fromMoneyAccountId === input.toMoneyAccountId) throw new ValidationError("Choose two different accounts");
+    if (!dec(input.amount).gt(0)) throw new ValidationError("Amount must be greater than zero");
+    const load = async (id: string) => {
+      const [m] = await tx.select().from(moneyAccounts).where(and(eq(moneyAccounts.id, id), eq(moneyAccounts.companyId, actor.companyId)));
+      if (!m?.active) throw new NotFound("money_account", id);
+      return m;
+    };
+    const from = await load(input.fromMoneyAccountId);
+    const to = await load(input.toMoneyAccountId);
+    if (from.currency !== to.currency) throw new ValidationError("The accounts hold different currencies; record a currency exchange instead");
+    const no = await nextNumber(tx, actor.companyId, "TRF", Number(input.transferDate.slice(0, 4)));
+    const entry = await postEntry(ctx, {
+      entryDate: input.transferDate,
+      description: `${no} ${from.name} → ${to.name}${input.reference ? ` (${input.reference})` : ""}`,
+      sourceType: "transfer",
+      sourceId: no,
+      lines: [
+        { accountId: to.ledgerAccountId, currency: to.currency, debit: input.amount },
+        { accountId: from.ledgerAccountId, currency: from.currency, credit: input.amount },
+      ],
+    });
+    await audit({ action: "transfers.create", entityType: "journal_entry", entityId: entry.id, after: { transferNo: no, from: from.name, to: to.name, amount: input.amount, currency: from.currency } });
+    return { id: entry.id, transferNo: no };
+  },
+});
 
 /** Undo a payment by reversing its journal entry. The payment record stays, marked reversed. */
 export const reversePayment = defineCommand({

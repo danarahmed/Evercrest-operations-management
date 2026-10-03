@@ -1,7 +1,10 @@
+import { z } from "zod";
+import { defineCommand } from "@/server/command";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { journalEntries, journalLines } from "@/db/schema";
 import {
+  postEntry,
   createAccount,
   postJournalEntry,
   reverseJournalEntry,
@@ -119,6 +122,17 @@ describe("reversal", () => {
     await expect(
       runCommand(env.db, env.admin, reverseJournalEntry, { entryId: r.id, entryDate: "2026-09-15", reason: "x" }),
     ).rejects.toMatchObject({ code: "conflict" });
+  });
+});
+
+describe("manual reversal guard", () => {
+  it("does not reverse entries that belong to an operation", async () => {
+    const op = defineCommand({ name: "test.operation", permission: null, input: z.any(), handler: (ctx) => postEntry(ctx, { entryDate: "2026-09-20", description: "op", sourceType: "invoice", sourceId: "INV-X", lines: [line("1200", "USD", "debit", "3"), line("4000", "USD", "credit", "3")] }) });
+    const r = (await runCommand(env.db, env.admin, op, {})) as { id: string };
+    const m = (await runCommand(env.db, env.admin, postJournalEntry, { entryDate: "2026-09-20", description: "fake", sourceType: "invoice", lines: [line("1200", "USD", "debit", "1"), line("4000", "USD", "credit", "1")] })) as { id: string };
+    const [fake] = await env.db.select().from(journalEntries).where(eq(journalEntries.id, m.id));
+    expect(fake.sourceType).toBe("manual");
+    await expect(runCommand(env.db, env.admin, reverseJournalEntry, { entryId: r.id, entryDate: "2026-09-21", reason: "x" })).rejects.toThrow(/correct it there/);
   });
 });
 

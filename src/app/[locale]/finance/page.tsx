@@ -9,6 +9,7 @@ import { can } from "@/server/authz";
 import { financeOptions, financeReports, openInvoices } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
+import { FinanceNav } from "./nav";
 
 export const dynamic = "force-dynamic";
 const LINES = 3;
@@ -38,6 +39,7 @@ export default async function Finance({ params, searchParams }: { params: Promis
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance">
       <h1>{t("title")}</h1>
+      <FinanceNav locale={locale} current="invoices" />
 
       {o && (
         <details className="panel">

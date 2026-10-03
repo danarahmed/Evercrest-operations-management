@@ -11,8 +11,9 @@ import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
-import { createAccount } from "@/domain/accounting/ledger";
-import { createMoneyAccount } from "@/domain/finance/payments";
+import { createAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus } from "@/domain/accounting/ledger";
+import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
+import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
 import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities } from "@/domain/jobs/commands";
 import { addActivity, setActivityStatus } from "@/domain/jobs/activities";
 import { setDocumentRequirement } from "@/domain/documents/documents";
@@ -106,6 +107,22 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "deliveries.bill": { command: billDeliveries },
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
+  // Manual journal entry: lines arrive as parallel arrays; empty rows are dropped.
+  "ledger.manual_entry": {
+    command: postJournalEntry,
+    prepare: async (_db, _a, input) => {
+      const col = (k: string) => (input[k] as string[] | undefined) ?? [];
+      const lines = col("l_accountId")
+        .map((accountId, i) => ({ accountId, currency: col("l_currency")[i], debit: col("l_debit")[i] || undefined, credit: col("l_credit")[i] || undefined, memo: col("l_memo")[i] || undefined }))
+        .filter((l) => l.accountId && (l.debit || l.credit));
+      return { entryDate: input.entryDate, description: input.description, lines };
+    },
+  },
+  "ledger.reverse_entry": { command: reverseJournalEntry },
+  "ledger.set_period_status": { command: setPeriodStatus, prepare: async (_db, _a, i) => ({ ...i, year: Number(i.year), month: Number(i.month) }) },
+  "transfers.create": { command: transferMoney },
+  "exchanges.create": { command: exchangeCurrency },
+  "exchanges.reverse": { command: reverseExchange },
   "money_accounts.create": { command: createMoneyAccount },
   "job_types.define": {
     command: defineJobType,

@@ -130,7 +130,8 @@ export const postJournalEntry = defineCommand({
   name: "ledger.post_entry",
   permission: "journal.post",
   input: entryInput,
-  handler: (ctx, input) => postEntry(ctx, { ...input, sourceType: input.sourceType ?? "manual" }),
+  // Always marked manual: a hand-made entry can never pose as an invoice, payment or settlement.
+  handler: (ctx, input) => postEntry(ctx, { ...input, sourceType: "manual", sourceId: input.sourceId ?? null }),
 });
 
 /** Post the mirror image of an entry and link both. The original is never changed. */
@@ -174,6 +175,11 @@ export const reverseJournalEntry = defineCommand({
   permission: "journal.reverse",
   input: z.object({ entryId: z.string().uuid(), entryDate: isoDate, reason: z.string().min(1) }),
   async handler(ctx, { entryId, entryDate, reason }) {
+    // Entries made by an operation (invoice, payment, settlement…) are corrected through that
+    // operation, so the document and the books never disagree.
+    const [e] = await ctx.tx.select({ sourceType: journalEntries.sourceType, sourceId: journalEntries.sourceId }).from(journalEntries).where(and(eq(journalEntries.id, entryId), eq(journalEntries.companyId, ctx.actor.companyId)));
+    if (e && e.sourceType && e.sourceType !== "manual")
+      throw new Conflict(`This entry belongs to ${e.sourceId ?? e.sourceType}; correct it there instead`, { sourceType: e.sourceType });
     const rev = await reverseEntry(ctx, entryId, entryDate, reason);
     await ctx.audit({ action: "ledger.reverse_entry", entityType: "journal_entry", entityId: entryId, after: { reversalId: rev.id }, reason });
     return rev;

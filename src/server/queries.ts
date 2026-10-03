@@ -16,6 +16,8 @@ import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCa
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
 import { balanceSheet, profitAndLoss } from "@/domain/accounting/statements";
+import { trialBalance } from "@/domain/accounting/ledger";
+import { exchangeList, journalList, moneyAccountBalances, partnerBalancesList, partnerLedger, periodsOfYear } from "@/domain/accounting/views";
 import { dec, toStr } from "@/domain/money";
 
 /** Read models for screens. Every read checks permission server-side, like commands. */
@@ -325,4 +327,39 @@ export async function reportsData(db: Db, actor: Actor, opts: { from: string; to
       .where(eq(businessPartners.companyId, actor.companyId))
       .orderBy(businessPartners.name),
   };
+}
+
+/** Finance → Accounts: trial balance, cash/bank balances, month locks. */
+export async function accountsOverview(db: Db, actor: Actor, asOf: string, year: number) {
+  requirePermission(actor, "reports.financial.view");
+  const tb = await trialBalance(db, actor.companyId, asOf);
+  return {
+    trialBalance: tb.filter((r) => !dec(r.balance).isZero() || !dec(r.debit).isZero()),
+    money: await moneyAccountBalances(db, actor.companyId),
+    periods: await periodsOfYear(db, actor.companyId, year),
+    accounts: await db.select({ id: accounts.id, code: accounts.code, name: accounts.name, type: accounts.type, currency: accounts.currency }).from(accounts).where(and(eq(accounts.companyId, actor.companyId), eq(accounts.postable, true), eq(accounts.active, true))).orderBy(accounts.code),
+  };
+}
+
+export async function journalView(db: Db, actor: Actor, from: string, to: string) {
+  requirePermission(actor, "reports.financial.view");
+  return {
+    entries: await journalList(db, actor.companyId, { from, to }),
+    accounts: await db.select({ id: accounts.id, code: accounts.code, name: accounts.name, currency: accounts.currency }).from(accounts).where(and(eq(accounts.companyId, actor.companyId), eq(accounts.postable, true), eq(accounts.active, true))).orderBy(accounts.code),
+  };
+}
+
+export async function exchangeView(db: Db, actor: Actor) {
+  requirePermission(actor, "reports.financial.view");
+  return { exchanges: await exchangeList(db, actor.companyId), money: await moneyAccountBalances(db, actor.companyId) };
+}
+
+export async function partnersFinance(db: Db, actor: Actor) {
+  requirePermission(actor, "reports.financial.view");
+  return partnerBalancesList(db, actor.companyId);
+}
+
+export async function partnerAccount(db: Db, actor: Actor, partnerId: string) {
+  requirePermission(actor, "reports.financial.view");
+  return partnerLedger(db, actor.companyId, partnerId);
 }

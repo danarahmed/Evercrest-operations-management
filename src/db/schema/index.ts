@@ -3,3 +3,4 @@ export * from "./accounting";
 export * from "./masterdata";
 export * from "./jobs";
 export * from "./transport";
+export * from "./finance";

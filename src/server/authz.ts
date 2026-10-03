@@ -25,6 +25,9 @@ export const PERMISSIONS = [
   "jobs.manage",
   "jobs.financial_close",
   "trips.manage",
+  "money_accounts.manage",
+  "payments.create",
+  "payments.reverse",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

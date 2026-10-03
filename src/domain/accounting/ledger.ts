@@ -17,6 +17,8 @@ export const lineInput = z
     debit: amountString.optional(),
     credit: amountString.optional(),
     memo: z.string().optional(),
+    partnerId: z.string().uuid().nullish(),
+    jobId: z.string().uuid().nullish(),
   })
   .refine((l) => (l.debit ? 1 : 0) + (l.credit ? 1 : 0) === 1, "each line has exactly one of debit or credit");
 
@@ -99,6 +101,8 @@ export async function postEntry(ctx: CommandContext, input: EntryInput, opts: { 
       debit: l.side === "debit" ? toStr(l.amount) : "0",
       credit: l.side === "credit" ? toStr(l.amount) : "0",
       memo: l.memo ?? null,
+      partnerId: l.partnerId ?? null,
+      jobId: l.jobId ?? null,
     })),
   );
   await ctx.audit({
@@ -129,23 +133,21 @@ export const postJournalEntry = defineCommand({
   handler: (ctx, input) => postEntry(ctx, { ...input, sourceType: input.sourceType ?? "manual" }),
 });
 
-/** Correct a posted entry by posting its mirror image. The original is never changed. */
-export const reverseJournalEntry = defineCommand({
-  name: "ledger.reverse_entry",
-  permission: "journal.reverse",
-  input: z.object({ entryId: z.string().uuid(), entryDate: isoDate, reason: z.string().min(1) }),
-  async handler(ctx, { entryId, entryDate, reason }) {
-    const { tx, actor } = ctx;
-    const [orig] = await tx
-      .select()
-      .from(journalEntries)
-      .where(and(eq(journalEntries.id, entryId), eq(journalEntries.companyId, actor.companyId)));
-    if (!orig) throw new NotFound("journal_entry", entryId);
-    if (orig.reversedByEntryId || orig.reversesEntryId)
-      throw new Conflict("Entry is already reversed or is itself a reversal", { entryId });
-    if (entryDate < orig.entryDate) throw new ValidationError("Reversal date cannot be before the original entry date");
-    const lines = await tx.select().from(journalLines).where(eq(journalLines.entryId, entryId)).orderBy(asc(journalLines.lineNo));
-    const rev = await postEntry(ctx, {
+/** Post the mirror image of an entry and link both. The original is never changed. */
+export async function reverseEntry(ctx: CommandContext, entryId: string, entryDate: string, reason: string) {
+  const { tx, actor } = ctx;
+  const [orig] = await tx
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.id, entryId), eq(journalEntries.companyId, actor.companyId)));
+  if (!orig) throw new NotFound("journal_entry", entryId);
+  if (orig.reversedByEntryId || orig.reversesEntryId)
+    throw new Conflict("Entry is already reversed or is itself a reversal", { entryId });
+  if (entryDate < orig.entryDate) throw new ValidationError("Reversal date cannot be before the original entry date");
+  const lines = await tx.select().from(journalLines).where(eq(journalLines.entryId, entryId)).orderBy(asc(journalLines.lineNo));
+  const rev = await postEntry(
+    ctx,
+    {
       entryDate,
       description: `Reversal of #${orig.entryNo}: ${reason}`,
       branchId: orig.branchId,
@@ -156,9 +158,23 @@ export const reverseJournalEntry = defineCommand({
         currency: l.currency,
         ...(dec(l.debit).isZero() ? { debit: toStr(dec(l.credit)) } : { credit: toStr(dec(l.debit)) }),
         memo: l.memo ?? undefined,
+        partnerId: l.partnerId,
+        jobId: l.jobId,
       })),
-    }, { reversesEntryId: entryId });
-    await tx.update(journalEntries).set({ reversedByEntryId: rev.id }).where(eq(journalEntries.id, entryId));
+    },
+    { reversesEntryId: entryId },
+  );
+  await tx.update(journalEntries).set({ reversedByEntryId: rev.id }).where(eq(journalEntries.id, entryId));
+  return rev;
+}
+
+/** Manual correction of a posted entry (accountant use). */
+export const reverseJournalEntry = defineCommand({
+  name: "ledger.reverse_entry",
+  permission: "journal.reverse",
+  input: z.object({ entryId: z.string().uuid(), entryDate: isoDate, reason: z.string().min(1) }),
+  async handler(ctx, { entryId, entryDate, reason }) {
+    const rev = await reverseEntry(ctx, entryId, entryDate, reason);
     await ctx.audit({ action: "ledger.reverse_entry", entityType: "journal_entry", entityId: entryId, after: { reversalId: rev.id }, reason });
     return rev;
   },

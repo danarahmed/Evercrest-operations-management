@@ -95,10 +95,16 @@ export const journalLines = pgTable(
     debit: numeric("debit", { precision: 20, scale: 4 }).notNull().default("0"),
     credit: numeric("credit", { precision: 20, scale: 4 }).notNull().default("0"),
     memo: text("memo"),
+    /** Sub-ledger dimension: who the amount is owed by/to (receivables, payables, advances). */
+    partnerId: uuid("partner_id"),
+    /** Profitability dimension. */
+    jobId: uuid("job_id"),
   },
   (t) => [
     unique().on(t.entryId, t.lineNo),
     index().on(t.accountId, t.currency),
+    index().on(t.partnerId),
+    index().on(t.jobId),
     check("one_sided_positive", sql`${t.debit} >= 0 and ${t.credit} >= 0 and (${t.debit} = 0) <> (${t.credit} = 0)`),
   ],
 );

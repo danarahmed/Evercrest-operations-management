@@ -11,6 +11,19 @@ import { defineCommand } from "./command";
 export const SETTINGS = {
   /** Default currency preselected in forms. Does not convert anything. */
   "ui.default_currency": z.enum(["IQD", "USD"]),
+  /**
+   * Which ledger account (by code) each kind of automatic posting uses.
+   * Nothing is posted to a default: a missing mapping stops the operation.
+   */
+  "accounting.posting_accounts": z
+    .object({
+      advances: z.string(),
+      customer_receivables: z.string(),
+      supplier_payables: z.string(),
+      payables_to_drivers: z.string(),
+      payables_to_transporters: z.string(),
+    })
+    .partial(),
 } satisfies Record<string, z.ZodType>;
 export type SettingKey = keyof typeof SETTINGS;
 export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS)[K]>;

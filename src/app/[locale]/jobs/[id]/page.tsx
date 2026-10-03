@@ -4,7 +4,8 @@ import Link from "next/link";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { describe, formatMoney, formatQty } from "@/lib/format";
-import { formOptions, jobWorkspace } from "@/server/queries";
+import { formOptions, jobHistoryView, jobWorkspace } from "@/server/queries";
+import { summarize } from "@/domain/management/history";
 import { JobForms } from "./forms";
 import { SettlementSection } from "./settlement";
 import { ActivitiesSection } from "./activities";
@@ -30,6 +31,8 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
   const cap = await getTranslations({ locale, namespace: "Setup" });
   const caps = w.job.capabilities as string[];
   const options = await formOptions(db, actor);
+  const history = await jobHistoryView(db, actor, id);
+  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
 
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/jobs/${id}`}>
@@ -179,6 +182,19 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
             </details>
           )}
         </>
+      )}
+      {history.length > 0 && (
+        <details className="panel">
+          <summary>{t("history")} ({history.length})</summary>
+          <div className="table-wrap"><table>
+            <tbody>{history.map(({ e, by }) => (
+              <tr key={e.id}>
+                <td>{dtf.format(e.createdAt)}</td><td>{by ?? "—"}</td><td dir="ltr">{e.action}</td>
+                <td className="wrap muted" dir="auto">{summarize(e.after)}</td><td className="wrap">{e.reason ?? ""}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </details>
       )}
     </Shell>
   );

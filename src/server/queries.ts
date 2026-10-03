@@ -1,9 +1,10 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
+import { auditLog, jobHistory } from "@/domain/management/history";
 import { jobBreakdown, jobProfitReport, jobTransactions, monthlySummary, totalsByCurrency, workQueues } from "@/domain/management/reports";
 import { awaitingStatement, listStatements, openStatementDebts, statementDetail } from "@/domain/transport/statements";
 import { tripAdvances } from "@/domain/finance/payments";
@@ -362,4 +363,60 @@ export async function partnersFinance(db: Db, actor: Actor) {
 export async function partnerAccount(db: Db, actor: Actor, partnerId: string) {
   requirePermission(actor, "reports.financial.view");
   return partnerLedger(db, actor.companyId, partnerId);
+}
+
+/** Users, roles and branches for the admin page. */
+export async function adminData(db: Db, actor: Actor) {
+  const canUsers = can(actor, "users.manage");
+  const canRoles = can(actor, "roles.manage");
+  if (!canUsers && !canRoles) requirePermission(actor, "users.manage");
+  const c = actor.companyId;
+  const userRows = await db.select().from(users).where(eq(users.companyId, c)).orderBy(users.displayName);
+  const roleRows = await db.select().from(roles).where(eq(roles.companyId, c)).orderBy(roles.name);
+  const perms = roleRows.length ? await db.select().from(rolePermissions).where(inArray(rolePermissions.roleId, roleRows.map((r) => r.id))) : [];
+  const assignments = userRows.length ? await db.select().from(userRoles).where(inArray(userRoles.userId, userRows.map((u) => u.id))) : [];
+  return {
+    canUsers,
+    canRoles,
+    held: [...actor.permissions],
+    users: userRows.map((u) => ({ ...u, roles: assignments.filter((a) => a.userId === u.id).map((a) => roleRows.find((r) => r.id === a.roleId)!).filter(Boolean) })),
+    roles: roleRows.map((r) => ({ ...r, permissions: perms.filter((p) => p.roleId === r.id).map((p) => p.permission).sort() })),
+  };
+}
+
+export async function auditView(db: Db, actor: Actor, f: { from: string; to: string; action?: string; userId?: string }) {
+  requirePermission(actor, "audit.view");
+  return {
+    events: await auditLog(db, actor.companyId, f),
+    users: await db.select({ id: users.id, name: users.displayName }).from(users).where(eq(users.companyId, actor.companyId)).orderBy(users.displayName),
+  };
+}
+
+export async function jobHistoryView(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  await getJob(db, actor.companyId, jobId);
+  return jobHistory(db, actor.companyId, jobId);
+}
+
+/** Headline figures for the dashboard (money only for people allowed to see it). */
+export async function dashboardKpis(db: Db, actor: Actor) {
+  const c = actor.companyId;
+  const [active] = await db.select({ n: sql<number>`count(*)::int` }).from(jobs).where(and(eq(jobs.companyId, c), inArray(jobs.status, ["open", "in_progress", "pending"])));
+  const [transit] = await db.select({ n: sql<number>`count(*)::int` }).from(trips).where(and(eq(trips.companyId, c), eq(trips.status, "loaded")));
+  if (!can(actor, "reports.financial.view")) return { activeJobs: active.n, inTransit: transit.n, money: null };
+  const cash = await moneyAccountBalances(db, c);
+  const byCur = (rows: { currency: string; balance: string }[]) => {
+    const m: Record<string, string> = {};
+    for (const r of rows) m[r.currency] = toStr(dec(m[r.currency] ?? "0").plus(dec(r.balance)));
+    return m;
+  };
+  const balances = await partnerBalancesList(db, c);
+  const owedToUs: Record<string, string> = {};
+  const weOwe: Record<string, string> = {};
+  for (const p of balances)
+    for (const [cur, b] of Object.entries(p.balances)) {
+      if (dec(b).gt(0)) owedToUs[cur] = toStr(dec(owedToUs[cur] ?? "0").plus(dec(b)));
+      else weOwe[cur] = toStr(dec(weOwe[cur] ?? "0").plus(dec(b).neg()));
+    }
+  return { activeJobs: active.n, inTransit: transit.n, money: { cash: byCur(cash.filter((x) => x.active)), owedToUs, weOwe } };
 }

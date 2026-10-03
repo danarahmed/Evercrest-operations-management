@@ -4,8 +4,8 @@ import Link from "next/link";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { exceptions } from "@/domain/management/exceptions";
-import { describe } from "@/lib/format";
-import { activeJobs } from "@/server/queries";
+import { describe, formatMoney } from "@/lib/format";
+import { activeJobs, dashboardKpis } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "./shell";
 
@@ -22,10 +22,22 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
   const st = await getTranslations({ locale, namespace: "JobStatus" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const today = new Date().toISOString().slice(0, 10);
-  const [alerts, jobList] = await Promise.all([exceptions(db, actor.companyId, today), activeJobs(db, actor)]);
+  const [alerts, jobList, kpi] = await Promise.all([exceptions(db, actor.companyId, today), activeJobs(db, actor), dashboardKpis(db, actor)]);
+  const money = (x: Record<string, string>) => (Object.keys(x).length ? Object.entries(x).sort(([a], [b]) => a.localeCompare(b)).map(([c, a]) => <div key={c}>{formatMoney(a, c, locale)}</div>) : <div>—</div>);
 
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="">
+      <div className="tiles">
+        <div className="tile"><span className="muted">{t("kpiActiveJobs")}</span><strong>{kpi.activeJobs}</strong></div>
+        <div className="tile"><span className="muted">{t("kpiInTransit")}</span><strong>{kpi.inTransit}</strong></div>
+        {kpi.money && (
+          <>
+            <Link href={`/${locale}/finance/accounts`} className="tile"><span className="muted">{t("kpiCash")}</span><strong>{money(kpi.money.cash)}</strong></Link>
+            <Link href={`/${locale}/finance/partners`} className="tile"><span className="muted">{t("kpiOwedToUs")}</span><strong>{money(kpi.money.owedToUs)}</strong></Link>
+            <Link href={`/${locale}/finance/partners`} className="tile"><span className="muted">{t("kpiWeOwe")}</span><strong>{money(kpi.money.weOwe)}</strong></Link>
+          </>
+        )}
+      </div>
       <h2>{t("attention")}</h2>
       {alerts.length === 0 ? (
         <p className="card muted">{t("allClear")}</p>

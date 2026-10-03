@@ -11,6 +11,7 @@ import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
+import { assignRole, createUser, defineRole, setUserActive } from "@/domain/org/commands";
 import { createAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus } from "@/domain/accounting/ledger";
 import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
 import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
@@ -107,6 +108,10 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "deliveries.bill": { command: billDeliveries },
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
+  "org.create_user": { command: createUser },
+  "org.set_user_active": { command: setUserActive, prepare: async (_db, _a, i) => ({ ...i, active: i.active === "true" }) },
+  "org.define_role": { command: defineRole, prepare: async (_db, _a, i) => ({ ...i, permissions: i.permissions ?? [] }) },
+  "org.assign_role": { command: assignRole, prepare: async (_db, _a, i) => ({ ...i, grant: i.grant !== "false" }) },
   // Manual journal entry: lines arrive as parallel arrays; empty rows are dropped.
   "ledger.manual_entry": {
     command: postJournalEntry,

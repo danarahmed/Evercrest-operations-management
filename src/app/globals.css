@@ -71,3 +71,7 @@ td details summary { cursor: pointer; font-size: 13px; }
 td .form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 td .form input, td .form select { padding: 4px 8px; font-size: 13px; }
 td .form .alert { flex-basis: 100%; }
+/* Dashboard tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-block: 8px 16px; }
+.tile { display: grid; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; text-decoration: none; color: var(--text); }
+.tile strong { font-size: 20px; }

@@ -32,6 +32,7 @@ export async function Shell({ locale, userName, path, permissions, wide, childre
           {["partners.manage", "accounts.manage", "settings.manage", "job_types.manage", "documents.configure", "rates.manage", "catalog.manage"].some((p) => permissions.has(p)) && (
             <Link href={`/${locale}/setup`}>{nl("setup")}</Link>
           )}
+          {(permissions.has("users.manage") || permissions.has("roles.manage")) && <Link href={`/${locale}/admin`}>{nl("admin")}</Link>}
           <span aria-hidden>|</span>
           {routing.locales.filter((l) => l !== locale).map((l) => (
             <Link key={l} href={`/${l}${path}`}>{LANG_NAMES[l]}</Link>

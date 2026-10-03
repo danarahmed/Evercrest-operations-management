@@ -2,3 +2,4 @@
 // Import this once at every entry point (server actions, scripts, tests).
 import "./transport/trips";
 import "./finance/payments";
+import "./documents/documents";

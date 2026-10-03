@@ -34,6 +34,8 @@ export interface Blocker {
  */
 export interface CapabilityModule {
   capability: Capability;
+  /** Check blockers even when the job has not switched this capability on (configured controls). */
+  alwaysCheck?: boolean;
   blockers(tx: Db, job: Job): Promise<Blocker[]>;
   inUse(tx: Db, job: Job): Promise<boolean>;
 }
@@ -46,4 +48,9 @@ export function registerCapabilityModule(m: CapabilityModule) {
 
 export function capabilityModule(c: Capability): CapabilityModule | undefined {
   return registry.get(c);
+}
+
+/** Modules whose blockers apply to this job: its capabilities plus always-checked controls. */
+export function modulesFor(job: { capabilities: string[] }): CapabilityModule[] {
+  return [...registry.values()].filter((m) => m.alwaysCheck || job.capabilities.includes(m.capability));
 }

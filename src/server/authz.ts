@@ -28,6 +28,9 @@ export const PERMISSIONS = [
   "money_accounts.manage",
   "payments.create",
   "payments.reverse",
+  "documents.configure",
+  "documents.record",
+  "documents.verify",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

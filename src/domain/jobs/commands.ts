@@ -7,7 +7,7 @@ import { requirePermission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { nextNumber } from "../sequences";
-import { type Blocker, CAPABILITIES, type Capability, capabilityModule, type Job } from "./capabilities";
+import { type Blocker, CAPABILITIES, type Capability, capabilityModule, type Job, modulesFor } from "./capabilities";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const uuid = z.string().uuid();
@@ -161,10 +161,7 @@ const TRANSITIONS: Record<JobStatus, JobStatus[]> = {
 
 export async function jobBlockers(tx: Db, job: Job): Promise<Blocker[]> {
   const out: Blocker[] = [];
-  for (const c of job.capabilities as Capability[]) {
-    const m = capabilityModule(c);
-    if (m) out.push(...(await m.blockers(tx, job)));
-  }
+  for (const m of modulesFor(job)) out.push(...(await m.blockers(tx, job)));
   return out;
 }
 

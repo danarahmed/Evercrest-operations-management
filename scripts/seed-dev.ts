@@ -14,6 +14,8 @@ import { createPartner } from "@/domain/masterdata/partners";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { defineRate } from "@/domain/transport/rates";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
+import { createWorkOrder } from "@/domain/field/work-orders";
+import { recordDelivery } from "@/domain/supply/deliveries";
 import { assignRole, createUser, defineRole } from "@/domain/org/commands";
 import { loadActor } from "@/server/actor";
 import { setupCompany } from "@/server/bootstrap";
@@ -32,12 +34,12 @@ for (const [code, name, type, currency] of [
   ["2200", "Payables to transporters", "liability"], ["3000", "Capital", "equity"], ["4000", "Transport revenue", "income"],
   ["5000", "Transport costs", "expense"], ["5100", "Field expenses", "expense"], ["5200", "Fuel and vehicle costs", "expense"], ["5300", "Permits and fees", "expense"],
   ["2300", "Payables to drivers", "liability"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"],
-  ["5010", "Transporter costs", "expense"], ["5900", "Rounding differences", "expense"], ["5950", "Bad debts written off", "expense"],
+  ["5010", "Transporter costs", "expense"], ["5900", "Rounding differences", "expense"], ["5950", "Bad debts written off", "expense"], ["4300", "Product sales", "income"], ["5400", "Cost of goods purchased", "expense"], ["5500", "Labour and contractors", "expense"],
 ] as const) acc[code] = (await run(createAccount, { code, name, type, currency })).id;
 await run(setSetting, { key: "accounting.posting_accounts", value: {
   advances: "1300", customer_receivables: "1100", supplier_payables: "2100", payables_to_transporters: "2200", payables_to_drivers: "2300",
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
-  demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950",
+  demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300",
 }, reason: "dev setup" });
 await run(setSetting, { key: "alerts.trip_transit_days", value: 3, reason: "dev setup" });
 const capitalDate = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -60,6 +62,10 @@ await rate({ rateType: "customer_price", basis: "actual_qty", amount: "55000", c
 await rate({ rateType: "transporter_fee", basis: "per_trip", amount: "100000", currency: "IQD", transporterId: zagros });
 const ptr = (await run(defineJobType, { code: "PTR", name: "Petroleum transportation", defaultCapabilities: ["transportation", "advances", "documents", "billing", "expenses"], defaultActivities: ["Arrange trucks", "Load at depot", "Deliver to field", "Collect manifests", "Invoice customer"] })).id;
 const gen = (await run(defineJobType, { code: "GEN", name: "General service", defaultCapabilities: ["expenses", "billing", "documents"] })).id;
+const sup = (await run(defineJobType, { code: "SUP", name: "Product supply", defaultCapabilities: ["products", "expenses", "billing"], defaultActivities: ["Confirm order", "Buy from supplier", "Deliver", "Invoice customer"] })).id;
+const fld = (await run(defineJobType, { code: "FLD", name: "Field service", defaultCapabilities: ["field_work", "expenses", "billing", "documents"], defaultActivities: ["Mobilize team", "Buy materials", "Perform work", "Inspect", "Invoice customer"] })).id;
+const generator = (await run(createCatalogItem, { kind: "product", code: "GEN100", name: "Generator 100 kVA", defaultUnit: "EA" })).id;
+const zagrosMaint = (await run(createPartner, { kind: "organization", name: "Zagros Maintenance", roles: ["contractor"] })).id;
 const kurdSupply = (await run(createPartner, { kind: "organization", name: "Kurd Supply Co", roles: ["supplier"] })).id;
 const manifest = (await run(defineDocumentType, { code: "MANIFEST", name: "Manifest" })).id;
 await run(setDocumentRequirement, { documentTypeId: manifest, scope: "job_type", scopeId: ptr, appliesTo: "trip", requiredBefore: "completed", active: true, reason: "policy" });
@@ -69,7 +75,12 @@ const d = (daysAgo: number) => new Date(today.getTime() - daysAgo * 86400000).to
 const contract = (await run(createContract, { partnerId: northOil, reference: "NO-2026-01", title: "Diesel supply and transport 2026", status: "active", validFrom: "2026-01-01", validTo: "2026-12-31" })).id;
 const project = (await run(createProject, { customerId: northOil, contractId: contract, code: "FX", name: "Field X operations" })).id;
 const job = await run<{ id: string }>(createJob, { customerId: northOil, jobTypeId: ptr, name: "Diesel to Field X", startDate: d(10), responsibleUserId: adminUserId, projectId: project, contractId: contract });
-await run(createJob, { customerId: northOil, jobTypeId: gen, name: "Supply 10 generators", startDate: d(2), responsibleUserId: adminUserId, description: "Customer asked for 10 x 100 kVA generators" });
+const genJob = (await run(createJob, { customerId: northOil, jobTypeId: sup, name: "Supply 10 generators", startDate: d(2), responsibleUserId: adminUserId, description: "Customer asked for 10 x 100 kVA generators" })).id;
+await run(defineRate, { rateType: "product_price", basis: "per_unit", amount: "4500", currency: "USD", unit: "EA", productId: generator, effectiveFrom: "2026-01-01", reason: "dev price list" });
+await run(recordDelivery, { jobId: genJob, productId: generator, quantity: "6", unit: "EA", deliveryDate: d(1), deliveredTo: "North Oil warehouse, Kirkuk", reference: "DN-301" });
+const fieldJob = (await run(createJob, { customerId: northOil, jobTypeId: fld, name: "Pump maintenance, Field Y", startDate: d(3), responsibleUserId: adminUserId })).id;
+await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 7", description: "Replace pump seals and test", contractorId: zagrosMaint, plannedDate: d(-2) });
+await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 9", description: "Inspect valves", plannedDate: d(-4) });
 const t1 = await run<{ id: string }>(createTrip, { jobId: job.id, newDriverName: "Ahmed Karim", truckPlate: "12 B 34567", transporterId: zagros, productId: diesel });
 await run(recordLoading, { tripId: t1.id, loadingDate: d(9), loadedQty: "30", loadedUnit: "MT" });
 await run(recordDischarge, { tripId: t1.id, dischargeDate: d(7), dischargedQty: "29750", dischargedUnit: "KG" });

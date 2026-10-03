@@ -5,6 +5,7 @@ import { branches, companies, currencies, users } from "./core";
 import { jobs } from "./jobs";
 import { businessPartners, catalogItems, units } from "./masterdata";
 import { payStatements } from "./statements";
+import { deliveries } from "./operations";
 import { trips } from "./transport";
 
 /** A cash box, safe or bank account. Exactly one currency; backed by one ledger account. */
@@ -126,8 +127,10 @@ export const invoiceLines = pgTable(
     accountId: uuid("account_id").notNull().references(() => accounts.id),
     jobId: uuid("job_id").references(() => jobs.id),
     tripId: uuid("trip_id").references(() => trips.id),
+    /** Product delivery this line invoices. */
+    deliveryId: uuid("delivery_id").references(() => deliveries.id),
   },
-  (t) => [unique().on(t.invoiceId, t.lineNo), index().on(t.jobId), index().on(t.tripId)],
+  (t) => [unique().on(t.invoiceId, t.lineNo), index().on(t.jobId), index().on(t.tripId), index().on(t.deliveryId)],
 );
 
 /**

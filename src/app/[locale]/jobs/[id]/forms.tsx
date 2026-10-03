@@ -132,9 +132,8 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
         <details className="panel">
           <summary>{t("supplierBill")}</summary>
           <p className="muted">{t("supplierBillHelp")}</p>
-          <ActionForm command="invoices.create" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+          <ActionForm command="invoices.job_bill" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
             <input type="hidden" name="kind" value="bill" />
-            <input type="hidden" name="billFrom" value="supplier" />
             <input type="hidden" name="l_jobId[]" value={jobId} />
             <div className="grid2">
               <label>{t("supplier")}<select name="partnerId" required>{options.suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>

@@ -1,7 +1,9 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { invoices, moneyAccounts } from "@/db/schema";
+import { invoices, moneyAccounts, partnerRoles } from "@/db/schema";
+import { createWorkOrder, setWorkOrderStatus } from "@/domain/field/work-orders";
+import { billDeliveries, cancelDelivery, recordDelivery } from "@/domain/supply/deliveries";
 import { decideApproval } from "@/domain/approvals/approvals";
 import { defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
 import { createInvoice } from "@/domain/finance/invoices";
@@ -88,6 +90,20 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "documents.define_type": { command: defineDocumentType },
   "approvals.decide": { command: decideApproval },
   "invoices.create": { command: createInvoice, prepare: invoiceLines },
+  // A bill entered on a job: bills from a supplier, or from a contractor (field work).
+  "invoices.job_bill": {
+    command: createInvoice,
+    prepare: async (db, actor, input) => {
+      const roles = await db.select({ role: partnerRoles.role }).from(partnerRoles).where(eq(partnerRoles.partnerId, String(input.partnerId ?? "")));
+      const billFrom = roles.some((r) => r.role === "supplier") ? "supplier" : roles.some((r) => r.role === "contractor") ? "contractor" : undefined;
+      return invoiceLines(db, actor, { ...input, billFrom });
+    },
+  },
+  "work_orders.create": { command: createWorkOrder },
+  "work_orders.set_status": { command: setWorkOrderStatus },
+  "deliveries.record": { command: recordDelivery },
+  "deliveries.cancel": { command: cancelDelivery },
+  "deliveries.bill": { command: billDeliveries },
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
   "money_accounts.create": { command: createMoneyAccount },

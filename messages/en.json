@@ -115,7 +115,9 @@
     "transport_awaiting_billing": "Bill {trip}",
     "payee_owes": "{name} owes the company {amount} from {statement}. It will be deducted from their next statement, or record a repayment.",
     "activity_next": "Next step: {step}",
-    "activity_required_open": "Finish step: {step}"
+    "activity_required_open": "Finish step: {step}",
+    "field_work_order_open": "Complete {workOrder} at {site}",
+    "supply_awaiting_billing": "Invoice {delivery}"
   },
   "Forms": {
     "saved": "Saved.",
@@ -349,7 +351,10 @@
     "contract": "Contract",
     "defaultActivities": "Checklist steps for new jobs (one per line, optional)",
     "defaultActivitiesHelp": "e.g.\nArrange truck\nLoad\nDeliver\nCollect manifest\nInvoice customer",
-    "steps": "Steps"
+    "steps": "Steps",
+    "rt_product_price": "Product sale price",
+    "basis_per_unit": "Per unit",
+    "posting_product_sales": "Product sales"
   },
   "Finance": {
     "title": "Finance",
@@ -559,5 +564,45 @@
     "assignee": "Who",
     "due": "Due",
     "requiredHelp": "Must be done before the job can be completed"
+  },
+  "Field": {
+    "title": "Work orders",
+    "number": "Work order",
+    "site": "Site",
+    "work": "Work",
+    "by": "Done by",
+    "ownTeam": "Our team",
+    "planned": "Planned",
+    "status": "Status",
+    "status_open": "Open",
+    "status_in_progress": "In progress",
+    "status_completed": "Completed",
+    "status_cancelled": "Cancelled",
+    "add": "New work order",
+    "complete": "Update a work order",
+    "completedDate": "Completion date",
+    "whatWasDone": "What was done / why",
+    "save": "Save"
+  },
+  "Supply": {
+    "title": "Deliveries",
+    "number": "Delivery",
+    "date": "Date",
+    "product": "Product",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "deliveredTo": "Delivered to",
+    "note": "Delivery note no.",
+    "cancelled": "Cancelled",
+    "invoiced": "Invoiced",
+    "notInvoiced": "Not invoiced",
+    "record": "Record a delivery",
+    "bill": "Invoice deliveries",
+    "billHelp": "Price comes from Setup → rates (product price). Type a price only for products without a price rule.",
+    "dueDate": "Due date",
+    "priceIfNoRule": "Unit price (only if no price rule)",
+    "currency": "Currency",
+    "fromPriceList": "From the price list",
+    "createInvoice": "Create invoice"
   }
 }

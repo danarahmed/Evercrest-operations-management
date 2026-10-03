@@ -115,7 +115,9 @@
     "transport_awaiting_billing": "فوتر {trip}",
     "payee_owes": "{name} مدين للشركة بمبلغ {amount} من {statement}. سيُخصم من كشفه القادم، أو سجّل تسديدًا.",
     "activity_next": "الخطوة التالية: {step}",
-    "activity_required_open": "أنجز الخطوة: {step}"
+    "activity_required_open": "أنجز الخطوة: {step}",
+    "field_work_order_open": "أكمل {workOrder} في {site}",
+    "supply_awaiting_billing": "فوتر {delivery}"
   },
   "Forms": {
     "saved": "تم الحفظ.",
@@ -349,7 +351,10 @@
     "contract": "العقد",
     "defaultActivities": "خطوات قائمة المهام للأعمال الجديدة (خطوة في كل سطر، اختياري)",
     "defaultActivitiesHelp": "مثال:\nترتيب الشاحنة\nالتحميل\nالتسليم\nاستلام المانيفست\nفوترة الزبون",
-    "steps": "الخطوات"
+    "steps": "الخطوات",
+    "rt_product_price": "سعر بيع المنتج",
+    "basis_per_unit": "لكل وحدة",
+    "posting_product_sales": "مبيعات المنتجات"
   },
   "Finance": {
     "title": "المالية",
@@ -559,5 +564,45 @@
     "assignee": "المكلّف",
     "due": "الموعد",
     "requiredHelp": "يجب إنجازها قبل إكمال العمل"
+  },
+  "Field": {
+    "title": "أوامر العمل",
+    "number": "أمر العمل",
+    "site": "الموقع",
+    "work": "العمل",
+    "by": "المنفّذ",
+    "ownTeam": "فريقنا",
+    "planned": "المخطط",
+    "status": "الحالة",
+    "status_open": "مفتوح",
+    "status_in_progress": "قيد التنفيذ",
+    "status_completed": "مكتمل",
+    "status_cancelled": "ملغى",
+    "add": "أمر عمل جديد",
+    "complete": "تحديث أمر عمل",
+    "completedDate": "تاريخ الإنجاز",
+    "whatWasDone": "ما تم إنجازه / السبب",
+    "save": "حفظ"
+  },
+  "Supply": {
+    "title": "التسليمات",
+    "number": "التسليم",
+    "date": "التاريخ",
+    "product": "المنتج",
+    "quantity": "الكمية",
+    "unit": "الوحدة",
+    "deliveredTo": "سُلّم إلى",
+    "note": "رقم مذكرة التسليم",
+    "cancelled": "ملغى",
+    "invoiced": "مفوتر",
+    "notInvoiced": "غير مفوتر",
+    "record": "تسجيل تسليم",
+    "bill": "فوترة التسليمات",
+    "billHelp": "السعر يأتي من الإعدادات ← الأسعار (سعر المنتج). أدخل سعرًا فقط للمنتجات بدون قاعدة سعر.",
+    "dueDate": "تاريخ الاستحقاق",
+    "priceIfNoRule": "سعر الوحدة (فقط إن لم توجد قاعدة)",
+    "currency": "العملة",
+    "fromPriceList": "من قائمة الأسعار",
+    "createInvoice": "إنشاء فاتورة"
   }
 }

@@ -26,10 +26,12 @@ const lineInput = z.object({
   accountId: uuid,
   jobId: uuid.nullish(),
   tripId: uuid.nullish(),
+  /** Set by product-supply invoicing; never typed by hand. */
+  deliveryId: uuid.nullish(),
 });
 
 /** Which payable account a bill uses depends on who is billing us. */
-const PAYABLE_KEYS = { supplier: "supplier_payables", transporter: "payables_to_transporters", driver: "payables_to_drivers" } as const satisfies Record<string, PostingKey>;
+const PAYABLE_KEYS = { supplier: "supplier_payables", contractor: "supplier_payables", transporter: "payables_to_transporters", driver: "payables_to_drivers" } as const satisfies Record<string, PostingKey>;
 
 export const createInvoice = defineCommand({
   name: "invoices.create",
@@ -38,7 +40,7 @@ export const createInvoice = defineCommand({
     kind: z.enum(["sales", "bill"]),
     partnerId: uuid,
     /** For bills: the role the partner bills us in. Ignored for sales. */
-    billFrom: z.enum(["supplier", "transporter", "driver"]).optional(),
+    billFrom: z.enum(["supplier", "contractor", "transporter", "driver"]).optional(),
     currency: currencyCode,
     invoiceDate: isoDate,
     dueDate: isoDate.nullish(),
@@ -51,7 +53,7 @@ export const createInvoice = defineCommand({
   async handler(ctx, input) {
     const { tx, actor, audit } = ctx;
     const role = input.kind === "sales" ? "customer" : input.billFrom;
-    if (!role) throw new ValidationError("Say whether the bill is from a supplier, transporter or driver");
+    if (!role) throw new ValidationError("Say whether the bill is from a supplier, contractor, transporter or driver");
     const [hasRole] = await tx.select().from(partnerRoles).where(and(eq(partnerRoles.partnerId, input.partnerId), eq(partnerRoles.role, role)));
     if (!hasRole) throw new ValidationError(`Partner is not marked as a ${role}`);
     if (input.kind === "bill" && input.externalRef) {
@@ -159,6 +161,7 @@ export const createInvoice = defineCommand({
         accountId: l.accountId,
         jobId: l.jobId,
         tripId: l.tripId,
+        deliveryId: l.deliveryId ?? null,
       })),
     );
     await audit({ action: "invoices.create", entityType: "invoice", entityId: inv.id, after: { invoiceNo, kind: input.kind, partnerId: input.partnerId, currency: input.currency, total: toStr(total) } });

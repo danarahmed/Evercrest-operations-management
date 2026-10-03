@@ -8,6 +8,7 @@ import { formOptions, jobWorkspace } from "@/server/queries";
 import { JobForms } from "./forms";
 import { SettlementSection } from "./settlement";
 import { ActivitiesSection } from "./activities";
+import { DeliveriesSection, WorkOrdersSection } from "./operations";
 import { can } from "@/server/authz";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
@@ -50,6 +51,9 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
       )}
 
 <ActivitiesSection locale={locale} jobId={w.job.id} activities={w.activities} users={options.users} editable={can(actor, "jobs.manage") && !["financially_closed", "cancelled"].includes(w.job.status)} />
+
+{caps.includes("field_work") && <WorkOrdersSection locale={locale} jobId={w.job.id} rows={w.workOrders} contractors={options.contractors} editable={can(actor, "jobs.manage") && !["financially_closed", "cancelled"].includes(w.job.status)} />}
+      {caps.includes("products") && <DeliveriesSection locale={locale} jobId={w.job.id} rows={w.deliveries} products={options.products} units={options.units} editable={can(actor, "jobs.manage") && !["financially_closed", "cancelled"].includes(w.job.status)} canBill={can(actor, "billing.create") && caps.includes("billing")} />}
 
       {(caps.includes("transportation") || w.trips.length > 0) && (
         <>

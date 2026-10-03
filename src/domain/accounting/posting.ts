@@ -11,7 +11,8 @@ export type PostingKey = "advances" | "customer_receivables" | "supplier_payable
   | "transport_revenue"
   | "demurrage_revenue"
   | "rounding_differences"
-  | "bad_debts";
+  | "bad_debts"
+  | "product_sales";
 
 /** Resolve a configured posting account. Never falls back to a guess. */
 export async function postingAccount(tx: Db, companyId: string, key: PostingKey) {

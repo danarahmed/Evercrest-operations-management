@@ -21,6 +21,7 @@ const ALLOWED_BASES: Record<RateType, readonly string[]> = {
   allowance: ["quantity"],
   demurrage_pay: ["per_day"],
   demurrage_bill: ["per_day"],
+  product_price: ["per_unit"],
 };
 
 const DIMENSIONS = ["productId", "customerId", "transporterId", "contractId"] as const;

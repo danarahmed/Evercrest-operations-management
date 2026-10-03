@@ -9,6 +9,8 @@ import { awaitingStatement, listStatements, openStatementDebts, statementDetail 
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { listActivities } from "@/domain/jobs/activities";
+import { listWorkOrders } from "@/domain/field/work-orders";
+import { listDeliveries } from "@/domain/supply/deliveries";
 import { quantityDifference } from "@/domain/transport/trips";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
@@ -82,6 +84,8 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     job,
     meta,
     activities: await listActivities(db, job.id),
+    workOrders: (job.capabilities as string[]).includes("field_work") ? await listWorkOrders(db, job.id) : [],
+    deliveries: (job.capabilities as string[]).includes("products") ? await listDeliveries(db, job.id) : [],
     customer: customer.name,
     nextAction: await nextActionInfo(db, job),
     blockers: await jobBlockers(db, job),
@@ -96,7 +100,7 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
 
 /** Choices for forms. Only active records. */
 export async function formOptions(db: Db, actor: Actor) {
-  const partnersWith = async (role: "driver" | "transporter" | "customer") =>
+  const partnersWith = async (role: "driver" | "transporter" | "customer" | "contractor") =>
     db
       .select({ id: businessPartners.id, name: businessPartners.name })
       .from(businessPartners)
@@ -114,10 +118,11 @@ export async function formOptions(db: Db, actor: Actor) {
     products: await db.select({ id: catalogItems.id, name: catalogItems.name }).from(catalogItems).where(and(eq(catalogItems.companyId, actor.companyId), eq(catalogItems.kind, "product"), eq(catalogItems.active, true))).orderBy(catalogItems.name),
     projects: await db.select({ id: projects.id, code: projects.code, name: projects.name, customer: businessPartners.name }).from(projects).innerJoin(businessPartners, eq(businessPartners.id, projects.customerId)).where(and(eq(projects.companyId, actor.companyId), eq(projects.status, "open"))).orderBy(projects.code),
     contracts: await db.select({ id: contracts.id, reference: contracts.reference, title: contracts.title, partner: businessPartners.name }).from(contracts).innerJoin(businessPartners, eq(businessPartners.id, contracts.partnerId)).where(and(eq(contracts.companyId, actor.companyId), inArray(contracts.status, ["draft", "active"]))).orderBy(contracts.reference),
+    contractors: await partnersWith("contractor"),
     suppliers: await db
       .selectDistinct({ id: businessPartners.id, name: businessPartners.name })
       .from(businessPartners)
-      .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "supplier")))
+      .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), inArray(partnerRoles.role, ["supplier", "contractor"])))
       .where(and(eq(businessPartners.companyId, actor.companyId), eq(businessPartners.active, true)))
       .orderBy(businessPartners.name),
     expenseAccounts: await db

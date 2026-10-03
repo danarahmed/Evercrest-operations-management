@@ -14,6 +14,7 @@ export const RATE_TYPES = [
   "allowance", // quantity of loss forgiven before a fine applies (no currency)
   "demurrage_pay", // per day, paid to the driver
   "demurrage_bill", // per day, billed to the customer
+  "product_price", // sale price per unit of a product delivered to a customer
 ] as const;
 export type RateType = (typeof RATE_TYPES)[number];
 
@@ -24,6 +25,7 @@ export const RATE_BASES = [
   "per_trip",
   "per_day",
   "quantity", // the rate itself is a quantity (allowance)
+  "per_unit", // amount per unit of a delivered quantity (product price)
 ] as const;
 
 /**

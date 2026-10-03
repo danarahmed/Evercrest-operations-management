@@ -39,6 +39,7 @@ export const SETTINGS = {
       demurrage_revenue: z.string(),
       rounding_differences: z.string(),
       bad_debts: z.string(),
+      product_sales: z.string(),
     })
     .partial(),
 } satisfies Record<string, z.ZodType>;

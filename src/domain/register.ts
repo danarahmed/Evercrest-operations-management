@@ -5,3 +5,4 @@ import "./finance/payments";
 import "./documents/documents";
 import "./transport/billing";
 import "./transport/statements";
+import "./jobs/activities";

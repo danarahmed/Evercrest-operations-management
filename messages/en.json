@@ -88,7 +88,11 @@
     "txBill": "Supplier bill",
     "txExpense": "Expense",
     "breakdown": "Where the money comes from and goes",
-    "account": "Account"
+    "account": "Account",
+    "responsible": "Responsible",
+    "started": "Started",
+    "project": "Project",
+    "contract": "Contract"
   },
   "Codes": {
     "transport_awaiting_loading": "Waiting for loading of {trip}",
@@ -109,7 +113,9 @@
     "documents_unverified": "{count} document(s) received but not yet verified.",
     "transport_awaiting_settlement": "Settle {trip}",
     "transport_awaiting_billing": "Bill {trip}",
-    "payee_owes": "{name} owes the company {amount} from {statement}. It will be deducted from their next statement, or record a repayment."
+    "payee_owes": "{name} owes the company {amount} from {statement}. It will be deducted from their next statement, or record a repayment.",
+    "activity_next": "Next step: {step}",
+    "activity_required_open": "Finish step: {step}"
   },
   "Forms": {
     "saved": "Saved.",
@@ -177,7 +183,12 @@
     "supplierBillNo": "Supplier's bill no.",
     "unitPrice": "Unit price",
     "currency": "Currency",
-    "dueDate": "Due date"
+    "dueDate": "Due date",
+    "moreLinks": "Project or contract (optional)",
+    "project": "Project",
+    "contract": "Contract",
+    "jobNeeds": "What this job needs",
+    "jobNeedsHelp": "Switch parts of the job on or off. A part that already has records cannot be switched off."
   },
   "Approvals": {
     "title": "Approvals",
@@ -319,7 +330,26 @@
     "posting_transport_revenue": "Transport revenue",
     "posting_demurrage_revenue": "Demurrage revenue",
     "posting_rounding_differences": "Rounding differences",
-    "posting_bad_debts": "Debts written off"
+    "posting_bad_debts": "Debts written off",
+    "contractsProjects": "Contracts and projects",
+    "contractsHelp": "Optional. Small or one-off work needs neither; link a job to a contract or project only when it helps.",
+    "addContract": "Add a contract",
+    "contractPartner": "Customer",
+    "contractRef": "Reference",
+    "contractTitle": "Title",
+    "contractStatus": "Status",
+    "contract_draft": "Draft",
+    "contract_active": "Active",
+    "contract_ended": "Ended",
+    "validFrom": "Valid from",
+    "validTo": "Valid to",
+    "activate": "Activate",
+    "endContract": "End",
+    "addProject": "Add a project",
+    "contract": "Contract",
+    "defaultActivities": "Checklist steps for new jobs (one per line, optional)",
+    "defaultActivitiesHelp": "e.g.\nArrange truck\nLoad\nDeliver\nCollect manifest\nInvoice customer",
+    "steps": "Steps"
   },
   "Finance": {
     "title": "Finance",
@@ -516,5 +546,18 @@
     "trip": "Trip",
     "driver": "Driver",
     "discharged": "Discharged"
+  },
+  "Activities": {
+    "title": "Steps",
+    "required": "required",
+    "markDone": "Done",
+    "skip": "Skip",
+    "why": "Why?",
+    "reopen": "Reopen",
+    "add": "Add a step",
+    "step": "Step",
+    "assignee": "Who",
+    "due": "Due",
+    "requiredHelp": "Must be done before the job can be completed"
   }
 }

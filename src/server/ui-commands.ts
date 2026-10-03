@@ -11,7 +11,8 @@ import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { createAccount } from "@/domain/accounting/ledger";
 import { createMoneyAccount } from "@/domain/finance/payments";
-import { defineJobType } from "@/domain/jobs/commands";
+import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities } from "@/domain/jobs/commands";
+import { addActivity, setActivityStatus } from "@/domain/jobs/activities";
 import { setDocumentRequirement } from "@/domain/documents/documents";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { billTrips } from "@/domain/transport/billing";
@@ -90,7 +91,17 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
   "money_accounts.create": { command: createMoneyAccount },
-  "job_types.define": { command: defineJobType },
+  "job_types.define": {
+    command: defineJobType,
+    // Checklist steps are typed one per line.
+    prepare: async (_db, _a, { activitiesText, ...i }) => ({ ...i, defaultCapabilities: i.defaultCapabilities ?? [], defaultActivities: String(activitiesText ?? "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean) }),
+  },
+  "jobs.set_capabilities": { command: setJobCapabilities, prepare: async (_db, _a, i) => ({ ...i, capabilities: i.capabilities ?? [] }) },
+  "activities.add": { command: addActivity },
+  "activities.set_status": { command: setActivityStatus },
+  "contracts.create": { command: createContract },
+  "contracts.set_status": { command: setContractStatus },
+  "projects.create": { command: createProject },
   "documents.set_requirement": {
     command: setDocumentRequirement,
     prepare: async (_db, _a, i) => ({ ...i, active: i.active !== "false" }),

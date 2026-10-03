@@ -1,13 +1,14 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { accounts, approvalRequests, catalogItems, invoiceLines, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
 import { jobBreakdown, jobProfitReport, jobTransactions, monthlySummary, totalsByCurrency, workQueues } from "@/domain/management/reports";
 import { awaitingStatement, listStatements, openStatementDebts, statementDetail } from "@/domain/transport/statements";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
+import { listActivities } from "@/domain/jobs/activities";
 import { quantityDifference } from "@/domain/transport/trips";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
@@ -69,8 +70,18 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
       };
     }),
   );
+  const [meta] = await db
+    .select({ type: jobTypes.name, responsible: users.displayName, project: projects.name, projectCode: projects.code, contract: contracts.reference, contractTitle: contracts.title })
+    .from(jobs)
+    .innerJoin(jobTypes, eq(jobTypes.id, jobs.jobTypeId))
+    .innerJoin(users, eq(users.id, jobs.responsibleUserId))
+    .leftJoin(projects, eq(projects.id, jobs.projectId))
+    .leftJoin(contracts, eq(contracts.id, jobs.contractId))
+    .where(eq(jobs.id, job.id));
   return {
     job,
+    meta,
+    activities: await listActivities(db, job.id),
     customer: customer.name,
     nextAction: await nextActionInfo(db, job),
     blockers: await jobBlockers(db, job),
@@ -101,6 +112,8 @@ export async function formOptions(db: Db, actor: Actor) {
     documentTypes: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, actor.companyId)).orderBy(documentTypes.name),
     units: await db.select({ code: units.code, name: units.name }).from(units).orderBy(units.code),
     products: await db.select({ id: catalogItems.id, name: catalogItems.name }).from(catalogItems).where(and(eq(catalogItems.companyId, actor.companyId), eq(catalogItems.kind, "product"), eq(catalogItems.active, true))).orderBy(catalogItems.name),
+    projects: await db.select({ id: projects.id, code: projects.code, name: projects.name, customer: businessPartners.name }).from(projects).innerJoin(businessPartners, eq(businessPartners.id, projects.customerId)).where(and(eq(projects.companyId, actor.companyId), eq(projects.status, "open"))).orderBy(projects.code),
+    contracts: await db.select({ id: contracts.id, reference: contracts.reference, title: contracts.title, partner: businessPartners.name }).from(contracts).innerJoin(businessPartners, eq(businessPartners.id, contracts.partnerId)).where(and(eq(contracts.companyId, actor.companyId), inArray(contracts.status, ["draft", "active"]))).orderBy(contracts.reference),
     suppliers: await db
       .selectDistinct({ id: businessPartners.id, name: businessPartners.name })
       .from(businessPartners)
@@ -192,6 +205,15 @@ export async function setupData(db: Db, actor: Actor) {
           rounding: (await getSetting(db, c, "rounding.final_increment")) ?? {},
         }
       : null,
+    contracts: has("contracts.manage")
+      ? await db.select({ c: contracts, partner: businessPartners.name }).from(contracts).innerJoin(businessPartners, eq(businessPartners.id, contracts.partnerId)).where(eq(contracts.companyId, c)).orderBy(desc(contracts.createdAt))
+      : null,
+    projects: has("projects.manage")
+      ? await db.select({ p: projects, customer: businessPartners.name, contract: contracts.reference }).from(projects).innerJoin(businessPartners, eq(businessPartners.id, projects.customerId)).leftJoin(contracts, eq(contracts.id, projects.contractId)).where(eq(projects.companyId, c)).orderBy(desc(projects.createdAt))
+      : null,
+    customers: has("contracts.manage") || has("projects.manage")
+      ? await db.select({ id: businessPartners.id, name: businessPartners.name }).from(businessPartners).innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "customer"))).where(eq(businessPartners.companyId, c)).orderBy(businessPartners.name)
+      : [],
     rates: has("rates.manage")
       ? await db.select({ r: rates, product: catalogItems.name }).from(rates).leftJoin(catalogItems, eq(catalogItems.id, rates.productId)).where(eq(rates.companyId, c)).orderBy(rates.rateType, desc(rates.effectiveFrom))
       : null,

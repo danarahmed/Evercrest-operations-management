@@ -88,7 +88,11 @@
     "txBill": "پسوولەی دابینکەر",
     "txExpense": "خەرجی",
     "breakdown": "پارە لە کوێوە دێت و بۆ کوێ دەچێت",
-    "account": "هەژمار"
+    "account": "هەژمار",
+    "responsible": "بەرپرسیار",
+    "started": "دەستپێکردن",
+    "project": "پڕۆژە",
+    "contract": "گرێبەست"
   },
   "Codes": {
     "transport_awaiting_loading": "چاوەڕێی بارکردنی {trip}",
@@ -109,7 +113,9 @@
     "documents_unverified": "{count} بەڵگەنامە وەرگیراون بەڵام هێشتا پشتڕاست نەکراونەتەوە.",
     "transport_awaiting_settlement": "{trip} یەکلابکەرەوە",
     "transport_awaiting_billing": "{trip} پسوولە بکە",
-    "payee_owes": "{name} {amount} قەرزداری کۆمپانیایە لە {statement}. لە کەشفی داهاتوویدا دەبڕدرێت، یان دانەوەکەی تۆمار بکە."
+    "payee_owes": "{name} {amount} قەرزداری کۆمپانیایە لە {statement}. لە کەشفی داهاتوویدا دەبڕدرێت، یان دانەوەکەی تۆمار بکە.",
+    "activity_next": "هەنگاوی داهاتوو: {step}",
+    "activity_required_open": "هەنگاوەکە تەواو بکە: {step}"
   },
   "Forms": {
     "saved": "پاشەکەوت کرا.",
@@ -177,7 +183,12 @@
     "supplierBillNo": "ژمارەی پسوولەی دابینکەر",
     "unitPrice": "نرخی یەکە",
     "currency": "دراو",
-    "dueDate": "کاتی دانەوە"
+    "dueDate": "کاتی دانەوە",
+    "moreLinks": "پڕۆژە یان گرێبەست (ئارەزوومەندانە)",
+    "project": "پڕۆژە",
+    "contract": "گرێبەست",
+    "jobNeeds": "ئەم کارە چی پێویستە",
+    "jobNeedsHelp": "بەشەکانی کار هەڵبکە یان بکوژێنەوە. بەشێک کە تۆماری تێدایە ناکوژێنرێتەوە."
   },
   "Approvals": {
     "title": "پەسەندکردنەکان",
@@ -319,7 +330,26 @@
     "posting_transport_revenue": "داهاتی گواستنەوە",
     "posting_demurrage_revenue": "داهاتی دیمەرج",
     "posting_rounding_differences": "جیاوازی نزیککردنەوە",
-    "posting_bad_debts": "قەرزی سڕاوە"
+    "posting_bad_debts": "قەرزی سڕاوە",
+    "contractsProjects": "گرێبەست و پڕۆژەکان",
+    "contractsHelp": "ئارەزوومەندانە. کاری بچووک یان یەکجاری پێویستی بە هیچیان نییە؛ تەنها کاتێک کارێک بە گرێبەست یان پڕۆژەوە ببەستە کە سوودی هەبێت.",
+    "addContract": "زیادکردنی گرێبەست",
+    "contractPartner": "کڕیار",
+    "contractRef": "ژمارەی ئاماژە",
+    "contractTitle": "ناونیشان",
+    "contractStatus": "دۆخ",
+    "contract_draft": "ڕەشنووس",
+    "contract_active": "کارا",
+    "contract_ended": "کۆتایی هاتووە",
+    "validFrom": "کارا لە",
+    "validTo": "کارا تا",
+    "activate": "کاراکردن",
+    "endContract": "کۆتایی",
+    "addProject": "زیادکردنی پڕۆژە",
+    "contract": "گرێبەست",
+    "defaultActivities": "هەنگاوەکانی لیستی کار بۆ کاری نوێ (هەر هێڵێک هەنگاوێک، ئارەزوومەندانە)",
+    "defaultActivitiesHelp": "بۆ نموونە:\nئامادەکردنی بارهەڵگر\nبارکردن\nگەیاندن\nوەرگرتنی مانیفێست\nپسوولە بۆ کڕیار",
+    "steps": "هەنگاوەکان"
   },
   "Finance": {
     "title": "دارایی",
@@ -516,5 +546,18 @@
     "trip": "گەشت",
     "driver": "شۆفێر",
     "discharged": "داگرتن"
+  },
+  "Activities": {
+    "title": "هەنگاوەکان",
+    "required": "پێویست",
+    "markDone": "تەواو",
+    "skip": "تێپەڕاندن",
+    "why": "بۆچی؟",
+    "reopen": "کردنەوەی دووبارە",
+    "add": "زیادکردنی هەنگاو",
+    "step": "هەنگاو",
+    "assignee": "کێ",
+    "due": "کاتی دیاریکراو",
+    "requiredHelp": "دەبێت پێش تەواوکردنی کار ئەنجام بدرێت"
   }
 }

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { branches, companies, users } from "./core";
 import { businessPartners } from "./masterdata";
 
@@ -60,6 +60,8 @@ export const jobTypes = pgTable(
     code: text("code").notNull(),
     name: text("name").notNull(),
     defaultCapabilities: text("default_capabilities").array().notNull().default(sql`'{}'::text[]`),
+    /** Activity checklist copied onto each new job of this type (users can add or skip steps). */
+    defaultActivities: text("default_activities").array().notNull().default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.companyId, t.code)],
@@ -104,4 +106,33 @@ export const jobs = pgTable(
     index().on(t.companyId, t.customerId),
     check("job_dates", sql`${t.endDate} is null or ${t.endDate} >= ${t.startDate}`),
   ],
+);
+
+export const ACTIVITY_STATUSES = ["open", "done", "skipped"] as const;
+
+/**
+ * Lightweight steps of a job (CLAUDE.md §9), e.g. arrange truck → load → deliver
+ * → collect document → invoice. Not a project-management system: a title, an
+ * optional owner and due date, and a status. A "required" step must be done
+ * (or skipped with a reason) before the job can be completed.
+ */
+export const jobActivities = pgTable(
+  "job_activities",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    position: integer("position").notNull(),
+    title: text("title").notNull(),
+    required: boolean("required").notNull().default(false),
+    assignedUserId: uuid("assigned_user_id").references(() => users.id),
+    dueDate: date("due_date", { mode: "string" }),
+    status: text("status", { enum: ACTIVITY_STATUSES }).notNull().default("open"),
+    note: text("note"),
+    doneBy: uuid("done_by").references(() => users.id),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.jobId, t.position)],
 );

@@ -120,6 +120,13 @@
       "when": 1791054694697,
       "tag": "0016_statement_debts",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791059642502,
+      "tag": "0017_job_activities",
+      "breakpoints": true
     }
   ]
 }

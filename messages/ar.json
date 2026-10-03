@@ -88,7 +88,11 @@
     "txBill": "فاتورة مورّد",
     "txExpense": "مصروف",
     "breakdown": "من أين يأتي المال وإلى أين يذهب",
-    "account": "الحساب"
+    "account": "الحساب",
+    "responsible": "المسؤول",
+    "started": "البدء",
+    "project": "المشروع",
+    "contract": "العقد"
   },
   "Codes": {
     "transport_awaiting_loading": "بانتظار تحميل {trip}",
@@ -109,7 +113,9 @@
     "documents_unverified": "{count} مستند مستلم لم يُتحقَّق منه بعد.",
     "transport_awaiting_settlement": "سوِّ {trip}",
     "transport_awaiting_billing": "فوتر {trip}",
-    "payee_owes": "{name} مدين للشركة بمبلغ {amount} من {statement}. سيُخصم من كشفه القادم، أو سجّل تسديدًا."
+    "payee_owes": "{name} مدين للشركة بمبلغ {amount} من {statement}. سيُخصم من كشفه القادم، أو سجّل تسديدًا.",
+    "activity_next": "الخطوة التالية: {step}",
+    "activity_required_open": "أنجز الخطوة: {step}"
   },
   "Forms": {
     "saved": "تم الحفظ.",
@@ -177,7 +183,12 @@
     "supplierBillNo": "رقم فاتورة المورّد",
     "unitPrice": "سعر الوحدة",
     "currency": "العملة",
-    "dueDate": "تاريخ الاستحقاق"
+    "dueDate": "تاريخ الاستحقاق",
+    "moreLinks": "مشروع أو عقد (اختياري)",
+    "project": "المشروع",
+    "contract": "العقد",
+    "jobNeeds": "ما يحتاجه هذا العمل",
+    "jobNeedsHelp": "شغّل أو أوقف أجزاء العمل. الجزء الذي فيه سجلات لا يمكن إيقافه."
   },
   "Approvals": {
     "title": "الموافقات",
@@ -319,7 +330,26 @@
     "posting_transport_revenue": "إيرادات النقل",
     "posting_demurrage_revenue": "إيرادات الديمرج",
     "posting_rounding_differences": "فروقات التقريب",
-    "posting_bad_debts": "الديون المشطوبة"
+    "posting_bad_debts": "الديون المشطوبة",
+    "contractsProjects": "العقود والمشاريع",
+    "contractsHelp": "اختياري. الأعمال الصغيرة أو لمرة واحدة لا تحتاج أيًا منهما؛ اربط العمل بعقد أو مشروع فقط عند الحاجة.",
+    "addContract": "إضافة عقد",
+    "contractPartner": "الزبون",
+    "contractRef": "المرجع",
+    "contractTitle": "العنوان",
+    "contractStatus": "الحالة",
+    "contract_draft": "مسودة",
+    "contract_active": "ساري",
+    "contract_ended": "منتهٍ",
+    "validFrom": "ساري من",
+    "validTo": "ساري إلى",
+    "activate": "تفعيل",
+    "endContract": "إنهاء",
+    "addProject": "إضافة مشروع",
+    "contract": "العقد",
+    "defaultActivities": "خطوات قائمة المهام للأعمال الجديدة (خطوة في كل سطر، اختياري)",
+    "defaultActivitiesHelp": "مثال:\nترتيب الشاحنة\nالتحميل\nالتسليم\nاستلام المانيفست\nفوترة الزبون",
+    "steps": "الخطوات"
   },
   "Finance": {
     "title": "المالية",
@@ -516,5 +546,18 @@
     "trip": "الرحلة",
     "driver": "السائق",
     "discharged": "التفريغ"
+  },
+  "Activities": {
+    "title": "الخطوات",
+    "required": "إلزامية",
+    "markDone": "تم",
+    "skip": "تخطٍّ",
+    "why": "لماذا؟",
+    "reopen": "إعادة فتح",
+    "add": "إضافة خطوة",
+    "step": "الخطوة",
+    "assignee": "المكلّف",
+    "due": "الموعد",
+    "requiredHelp": "يجب إنجازها قبل إكمال العمل"
   }
 }

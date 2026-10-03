@@ -30,6 +30,15 @@ export default async function NewJob({ params }: { params: Promise<{ locale: str
           <label>{t("responsible")}<select name="responsibleUserId" required defaultValue={actor.userId}>{o.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
           <label>{t("description")}<input name="description" /></label>
         </div>
+        {(o.projects.length > 0 || o.contracts.length > 0) && (
+          <details>
+            <summary>{t("moreLinks")}</summary>
+            <div className="grid2">
+              <label>{t("project")}<select name="projectId" defaultValue=""><option value="">—</option>{o.projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name} ({p.customer})</option>)}</select></label>
+              <label>{t("contract")}<select name="contractId" defaultValue=""><option value="">—</option>{o.contracts.map((c) => <option key={c.id} value={c.id}>{c.reference} · {c.title} ({c.partner})</option>)}</select></label>
+            </div>
+          </details>
+        )}
       </ActionForm>
     </Shell>
   );

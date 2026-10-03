@@ -35,7 +35,8 @@ export interface Blocker {
  * - inUse(): whether disabling the capability would orphan existing records
  */
 export interface CapabilityModule {
-  capability: Capability;
+  /** "core": a general control that is not a switchable capability (e.g. required activities). */
+  capability: Capability | "core";
   /** Check blockers even when the job has not switched this capability on (configured controls). */
   alwaysCheck?: boolean;
   blockers(tx: Db, job: Job): Promise<Blocker[]>;

@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, contracts, jobs, jobTypes, partnerRoles, projects, users } from "@/db/schema";
+import { businessPartners, contracts, jobActivities, jobs, jobTypes, partnerRoles, projects, users } from "@/db/schema";
 import { type JobStatus } from "@/db/schema/jobs";
 import { requirePermission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
@@ -57,6 +57,20 @@ export const createProject = defineCommand({
   },
 });
 
+/** Contracts move draft → active → ended; an ended contract cannot be used for new jobs. */
+export const setContractStatus = defineCommand({
+  name: "contracts.set_status",
+  permission: "contracts.manage",
+  input: z.object({ contractId: uuid, status: z.enum(["draft", "active", "ended"]), reason: z.string().trim().min(1) }),
+  async handler({ tx, actor, audit }, { contractId, status, reason }) {
+    const [c] = await tx.select().from(contracts).where(and(eq(contracts.id, contractId), eq(contracts.companyId, actor.companyId)));
+    if (!c) throw new NotFound("contract", contractId);
+    await tx.update(contracts).set({ status }).where(eq(contracts.id, contractId));
+    await audit({ action: "contracts.set_status", entityType: "contract", entityId: contractId, before: { status: c.status }, after: { status }, reason });
+    return { id: contractId, status };
+  },
+});
+
 async function assertContractFor(tx: Db, companyId: string, contractId: string, partnerId: string) {
   const [c] = await tx.select().from(contracts).where(and(eq(contracts.id, contractId), eq(contracts.companyId, companyId)));
   if (!c) throw new NotFound("contract", contractId);
@@ -68,13 +82,20 @@ async function assertContractFor(tx: Db, companyId: string, contractId: string, 
 export const defineJobType = defineCommand({
   name: "job_types.define",
   permission: "job_types.manage",
-  input: z.object({ code: z.string().trim().min(1), name: z.string().trim().min(1), defaultCapabilities: capabilityList }),
+  input: z.object({
+    code: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    defaultCapabilities: capabilityList,
+    /** Checklist steps copied onto new jobs of this type. */
+    defaultActivities: z.array(z.string().trim()).transform((xs) => xs.filter(Boolean)).optional(),
+  }),
   async handler({ tx, actor, audit }, input) {
     const [prev] = await tx.select().from(jobTypes).where(and(eq(jobTypes.companyId, actor.companyId), eq(jobTypes.code, input.code)));
+    const defaultActivities = input.defaultActivities ?? prev?.defaultActivities ?? [];
     const [row] = await tx
       .insert(jobTypes)
-      .values({ ...input, companyId: actor.companyId })
-      .onConflictDoUpdate({ target: [jobTypes.companyId, jobTypes.code], set: { name: input.name, defaultCapabilities: input.defaultCapabilities } })
+      .values({ ...input, defaultActivities, companyId: actor.companyId })
+      .onConflictDoUpdate({ target: [jobTypes.companyId, jobTypes.code], set: { name: input.name, defaultCapabilities: input.defaultCapabilities, defaultActivities } })
       .returning();
     await audit({ action: "job_types.define", entityType: "job_type", entityId: row.id, before: prev ?? null, after: input });
     return { id: row.id };
@@ -109,7 +130,10 @@ export const createJob = defineCommand({
       if (p.customerId !== input.customerId) throw new ValidationError("Project belongs to a different customer");
       if (p.status !== "open") throw new ValidationError("Project is closed");
     }
-    if (input.contractId) await assertContractFor(tx, actor.companyId, input.contractId, input.customerId);
+    if (input.contractId) {
+      const c = await assertContractFor(tx, actor.companyId, input.contractId, input.customerId);
+      if (c.status === "ended") throw new ValidationError(`Contract ${c.reference} has ended`);
+    }
 
     const jobNo = await nextNumber(tx, actor.companyId, "JOB", Number(input.startDate.slice(0, 4)));
     const capabilities = input.capabilities ?? (type.defaultCapabilities as Capability[]);
@@ -117,6 +141,9 @@ export const createJob = defineCommand({
       .insert(jobs)
       .values({ ...input, capabilities, jobNo, branchId: input.branchId ?? actor.branchId, companyId: actor.companyId, createdBy: actor.userId })
       .returning();
+    const steps = type.defaultActivities as string[];
+    if (steps.length)
+      await tx.insert(jobActivities).values(steps.map((title, i) => ({ companyId: actor.companyId, jobId: row.id, position: i + 1, title, createdBy: actor.userId })));
     await audit({ action: "jobs.create", entityType: "job", entityId: row.id, after: { jobNo, ...input, capabilities } });
     return { id: row.id, jobNo };
   },
@@ -208,6 +235,14 @@ export async function nextActionInfo(tx: Db, job: Job): Promise<NextAction | nul
   const blockers = await jobBlockers(tx, job);
   if (blockers.length) return { code: blockers[0].code, params: blockers[0].params ?? {}, text: blockers[0].action };
   if (job.status === "completed") return { code: "job.ready_to_close", params: {}, text: "Ready to close financially" };
+  // Nothing blocking: point to the next open step of the job's checklist, if any.
+  const [step] = await tx
+    .select({ title: jobActivities.title })
+    .from(jobActivities)
+    .where(and(eq(jobActivities.jobId, job.id), eq(jobActivities.status, "open")))
+    .orderBy(asc(jobActivities.position))
+    .limit(1);
+  if (step && job.status !== "draft") return { code: "activity.next", params: { step: step.title }, text: `Next step: ${step.title}` };
   return job.status === "draft"
     ? { code: "job.open_it", params: {}, text: "Open the job" }
     : { code: "job.ready_to_complete", params: {}, text: "Ready to complete" };

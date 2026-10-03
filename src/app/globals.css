@@ -57,3 +57,10 @@ tr.subtotal td { border-top: 2px solid var(--border); background: var(--bg, tran
 main.wide { max-width: 1500px; }
 table.statement { font-size: 0.85em; }
 table.statement td, table.statement th { white-space: nowrap; padding: 6px 8px; }
+/* Checkbox + text on one line inside forms */
+.form label.row { display: flex; align-items: center; gap: 6px; color: var(--text); }
+td.wrap, td.next { white-space: normal; }
+/* Forms inside table cells (row actions) are just buttons */
+td .form { padding: 0; border: 0; background: none; box-shadow: none; margin: 0; }
+td .form button { padding: 4px 10px; font-size: 13px; }
+td details summary { cursor: pointer; font-size: 13px; }

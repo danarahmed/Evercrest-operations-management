@@ -7,6 +7,7 @@ import { describe, formatMoney, formatQty } from "@/lib/format";
 import { formOptions, jobWorkspace } from "@/server/queries";
 import { JobForms } from "./forms";
 import { SettlementSection } from "./settlement";
+import { ActivitiesSection } from "./activities";
 import { can } from "@/server/authz";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
@@ -25,6 +26,7 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
   const ts = await getTranslations({ locale, namespace: "TripStatus" });
   const ds = await getTranslations({ locale, namespace: "DocState" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
+  const cap = await getTranslations({ locale, namespace: "Setup" });
   const caps = w.job.capabilities as string[];
   const options = await formOptions(db, actor);
 
@@ -33,12 +35,21 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
       <p><Link href={`/${locale}`}>{t("back")}</Link></p>
       <div className="card">
         <h1>{w.job.jobNo} · {w.job.name}</h1>
-        <p className="muted">{w.customer} · <span className="badge">{st(w.job.status)}</span></p>
+        <p className="muted">{w.customer} · {w.meta.type} · <span className="badge">{st(w.job.status)}</span></p>
+        <p className="muted">
+          {t("responsible")}: {w.meta.responsible} · {t("started")}: {w.job.startDate}
+          {w.meta.projectCode && <> · {t("project")}: <span dir="auto">{w.meta.projectCode} {w.meta.project}</span></>}
+          {w.meta.contract && <> · {t("contract")}: <span dir="auto">{w.meta.contract} {w.meta.contractTitle}</span></>}
+        </p>
+        {w.job.description && <p>{w.job.description}</p>}
+        <p className="row">{caps.map((c) => <span key={c} className="badge">{cap(`cap_${c}`)}</span>)}</p>
         <p>{t("nextAction")}: <span className="next">{w.nextAction ? describe(codes, w.nextAction.code, w.nextAction.params, w.nextAction.text, locale) : t("none")}</span></p>
       </div>
       {!["financially_closed", "cancelled"].includes(w.job.status) && (
         <JobForms locale={locale} jobId={w.job.id} jobNo={w.job.jobNo} capabilities={caps} tripList={w.trips.map((x) => x.trip)} options={options} />
       )}
+
+<ActivitiesSection locale={locale} jobId={w.job.id} activities={w.activities} users={options.users} editable={can(actor, "jobs.manage") && !["financially_closed", "cancelled"].includes(w.job.status)} />
 
       {(caps.includes("transportation") || w.trips.length > 0) && (
         <>

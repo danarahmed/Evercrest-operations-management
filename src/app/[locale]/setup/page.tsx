@@ -67,6 +67,70 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
         </Section>
       )}
 
+      {(d.contracts || d.projects) && (
+        <Section title={t("contractsProjects")}>
+          <p className="muted">{t("contractsHelp")}</p>
+          {d.contracts && (
+            <>
+              <details className="panel">
+                <summary>{t("addContract")}</summary>
+                <ActionForm command="contracts.create" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
+                  <div className="grid2">
+                    <label>{t("contractPartner")}<select name="partnerId" required>{d.customers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+                    <label>{t("contractRef")}<input name="reference" required dir="ltr" /></label>
+                    <label>{t("contractTitle")}<input name="title" required /></label>
+                    <label>{t("contractStatus")}<select name="status" defaultValue="active">{["draft", "active", "ended"].map((x) => <option key={x} value={x}>{t(`contract_${x}`)}</option>)}</select></label>
+                    <label>{t("validFrom")}<input type="date" name="validFrom" /></label>
+                    <label>{t("validTo")}<input type="date" name="validTo" /></label>
+                  </div>
+                </ActionForm>
+              </details>
+              {d.contracts.length > 0 && (
+                <div className="table-wrap"><table>
+                  <thead><tr><th>{t("contractRef")}</th><th>{t("contractTitle")}</th><th>{t("contractPartner")}</th><th>{t("validFrom")}</th><th>{t("validTo")}</th><th>{t("contractStatus")}</th><th /></tr></thead>
+                  <tbody>{d.contracts.map(({ c, partner }) => (
+                    <tr key={c.id}>
+                      <td dir="ltr">{c.reference}</td><td>{c.title}</td><td>{partner}</td><td>{c.validFrom ?? "—"}</td><td>{c.validTo ?? "—"}</td>
+                      <td><span className={`badge ${c.status === "active" ? "state-verified" : ""}`}>{t(`contract_${c.status}`)}</span></td>
+                      <td>{c.status !== "ended" && (
+                        <ActionForm command="contracts.set_status" locale={locale} idempotencyKey={k()} submitLabel={c.status === "draft" ? t("activate") : t("endContract")}>
+                          <input type="hidden" name="contractId" value={c.id} />
+                          <input type="hidden" name="status" value={c.status === "draft" ? "active" : "ended"} />
+                          <input type="hidden" name="reason" value={c.status === "draft" ? "activated" : "contract ended"} />
+                        </ActionForm>
+                      )}</td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </>
+          )}
+          {d.projects && (
+            <>
+              <details className="panel">
+                <summary>{t("addProject")}</summary>
+                <ActionForm command="projects.create" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
+                  <div className="grid2">
+                    <label>{f("customer")}<select name="customerId" required>{d.customers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
+                    <label>{f("name")}<input name="name" required /></label>
+                    <label>{t("contract")}<select name="contractId" defaultValue=""><option value="">—</option>{(d.contracts ?? []).filter(({ c }) => c.status !== "ended").map(({ c, partner }) => <option key={c.id} value={c.id}>{c.reference} · {partner}</option>)}</select></label>
+                  </div>
+                </ActionForm>
+              </details>
+              {d.projects.length > 0 && (
+                <div className="table-wrap"><table>
+                  <thead><tr><th>{t("code")}</th><th>{f("name")}</th><th>{f("customer")}</th><th>{t("contract")}</th></tr></thead>
+                  <tbody>{d.projects.map(({ p, customer, contract }) => (
+                    <tr key={p.id}><td dir="ltr">{p.code}</td><td>{p.name}</td><td>{customer}</td><td dir="ltr">{contract ?? "—"}</td></tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </>
+          )}
+        </Section>
+      )}
+
       {d.accounts && (
         <Section title={t("accounts")}>
           <details className="panel">
@@ -217,9 +281,15 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
               <fieldset className="row"><legend>{t("defaultCapabilities")}</legend>
                 {CAPABILITIES.map((c) => <label key={c} className="row"><input type="checkbox" name="defaultCapabilities[]" value={c} />{t(`cap_${c}`)}</label>)}
               </fieldset>
+              <label>{t("defaultActivities")}<textarea name="activitiesText" rows={4} placeholder={t("defaultActivitiesHelp")} /></label>
             </ActionForm>
           </details>
-          <ul>{d.jobTypes.map((j) => <li key={j.id}>{j.name} — {(j.defaultCapabilities as string[]).map((c) => t(`cap_${c}`)).join(", ") || "—"}</li>)}</ul>
+          <ul>{d.jobTypes.map((j) => (
+            <li key={j.id}>
+              <strong>{j.name}</strong> — {(j.defaultCapabilities as string[]).map((c) => t(`cap_${c}`)).join(", ") || "—"}
+              {(j.defaultActivities as string[]).length > 0 && <div className="muted">{t("steps")}: {(j.defaultActivities as string[]).join(" → ")}</div>}
+            </li>
+          ))}</ul>
         </Section>
       )}
 

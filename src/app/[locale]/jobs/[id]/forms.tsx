@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { ActionForm } from "@/components/ActionForm";
 import type { trips } from "@/db/schema";
 import type { FormOptions } from "@/server/queries";
+import { CAPABILITIES } from "@/domain/jobs/capabilities";
 
 type Trip = typeof trips.$inferSelect;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -18,6 +19,7 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
 }) {
   const t = await getTranslations({ locale, namespace: "Forms" });
   const st = await getTranslations({ locale, namespace: "JobStatus" });
+  const cap = await getTranslations({ locale, namespace: "Setup" });
   const planned = tripList.filter((x) => x.status === "planned" || x.status === "loaded");
   const loaded = tripList.filter((x) => x.status === "loaded" || x.status === "discharged");
   const live = tripList.filter((x) => x.status !== "cancelled");
@@ -166,6 +168,18 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
           </ActionForm>
         </details>
       )}
+
+      <details className="panel">
+        <summary>{t("jobNeeds")}</summary>
+        <p className="muted">{t("jobNeedsHelp")}</p>
+        <ActionForm command="jobs.set_capabilities" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+          <input type="hidden" name="jobId" value={jobId} />
+          <fieldset className="row">
+            {CAPABILITIES.map((c) => <label key={c} className="row"><input type="checkbox" name="capabilities[]" value={c} defaultChecked={capabilities.includes(c)} />{cap(`cap_${c}`)}</label>)}
+          </fieldset>
+          <label>{t("reason")}<input name="reason" /></label>
+        </ActionForm>
+      </details>
 
       <details className="panel">
         <summary>{t("changeStatus")}</summary>

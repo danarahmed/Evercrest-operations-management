@@ -52,3 +52,10 @@ export function fromDbError(err: unknown): unknown {
   }
   return err;
 }
+
+/** The operation is valid but must be approved first; submit it as an approval request. */
+export class ApprovalRequired extends DomainError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super("approval_required", message, details);
+  }
+}

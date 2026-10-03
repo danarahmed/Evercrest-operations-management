@@ -12,6 +12,11 @@ export const SETTINGS = {
   /** Default currency preselected in forms. Does not convert anything. */
   "ui.default_currency": z.enum(["IQD", "USD"]),
   /**
+   * Money paid out above these amounts (per currency) needs approval by a second
+   * person. A currency with no limit configured needs no approval.
+   */
+  "approvals.payment_out_limits": z.record(z.string().regex(/^[A-Z]{3}$/), z.string().regex(/^\d+(\.\d+)?$/)),
+  /**
    * Which ledger account (by code) each kind of automatic posting uses.
    * Nothing is posted to a default: a missing mapping stops the operation.
    */

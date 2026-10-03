@@ -5,15 +5,17 @@ import { accounts, invoices, journalLines, moneyAccounts, payments } from "@/db/
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
-import { Conflict, NotFound, ValidationError } from "@/server/errors";
+import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
+import { getSetting } from "@/server/settings";
 import { postEntry, reverseEntry } from "../accounting/ledger";
 import { postingAccount } from "../accounting/posting";
 import { amountString, currencyCode } from "../currency";
 import { type Capability, type Job, registerCapabilityModule } from "../jobs/capabilities";
 import { getJob } from "../jobs/commands";
 import { getTrip } from "../transport/trips";
-import { dec, toStr } from "../money";
+import { D, dec, toStr } from "../money";
 import { nextNumber } from "../sequences";
+import { registerApprovable } from "../approvals/approvals";
 
 const uuid = z.string().uuid();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -122,6 +124,8 @@ export const recordPayment = defineCommand({
       if (!partnerId) throw new ValidationError("An advance needs a payee");
     }
 
+    if (input.direction === "out" && !ctx.approval) await assertWithinLimit(tx, actor.companyId, input.currency, input.amount, partnerId, input.paymentDate);
+
     const paymentNo = await nextNumber(tx, actor.companyId, input.direction === "out" ? "PAY" : "RCV", Number(input.paymentDate.slice(0, 4)));
     const cashSide = { accountId: money.ledgerAccountId, currency: input.currency, jobId };
     // Expenses carry the job (cost) but no partner balance; balance-sheet sides carry the partner.
@@ -144,6 +148,30 @@ export const recordPayment = defineCommand({
     return { id: row.id, paymentNo, journalEntryId: entry.id };
   },
 });
+
+/**
+ * Payments out above the configured limit need approval. Payments to the same
+ * payee on the same day are added together, so a large payment cannot slip
+ * through as several small ones.
+ */
+async function assertWithinLimit(tx: Db, companyId: string, currency: string, amount: string, partnerId: string | null, date: string) {
+  const limits = (await getSetting(tx, companyId, "approvals.payment_out_limits")) ?? {};
+  const limit = limits[currency];
+  if (limit === undefined) return;
+  let sameDay = new D(0);
+  if (partnerId) {
+    // Serialize concurrent payments to the same payee/day/currency so their sum is checked correctly.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`payout:${companyId}:${partnerId}:${currency}:${date}`}))`);
+    const [r] = await tx
+      .select({ total: sql<string>`coalesce(sum(${payments.amount}), 0)` })
+      .from(payments)
+      .where(and(eq(payments.companyId, companyId), eq(payments.partnerId, partnerId), eq(payments.currency, currency), eq(payments.paymentDate, date), eq(payments.direction, "out"), eq(payments.status, "posted")));
+    sameDay = dec(r.total);
+  }
+  const total = sameDay.plus(dec(amount));
+  if (total.gt(dec(limit)))
+    throw new ApprovalRequired(`Payments over ${limit} ${currency} need approval`, { limit, currency, total: toStr(total), alreadyPaidToday: toStr(sameDay) });
+}
 
 async function counterAccount(tx: Db, companyId: string, purpose: (typeof PAYMENT_PURPOSES)[number], direction: "in" | "out") {
   switch (purpose) {
@@ -209,3 +237,5 @@ registerCapabilityModule({
   },
 });
 
+
+registerApprovable(recordPayment);

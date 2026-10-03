@@ -71,6 +71,13 @@
       "when": 1791041199398,
       "tag": "0009_currency_exchange",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791041251022,
+      "tag": "0010_approvals",
+      "breakpoints": true
     }
   ]
 }

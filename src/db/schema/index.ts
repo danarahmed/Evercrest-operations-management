@@ -5,3 +5,4 @@ export * from "./jobs";
 export * from "./transport";
 export * from "./finance";
 export * from "./documents";
+export * from "./approvals";

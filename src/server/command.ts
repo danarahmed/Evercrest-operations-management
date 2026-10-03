@@ -20,6 +20,8 @@ export interface CommandContext {
   tx: Db;
   actor: Actor;
   audit(event: AuditInput): Promise<void>;
+  /** Set when this run executes an approved request. */
+  approval?: { requestId: string; approvedBy: string };
 }
 
 export interface Command<I, O> {
@@ -38,6 +40,8 @@ export function defineCommand<I, O>(cmd: Command<I, O>): Command<I, O> {
 export interface RunOptions {
   /** Client-generated key; a retry with the same key returns the original result. */
   idempotencyKey?: string;
+  /** Internal: run on behalf of an approved request (see domain/approvals). */
+  approval?: { requestId: string; approvedBy: string };
 }
 
 /**
@@ -86,6 +90,7 @@ export async function runCommand<I, O>(
       const ctx: CommandContext = {
         tx: tx as unknown as Db,
         actor,
+        approval: opts.approval,
         audit: async (e) => {
           audited++;
           await tx.insert(auditEvents).values({
@@ -98,7 +103,7 @@ export async function runCommand<I, O>(
             before: e.before ?? null,
             after: e.after ?? null,
             reason: e.reason ?? null,
-            approvedBy: e.approvedBy ?? null,
+            approvedBy: e.approvedBy ?? opts.approval?.approvedBy ?? null,
             idempotencyKey: key ?? null,
           });
         },

@@ -9,6 +9,8 @@ import { summarize } from "@/domain/management/history";
 import { JobForms } from "./forms";
 import { SettlementSection } from "./settlement";
 import { ActivitiesSection } from "./activities";
+import { JobDetailsForms } from "./details";
+import { Fragment } from "react";
 import { DeliveriesSection, WorkOrdersSection } from "./operations";
 import { can } from "@/server/authz";
 import { currentActor } from "@/server/session";
@@ -30,6 +32,7 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const cap = await getTranslations({ locale, namespace: "Setup" });
   const caps = w.job.capabilities as string[];
+  const values = w.job.customValues as Record<string, string>;
   const options = await formOptions(db, actor);
   const history = await jobHistoryView(db, actor, id);
   const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
@@ -47,8 +50,17 @@ export default async function JobPage({ params }: { params: Promise<{ locale: st
         </p>
         {w.job.description && <p>{w.job.description}</p>}
         <p className="row">{caps.map((c) => <span key={c} className="badge">{cap(`cap_${c}`)}</span>)}</p>
+        {(w.fields.some((f) => values[f.key]) || w.job.budgetAmount) && (
+          <dl className="kv">
+            {w.fields.filter((f) => values[f.key]).map((f) => <Fragment key={f.id}><dt>{f.label}</dt><dd dir="auto">{values[f.key]}</dd></Fragment>)}
+            {w.job.budgetAmount && w.job.budgetCurrency && <><dt>{t("budget")}</dt><dd>{formatMoney(w.job.budgetAmount, w.job.budgetCurrency, locale)}</dd></>}
+          </dl>
+        )}
         <p>{t("nextAction")}: <span className="next">{w.nextAction ? describe(codes, w.nextAction.code, w.nextAction.params, w.nextAction.text, locale) : t("none")}</span></p>
       </div>
+      {!["financially_closed", "cancelled"].includes(w.job.status) && can(actor, "jobs.manage") && (
+        <JobDetailsForms locale={locale} jobId={w.job.id} fields={w.fields} values={values} budget={{ amount: w.job.budgetAmount, currency: w.job.budgetCurrency }} />
+      )}
       {!["financially_closed", "cancelled"].includes(w.job.status) && (
         <JobForms locale={locale} jobId={w.job.id} jobNo={w.job.jobNo} capabilities={caps} tripList={w.trips.map((x) => x.trip)} options={options} />
       )}

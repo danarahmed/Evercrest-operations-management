@@ -24,7 +24,8 @@ export function describe(t: Translate, code: string, params: Record<string, stri
   const key = code.replace(/\./g, "_");
   if (!t.has(key)) return fallback;
   const values = { ...params };
-  if (values.amount && values.currency) values.amount = formatMoney(values.amount, values.currency, locale);
+  if (values.currency)
+    for (const k of ["amount", "costs", "budget"]) if (values[k]) values[k] = formatMoney(values[k], values.currency, locale);
   // Unicode isolation keeps codes, dates and numbers intact inside right-to-left sentences.
   for (const k of Object.keys(values)) values[k] = `\u2068${values[k]}\u2069`;
   return t(key, values);

@@ -54,3 +54,42 @@ journal entries only by calling the ledger engine — never by writing ledger ro
 - **Phase 6 — Management:** dashboards, exceptions, data-quality checks, reports, PDF export.
 
 Each phase is built as vertical slices and tested before the next dependency.
+
+## Module map (what is built)
+
+| Area | Code | Screens |
+|---|---|---|
+| Job engine | `domain/jobs` — jobs, capabilities registry, steps (`activities.ts`), custom fields + budget (`custom-fields.ts`), contracts, projects, job types with default capabilities and steps | Dashboard, Jobs (workspace), New job, Setup |
+| Transport | `domain/transport` — trips, rates, settlement, billing, pay statements, statement debts | Job workspace, Pay statements |
+| Field service | `domain/field/work-orders.ts` — work orders gate job completion | Job workspace |
+| Product supply | `domain/supply/deliveries.ts` — deliveries invoiced at the product price rule | Job workspace |
+| Documents | `domain/documents` — types and rules by job type, customer or contract | Job workspace, Documents, Setup |
+| Finance | `domain/finance` — invoices/bills, payments (one engine: advance, settlement, receipt, bill payment, expense, other), transfers, currency exchange | Finance (5 tabs) |
+| Accounting | `domain/accounting` — ledger, posting map, statements, views (journal, trial balance, partner ledger, cash balances, month locks) | Finance → Cash, bank & books / Journal / Partner accounts |
+| Approvals | `domain/approvals` — four-eyes, payout limits, write-offs always | Approvals |
+| Management | `domain/management` — exceptions, reports (job profit, monthly), history/audit | Dashboard, Reports, Admin → Audit log |
+| Organisation | `domain/org` — users, roles, permissions (no self-escalation) | Admin |
+
+Capability modules plug into the job engine with `registerCapabilityModule`
+(blockers → next action, `inUse` protects switching a capability off). General
+controls that are not switchable (required steps, required custom fields) use
+the `"core"` capability with `alwaysCheck`.
+
+## Acceptance scenarios (CLAUDE.md §43) — where they are tested
+
+| Scenario | Test |
+|---|---|
+| A Simple product supply | `tests/operations.test.ts` (deliveries, no trips) |
+| B Petroleum transport via transporter | `tests/settlement.test.ts`, `tests/statements.test.ts` |
+| C Direct driver | `tests/settlement.test.ts` (trips without transporter) |
+| D Driver changes transporter | `tests/transport.test.ts` (transporter captured per trip) |
+| E Field service | `tests/operations.test.ts` (work orders, contractor bill) |
+| F Product + transportation | capabilities combine on one job (`jobs.set_capabilities`) |
+| G Customer-specific requirement | `tests/custom-fields.test.ts` (customer document + required field by configuration) |
+| H New service | job type + steps + expenses + invoices, no new module (`tests/activities.test.ts`, `tests/reports.test.ts`) |
+
+## Not built yet
+
+- Supabase Auth (only `AUTH_MODE=dev` sign-in exists) and production hosting.
+- PDF files (pages print cleanly from the browser instead).
+- Inventory stock levels, fleet, HR, CRM — deliberately out of scope (CLAUDE.md §34).

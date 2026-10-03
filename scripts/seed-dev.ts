@@ -10,6 +10,7 @@ import { defineDocumentType, recordDocument, setDocumentRequirement } from "@/do
 import { createInvoice } from "@/domain/finance/invoices";
 import { createMoneyAccount, recordPayment } from "@/domain/finance/payments";
 import { createContract, createJob, createProject, defineJobType } from "@/domain/jobs/commands";
+import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jobs/custom-fields";
 import { createPartner } from "@/domain/masterdata/partners";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { defineRate } from "@/domain/transport/rates";
@@ -92,6 +93,9 @@ await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId:
 await run(createInvoice, { kind: "sales", partnerId: northOil, currency: "USD", invoiceDate: d(7), dueDate: d(2), lines: [{ description: "Site support", quantity: "1", unitPrice: "3000", accountId: acc["4000"], jobId: job.id }] });
 await run(recordPayment, { direction: "out", purpose: "expense", moneyAccountId: iqd, amount: "175000", currency: "IQD", paymentDate: d(8), method: "cash", jobId: job.id, counterAccountId: acc["5300"], notes: "Field entry permit", reference: "R-554" });
 await run(createInvoice, { kind: "bill", billFrom: "supplier", partnerId: kurdSupply, currency: "IQD", invoiceDate: d(5), dueDate: d(-25), externalRef: "KS-88", lines: [{ description: "Truck tyre repair", quantity: "1", unitPrice: "120000", accountId: acc["5200"], jobId: job.id }] });
+await run(defineCustomField, { key: "customer_ref", label: "Customer PO / reference", scope: "customer", scopeId: northOil, required: true, requiredBefore: "financially_closed" });
+await run(setJobCustomValues, { jobId: job.id, values: { customer_ref: "NOC-PO-2026-118" } });
+await run(setJobBudget, { jobId: job.id, amount: "2500000", currency: "IQD" });
 // A second person so approvals (four-eyes) can be tried, and a payment limit that triggers them.
 const finance = await run<{ id: string }>(createUser, { email: "finance@evercrest.local", displayName: "Finance Manager" });
 const role = await run<{ id: string }>(defineRole, { code: "finance", name: "Finance", permissions: ["jobs.view", "approvals.decide", "documents.verify", "payments.create", "reports.financial.view"], reason: "dev setup" });

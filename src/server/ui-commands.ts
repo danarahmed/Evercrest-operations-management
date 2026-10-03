@@ -17,6 +17,7 @@ import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
 import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
 import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities } from "@/domain/jobs/commands";
 import { addActivity, setActivityStatus } from "@/domain/jobs/activities";
+import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jobs/custom-fields";
 import { setDocumentRequirement } from "@/domain/documents/documents";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { billTrips } from "@/domain/transport/billing";
@@ -142,8 +143,25 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "projects.create": { command: createProject },
   "documents.set_requirement": {
     command: setDocumentRequirement,
-    prepare: async (_db, _a, i) => ({ ...i, active: i.active !== "false" }),
+    // One select chooses what the rule is for: "job_type:<id>", "customer:<id>" or "contract:<id>".
+    prepare: async (_db, _a, { target, ...i }) => {
+      const [scope, scopeId] = String(target ?? "").split(":");
+      return { ...i, ...(target ? { scope, scopeId } : {}), active: i.active !== "false" };
+    },
   },
+  "custom_fields.define": {
+    command: defineCustomField,
+    prepare: async (_db, _a, { target, ...i }) => {
+      const [scope, scopeId] = String(target ?? "all").split(":");
+      return { ...i, scope, scopeId: scopeId || null };
+    },
+  },
+  // Custom values arrive as cf_<key> fields.
+  "jobs.set_custom_values": {
+    command: setJobCustomValues,
+    prepare: async (_db, _a, i) => ({ jobId: i.jobId, values: Object.fromEntries(Object.entries(i).filter(([k]) => k.startsWith("cf_")).map(([k, v]) => [k.slice(3), String(v)])) }),
+  },
+  "jobs.set_budget": { command: setJobBudget },
   "settings.posting_accounts": { command: setSetting, prepare: settingFromFields("accounting.posting_accounts") },
   "settings.payment_limits": { command: setSetting, prepare: settingFromFields("approvals.payment_out_limits") },
   "settings.rounding": { command: setSetting, prepare: settingFromFields("rounding.final_increment") },

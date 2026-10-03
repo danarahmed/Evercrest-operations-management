@@ -98,7 +98,8 @@
     "started": "البدء",
     "project": "المشروع",
     "contract": "العقد",
-    "history": "السجل"
+    "history": "السجل",
+    "budget": "الميزانية"
   },
   "Codes": {
     "transport_awaiting_loading": "بانتظار تحميل {trip}",
@@ -123,7 +124,10 @@
     "activity_next": "الخطوة التالية: {step}",
     "activity_required_open": "أنجز الخطوة: {step}",
     "field_work_order_open": "أكمل {workOrder} في {site}",
-    "supply_awaiting_billing": "فوتر {delivery}"
+    "supply_awaiting_billing": "فوتر {delivery}",
+    "job_custom_field_missing": "املأ {field}",
+    "job_over_budget": "{job}: التكاليف {costs} تجاوزت الميزانية {budget}.",
+    "job_negative_margin": "{job} يخسر: {amount} (التكاليف أعلى من الإيرادات)."
   },
   "Forms": {
     "saved": "تم الحفظ.",
@@ -196,7 +200,10 @@
     "project": "المشروع",
     "contract": "العقد",
     "jobNeeds": "ما يحتاجه هذا العمل",
-    "jobNeedsHelp": "شغّل أو أوقف أجزاء العمل. الجزء الذي فيه سجلات لا يمكن إيقافه."
+    "jobNeedsHelp": "شغّل أو أوقف أجزاء العمل. الجزء الذي فيه سجلات لا يمكن إيقافه.",
+    "extraInfo": "معلومات إضافية",
+    "budget": "الميزانية",
+    "budgetHelp": "اختياري. إذا تجاوزت التكاليف بهذه العملة الميزانية، تُنبَّه الإدارة."
   },
   "Approvals": {
     "title": "الموافقات",
@@ -361,7 +368,23 @@
     "steps": "الخطوات",
     "rt_product_price": "سعر بيع المنتج",
     "basis_per_unit": "لكل وحدة",
-    "posting_product_sales": "مبيعات المنتجات"
+    "posting_product_sales": "مبيعات المنتجات",
+    "ruleFor": "لـ",
+    "allJobs": "كل الأعمال",
+    "byJobType": "نوع العمل",
+    "byCustomer": "الزبون",
+    "byContract": "العقد",
+    "scope_job_type": "نوع العمل",
+    "scope_customer": "الزبون",
+    "scope_contract": "العقد",
+    "customFields": "حقول مخصصة",
+    "customFieldsHelp": "معلومات إضافية يحتاجها بعض الزبائن أو أنواع العمل (مرجع الزبون، رقم التصريح، رمز الموقع). للحقائق البسيطة فقط — ما يُستخدم في الحسابات أو التقارير يجب أن يصبح حقلًا حقيقيًا.",
+    "addCustomField": "إضافة حقل مخصص أو تعديله",
+    "fieldLabel": "التسمية",
+    "fieldLabelExample": "مثال: رقم تصريح الحقل",
+    "fieldKey": "المفتاح",
+    "fieldFor": "يظهر في",
+    "fieldRequired": "إلزامي"
   },
   "Finance": {
     "title": "المالية",

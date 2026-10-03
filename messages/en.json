@@ -98,7 +98,8 @@
     "started": "Started",
     "project": "Project",
     "contract": "Contract",
-    "history": "History"
+    "history": "History",
+    "budget": "Budget"
   },
   "Codes": {
     "transport_awaiting_loading": "Waiting for loading of {trip}",
@@ -123,7 +124,10 @@
     "activity_next": "Next step: {step}",
     "activity_required_open": "Finish step: {step}",
     "field_work_order_open": "Complete {workOrder} at {site}",
-    "supply_awaiting_billing": "Invoice {delivery}"
+    "supply_awaiting_billing": "Invoice {delivery}",
+    "job_custom_field_missing": "Fill in {field}",
+    "job_over_budget": "{job}: costs {costs} are above the budget of {budget}.",
+    "job_negative_margin": "{job} is losing money: {amount} (costs are higher than revenue)."
   },
   "Forms": {
     "saved": "Saved.",
@@ -196,7 +200,10 @@
     "project": "Project",
     "contract": "Contract",
     "jobNeeds": "What this job needs",
-    "jobNeedsHelp": "Switch parts of the job on or off. A part that already has records cannot be switched off."
+    "jobNeedsHelp": "Switch parts of the job on or off. A part that already has records cannot be switched off.",
+    "extraInfo": "Extra information",
+    "budget": "Budget",
+    "budgetHelp": "Optional. If costs in this currency go above the budget, management is warned."
   },
   "Approvals": {
     "title": "Approvals",
@@ -361,7 +368,23 @@
     "steps": "Steps",
     "rt_product_price": "Product sale price",
     "basis_per_unit": "Per unit",
-    "posting_product_sales": "Product sales"
+    "posting_product_sales": "Product sales",
+    "ruleFor": "For",
+    "allJobs": "All jobs",
+    "byJobType": "Job type",
+    "byCustomer": "Customer",
+    "byContract": "Contract",
+    "scope_job_type": "Job type",
+    "scope_customer": "Customer",
+    "scope_contract": "Contract",
+    "customFields": "Custom fields",
+    "customFieldsHelp": "Extra information some customers or kinds of work need (customer reference, permit number, site code). Use only for simple facts — anything used in calculations or reports should become a real field.",
+    "addCustomField": "Add or change a custom field",
+    "fieldLabel": "Label",
+    "fieldLabelExample": "e.g. Field permit no.",
+    "fieldKey": "Key",
+    "fieldFor": "Shown on",
+    "fieldRequired": "Required"
   },
   "Finance": {
     "title": "Finance",

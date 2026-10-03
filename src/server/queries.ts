@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
 import { auditLog, jobHistory } from "@/domain/management/history";
@@ -10,6 +10,7 @@ import { awaitingStatement, listStatements, openStatementDebts, statementDetail 
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { listActivities } from "@/domain/jobs/activities";
+import { applicableFields } from "@/domain/jobs/custom-fields";
 import { listWorkOrders } from "@/domain/field/work-orders";
 import { listDeliveries } from "@/domain/supply/deliveries";
 import { quantityDifference } from "@/domain/transport/trips";
@@ -87,6 +88,7 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     job,
     meta,
     activities: await listActivities(db, job.id),
+    fields: await applicableFields(db, job),
     workOrders: (job.capabilities as string[]).includes("field_work") ? await listWorkOrders(db, job.id) : [],
     deliveries: (job.capabilities as string[]).includes("products") ? await listDeliveries(db, job.id) : [],
     customer: customer.name,
@@ -231,6 +233,15 @@ export async function setupData(db: Db, actor: Actor) {
     documentRules: has("documents.configure")
       ? await db.select({ r: documentRequirements, type: documentTypes.name }).from(documentRequirements).innerJoin(documentTypes, eq(documentTypes.id, documentRequirements.documentTypeId)).where(eq(documentRequirements.companyId, c))
       : null,
+    /** What a document rule or custom field can target: job types, customers, contracts (names for display). */
+    targets: has("documents.configure") || has("job_types.manage")
+      ? {
+          jobTypes: await db.select({ id: jobTypes.id, name: jobTypes.name }).from(jobTypes).where(eq(jobTypes.companyId, c)).orderBy(jobTypes.name),
+          customers: await db.select({ id: businessPartners.id, name: businessPartners.name }).from(businessPartners).innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "customer"))).where(eq(businessPartners.companyId, c)).orderBy(businessPartners.name),
+          contracts: await db.select({ id: contracts.id, name: contracts.reference }).from(contracts).where(eq(contracts.companyId, c)).orderBy(contracts.reference),
+        }
+      : null,
+    customFields: has("job_types.manage") ? await db.select().from(customFields).where(eq(customFields.companyId, c)).orderBy(customFields.label) : null,
   };
 }
 

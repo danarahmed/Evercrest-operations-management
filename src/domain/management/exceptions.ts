@@ -2,6 +2,7 @@ import { and, eq, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { approvalRequests, documents, invoices, jobs, journalLines, moneyAccounts, payments, trips } from "@/db/schema";
 import { postingAccount } from "../accounting/posting";
+import { jobProfitability } from "../finance/invoices";
 import { statementDebts } from "../transport/statement-debts";
 import { dec, toStr } from "../money";
 import { getSetting } from "@/server/settings";
@@ -86,6 +87,20 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
         message: `${d.name} owes the company ${d.open} ${d.currency} from ${d.statementNo}. It will be deducted from their next statement, or record a repayment.`,
         entity: { type: "pay_statement", id: d.statementId, label: d.statementNo },
       });
+
+  // Jobs over their cost budget (budget currency only) and running jobs losing money.
+  const running = await db.select().from(jobs).where(and(eq(jobs.companyId, companyId), inArray(jobs.status, ["open", "in_progress", "pending", "completed"])));
+  for (const j of running) {
+    const profit = await jobProfitability(db, j.id);
+    if (j.budgetAmount && j.budgetCurrency) {
+      const costs = dec(profit.find((p) => p.currency === j.budgetCurrency)?.costs ?? "0");
+      if (costs.gt(dec(j.budgetAmount)))
+        out.push({ severity: "warning", code: "job.over_budget", params: { job: j.jobNo, costs: toStr(costs), budget: toStr(dec(j.budgetAmount)), currency: j.budgetCurrency }, message: `${j.jobNo}: costs ${toStr(costs)} ${j.budgetCurrency} are above the budget of ${toStr(dec(j.budgetAmount))} ${j.budgetCurrency}.`, entity: { type: "job", id: j.id, label: j.jobNo } });
+    }
+    for (const p of profit)
+      if (dec(p.revenue).gt(0) && dec(p.profit).lt(0))
+        out.push({ severity: "warning", code: "job.negative_margin", params: { job: j.jobNo, amount: p.profit, currency: p.currency }, message: `${j.jobNo} is losing money: ${p.profit} ${p.currency} (costs are higher than revenue).`, entity: { type: "job", id: j.id, label: j.jobNo } });
+  }
 
   // Work waiting on someone.
   const [pending] = await db.select({ n: sql<number>`count(*)::int` }).from(approvalRequests).where(and(eq(approvalRequests.companyId, companyId), eq(approvalRequests.status, "pending")));

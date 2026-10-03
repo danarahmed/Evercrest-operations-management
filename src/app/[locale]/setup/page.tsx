@@ -40,6 +40,21 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
   const k = () => crypto.randomUUID();
   const acctLabel = (a: { code: string; name: string; currency: string | null }) => `${a.code} · ${a.name}${a.currency ? ` (${a.currency})` : ""}`;
 
+  // Rules and custom fields can target a job type, a customer or a contract (configuration, not code).
+  const targetSelect = (name: string, withAll: boolean, withContracts = true) => (
+    <select name={name} required defaultValue={withAll ? "all" : undefined}>
+      {withAll && <option value="all">{t("allJobs")}</option>}
+      <optgroup label={t("byJobType")}>{(d.targets?.jobTypes ?? []).map((x) => <option key={x.id} value={`job_type:${x.id}`}>{x.name}</option>)}</optgroup>
+      <optgroup label={t("byCustomer")}>{(d.targets?.customers ?? []).map((x) => <option key={x.id} value={`customer:${x.id}`}>{x.name}</option>)}</optgroup>
+      {withContracts && <optgroup label={t("byContract")}>{(d.targets?.contracts ?? []).map((x) => <option key={x.id} value={`contract:${x.id}`}>{x.name}</option>)}</optgroup>}
+    </select>
+  );
+  const targetName = (scope: string, id: string | null) => {
+    if (scope === "all" || !id) return t("allJobs");
+    const list = scope === "job_type" ? d.targets?.jobTypes : scope === "customer" ? d.targets?.customers : d.targets?.contracts;
+    return `${t(`scope_${scope}`)}: ${list?.find((x) => x.id === id)?.name ?? "?"}`;
+  };
+
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/setup">
       <h1>{t("title")}</h1>
@@ -293,6 +308,33 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
         </Section>
       )}
 
+      {d.customFields && (
+        <Section title={t("customFields")}>
+          <p className="muted">{t("customFieldsHelp")}</p>
+          <details className="panel">
+            <summary>{t("addCustomField")}</summary>
+            <ActionForm command="custom_fields.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+              <div className="grid2">
+                <label>{t("fieldLabel")}<input name="label" required placeholder={t("fieldLabelExample")} /></label>
+                <label>{t("fieldKey")}<input name="key" required dir="ltr" placeholder="permit_no" pattern="[a-z][a-z0-9_]{1,40}" /></label>
+                <label>{t("fieldFor")}{targetSelect("target", true, false)}</label>
+                <label>{t("requiredBefore")}<select name="requiredBefore"><option value="completed">{t("beforeCompletion")}</option><option value="financially_closed">{t("beforeClose")}</option></select></label>
+                <label className="row"><input type="checkbox" name="required" value="true" />{t("fieldRequired")}</label>
+                <label>{t("ruleActive")}<select name="active"><option value="true">{t("on")}</option><option value="false">{t("off")}</option></select></label>
+              </div>
+            </ActionForm>
+          </details>
+          {d.customFields.length > 0 && (
+            <ul>{d.customFields.map((c) => (
+              <li key={c.id} className={c.active ? "" : "muted"}>
+                <strong>{c.label}</strong> <span className="muted" dir="ltr">({c.key})</span> · {targetName(c.scope, c.scopeId)}
+                {c.required && ` · ${t("fieldRequired")} (${c.requiredBefore === "completed" ? t("beforeCompletion") : t("beforeClose")})`}{!c.active && ` · ${t("off")}`}
+              </li>
+            ))}</ul>
+          )}
+        </Section>
+      )}
+
       {d.documentTypes && (
         <Section title={t("documentRules")}>
           <ActionForm command="documents.define_type" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
@@ -302,13 +344,12 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
               <label>{f("name")}<input name="name" required /></label>
             </div>
           </ActionForm>
-          {d.documentTypes.length > 0 && d.jobTypes && (
+          {d.documentTypes.length > 0 && d.targets && (
             <ActionForm command="documents.set_requirement" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
               <strong>{t("addRule")}</strong>
-              <input type="hidden" name="scope" value="job_type" />
               <div className="grid2">
                 <label>{f("documentType")}<select name="documentTypeId" required>{d.documentTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-                <label>{f("jobType")}<select name="scopeId" required>{d.jobTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+                <label>{t("ruleFor")}{targetSelect("target", false)}</label>
                 <label>{t("appliesTo")}<select name="appliesTo"><option value="trip">{t("eachTrip")}</option><option value="job">{t("theJob")}</option></select></label>
                 <label>{t("requiredBefore")}<select name="requiredBefore"><option value="completed">{t("beforeCompletion")}</option><option value="financially_closed">{t("beforeClose")}</option></select></label>
                 <label>{t("ruleActive")}<select name="active"><option value="true">{t("on")}</option><option value="false">{t("off")}</option></select></label>
@@ -316,7 +357,7 @@ export default async function Setup({ params }: { params: Promise<{ locale: stri
               </div>
             </ActionForm>
           )}
-          <ul>{(d.documentRules ?? []).map(({ r, type }) => <li key={r.id}>{type} · {r.appliesTo === "trip" ? t("eachTrip") : t("theJob")} · {r.requiredBefore === "completed" ? t("beforeCompletion") : t("beforeClose")}</li>)}</ul>
+          <ul>{(d.documentRules ?? []).map(({ r, type }) => <li key={r.id}>{type} · {targetName(r.scope, r.scopeId)} · {r.appliesTo === "trip" ? t("eachTrip") : t("theJob")} · {r.requiredBefore === "completed" ? t("beforeCompletion") : t("beforeClose")}</li>)}</ul>
         </Section>
       )}
     </Shell>

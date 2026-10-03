@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, char, check, jsonb, numeric, date, index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { branches, companies, users } from "./core";
 import { businessPartners } from "./masterdata";
 
@@ -97,6 +97,11 @@ export const jobs = pgTable(
     responsibleUserId: uuid("responsible_user_id").notNull().references(() => users.id),
     status: text("status", { enum: JOB_STATUSES }).notNull().default("open"),
     capabilities: text("capabilities").array().notNull().default(sql`'{}'::text[]`),
+    /** Values of configured custom fields (CLAUDE.md §8), keyed by field key. */
+    customValues: jsonb("custom_values").notNull().default(sql`'{}'::jsonb`),
+    /** Optional cost budget in one currency; costs above it raise an exception. */
+    budgetAmount: numeric("budget_amount", { precision: 20, scale: 4 }),
+    budgetCurrency: char("budget_currency", { length: 3 }),
     createdBy: uuid("created_by").notNull().references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -105,6 +110,7 @@ export const jobs = pgTable(
     index().on(t.companyId, t.status),
     index().on(t.companyId, t.customerId),
     check("job_dates", sql`${t.endDate} is null or ${t.endDate} >= ${t.startDate}`),
+    check("job_budget", sql`(${t.budgetAmount} is null) = (${t.budgetCurrency} is null) and coalesce(${t.budgetAmount}, 0) >= 0`),
   ],
 );
 
@@ -135,4 +141,27 @@ export const jobActivities = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.jobId, t.position)],
+);
+
+/**
+ * Extra information a job may need for a customer or a kind of work
+ * (customer reference, field permit number, site code …). Only for simple
+ * facts: anything used in calculations or reports becomes a real field.
+ */
+export const customFields = pgTable(
+  "custom_fields",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    /** Which jobs show the field: every job, one job type, or one customer's jobs. */
+    scope: text("scope", { enum: ["all", "job_type", "customer"] }).notNull(),
+    scopeId: uuid("scope_id"),
+    required: boolean("required").notNull().default(false),
+    requiredBefore: text("required_before", { enum: ["completed", "financially_closed"] }).notNull().default("completed"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.companyId, t.key), check("scope_target", sql`(${t.scope} = 'all') = (${t.scopeId} is null)`)],
 );

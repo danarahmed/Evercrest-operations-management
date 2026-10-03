@@ -98,7 +98,8 @@
     "started": "دەستپێکردن",
     "project": "پڕۆژە",
     "contract": "گرێبەست",
-    "history": "مێژوو"
+    "history": "مێژوو",
+    "budget": "بودجە"
   },
   "Codes": {
     "transport_awaiting_loading": "چاوەڕێی بارکردنی {trip}",
@@ -123,7 +124,10 @@
     "activity_next": "هەنگاوی داهاتوو: {step}",
     "activity_required_open": "هەنگاوەکە تەواو بکە: {step}",
     "field_work_order_open": "{workOrder} لە {site} تەواو بکە",
-    "supply_awaiting_billing": "پسوولە بۆ {delivery} بکە"
+    "supply_awaiting_billing": "پسوولە بۆ {delivery} بکە",
+    "job_custom_field_missing": "{field} پڕبکەرەوە",
+    "job_over_budget": "{job}: تێچوو {costs} لە بودجەی {budget} زیاترە.",
+    "job_negative_margin": "{job} زەرەر دەکات: {amount} (تێچوو لە داهات زیاترە)."
   },
   "Forms": {
     "saved": "پاشەکەوت کرا.",
@@ -196,7 +200,10 @@
     "project": "پڕۆژە",
     "contract": "گرێبەست",
     "jobNeeds": "ئەم کارە چی پێویستە",
-    "jobNeedsHelp": "بەشەکانی کار هەڵبکە یان بکوژێنەوە. بەشێک کە تۆماری تێدایە ناکوژێنرێتەوە."
+    "jobNeedsHelp": "بەشەکانی کار هەڵبکە یان بکوژێنەوە. بەشێک کە تۆماری تێدایە ناکوژێنرێتەوە.",
+    "extraInfo": "زانیاری زیادە",
+    "budget": "بودجە",
+    "budgetHelp": "ئارەزوومەندانە. ئەگەر تێچوو بەم دراوە لە بودجە زیاتر بێت، بەڕێوەبەرایەتی ئاگادار دەکرێتەوە."
   },
   "Approvals": {
     "title": "پەسەندکردنەکان",
@@ -361,7 +368,23 @@
     "steps": "هەنگاوەکان",
     "rt_product_price": "نرخی فرۆشتنی بەرهەم",
     "basis_per_unit": "بۆ هەر یەکەیەک",
-    "posting_product_sales": "فرۆشتنی بەرهەم"
+    "posting_product_sales": "فرۆشتنی بەرهەم",
+    "ruleFor": "بۆ",
+    "allJobs": "هەموو کارەکان",
+    "byJobType": "جۆری کار",
+    "byCustomer": "کڕیار",
+    "byContract": "گرێبەست",
+    "scope_job_type": "جۆری کار",
+    "scope_customer": "کڕیار",
+    "scope_contract": "گرێبەست",
+    "customFields": "خانەی تایبەت",
+    "customFieldsHelp": "زانیاری زیادە کە هەندێک کڕیار یان جۆری کار پێویستیانە (ژمارەی ئاماژەی کڕیار، ژمارەی مۆڵەت، کۆدی شوێن). تەنها بۆ زانیاری سادە — هەر شتێک لە حیساب یان ڕاپۆرتدا بەکاربێت دەبێت ببێتە خانەیەکی ڕاستەقینە.",
+    "addCustomField": "زیادکردن یان گۆڕینی خانەی تایبەت",
+    "fieldLabel": "ناونیشان",
+    "fieldLabelExample": "بۆ نموونە: ژمارەی مۆڵەتی کێڵگە",
+    "fieldKey": "کلیل",
+    "fieldFor": "پیشان دەدرێت لە",
+    "fieldRequired": "پێویست"
   },
   "Finance": {
     "title": "دارایی",

@@ -18,6 +18,12 @@ export const PERMISSIONS = [
   "audit.view",
   "partners.manage",
   "catalog.manage",
+  "contracts.manage",
+  "projects.manage",
+  "job_types.manage",
+  "jobs.create",
+  "jobs.manage",
+  "jobs.financial_close",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

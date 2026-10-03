@@ -2,529 +2,310 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# MASTER CLAUDE.md — BUSINESS OPERATING SYSTEM
+# COMPANY ERP — FLEXIBLE PROJECT / JOB ARCHITECTURE
 
-You are working on an already substantially built business operations, POS, inventory, production, supplier, cash-management, accounting, reporting, and control system for a café/bakery/food-service business.
+## 0. Repository Status
 
-This document is the single source of truth for the product direction and implementation requirements. Treat it as the overall product and architecture specification, not as a feature request list.
+The repository currently contains no application code. The technology stack, build/lint/test commands, and code layout have **not yet been decided**.
 
-The system already contains substantial functionality. Do not rebuild working functionality unnecessarily. First inspect what already exists, preserve correct functionality, and extend it where required.
+- Do not assume a stack. Propose one (with reasoning against sections 36–38) and get confirmation before scaffolding.
+- Once code exists, replace this section with: the stack, how to install, run, lint, test (including how to run a single test), and the actual module layout.
+- Before any large build-out, record the build/integrate decision for accounting, inventory and CRM and the system of record for each data category (sections 36–38).
 
-The goal is not many disconnected features. The goal is one coherent business operating system where operations, inventory, money, accounting, people, customers, reporting, controls, and management information are connected automatically.
+---
 
-## 1. Product Goal
 
-Build a professional business operating system that makes running a café/bakery/food-service business simple, fast, accurate, controlled, automated, transparent, easy to learn, comfortable to use, and powerful for management.
+The company performs many different kinds of work, but most individual projects are **not** extremely complicated. The real problem is that different projects, customers and jobs require different information, resources, documents, advances and approvals: some involve transportation, products, field work, external contractors, employees, purchasing, or customer-reimbursable costs; some involve none of these.
 
-Employees perform normal daily work without needing to understand the complexity behind the system.
+Therefore the ERP must be:
 
-**Core philosophy: complexity belongs inside the system, not inside the user's workflow.**
+**SIMPLE BY DEFAULT · FLEXIBLE WHEN NEEDED · CONTROLLED WHEN MONEY IS INVOLVED**
 
-- Employee: simple input → automatic processing → clear result → actionable exception when something is wrong.
-- Management: real operational data → reliable analysis → clear problems → actionable decisions.
+## 1. Do Not Build a Separate ERP Workflow for Every Type of Project
 
-## 2. The Most Important Principle
+Do **not** create independent Transportation / Petroleum / Field / Supply / Logistics / Construction project systems. That duplicates functionality and creates unnecessary complexity. Use **one common Project / Job engine with optional capabilities**.
 
-**ONE OPERATION → ONE SOURCE OF TRUTH → AUTOMATIC CONSEQUENCES**
+## 2. Simple Core Model
 
-The user records an operation once; the system propagates its consequences to every relevant area.
+Customer → Contract / Agreement (optional) → Project (optional) → Job / Work Order → Activities / Tasks → Resources / Transactions → Costs + Revenue → Documents → Settlement / Billing → Profitability
 
-A sale automatically affects, where applicable: revenue, payment, cash/card/platform balance, inventory, recipe consumption, COGS, customer history, production consumption, accounting, reports, audit trail, alerts.
+Not every job needs every level:
+- **Small job:** Customer → Job → Cost → Revenue → Invoice
+- **Transportation job:** Customer → Job → Trip → Driver / Truck / Transporter → Advance → Documents → Settlement → Billing
+- **Field-service job:** Customer → Project → Work Order → Employees / Contractor / Materials → Expenses → Completion → Billing
 
-The user must not manually record the same event in several modules. The same applies to: purchases, deliveries, supplier returns, credit notes, waste, production, refunds, cash movements, staff meals, free items, samples, expenses, branch transfers, payroll.
+The same ERP supports all three without forcing the same workflow onto them.
 
-## 3. Non-Negotiable Priorities
+## 3. Job Is the Central Operational Object
 
-1. Data accuracy
-2. Financial integrity
-3. Inventory integrity
-4. Transaction reliability
-5. Security and controls
-6. Operational simplicity
-7. Automation
-8. Management visibility
-9. Speed
-10. Visual polish
+Every meaningful piece of work should normally have a Job ID (e.g. `JOB-2026-00125`).
 
-Do not sacrifice accuracy or control merely to reduce clicks. Do not sacrifice usability merely to expose unnecessary complexity. The objective is **reliable simplicity**.
+A Job can contain: customer, project, contract, job type, service, product, location, start/end date, responsible person, status, budget, revenue, costs, documents, activities, resources, payments, profitability. Only relevant fields are shown.
 
-## 4. Existing System — Preserve What Already Works
+## 4. Optional Capabilities
 
-The system currently manages:
+When creating a Job, the user activates only the capabilities that job needs:
 
-- **Selling:** quick sales, tables, open bills, split bills, moving bills, cancelled bills, discounts, cash, card, delivery-platform payments, receipts, barista tickets, customer numbers
-- **Stock:** ingredients, packaging, recipe-based inventory deduction, deliveries, blind stock counts by two people, waste, low-stock alerts
-- **Costs and prices:** recipe-based product costing, product margin, scheduled price changes, price history
-- **Production:** gelato batches, base production, exact batch costing
-- **Suppliers:** delivery receiving, delivery price checking, supplier bills, supplier payments, supplier balances, supplier aging
-- **Cash:** drawer counts, over/short, cash transfers to safe, cash transfers to bank, card-to-bank reconciliation, delivery-platform statement reconciliation
-- **Accounting:** automatic accounting, Profit & Loss, Trial Balance, month locks
-- **Controls:** 9 staff roles, void/refund/cancellation reasons, manager PIN for large discounts, action reports by employee, audit trail, dashboard alerts
+- **Transportation:** driver, truck, transporter, trip, loading, unloading, quantity, advance, settlement, demurrage
+- **Products:** product, quantity, unit, purchase, sale, inventory, delivery
+- **Field Work:** site, work order, employee, contractor, equipment, material, labor, completion
+- **Financial:** expense, advance, revenue, invoice, customer receivable, supplier payable
+- **Documents:** contract, manifest, delivery document, invoice, receipt, approval, completion certificate
+- **Approval:** expense, purchase, rate, adjustment, payment approval
 
-All of this must remain functional. If something already works correctly, do not replace it simply because you would personally design it differently.
+A Job exposes only the capabilities actually needed.
 
-## 5. Do Not Build Features in Isolation
+## 5. Simple Job Creation
 
-Evaluate every new feature across:
+Minimum useful information: customer, job name, job type, start date, responsible employee, description. Everything else can be added when needed. Do **not** force users to complete 50 fields to create a simple job.
 
-- **Operations** — what does the employee do?
-- **Inventory** — what stock changes?
-- **Money** — what money changes?
-- **Accounting** — what journal entries are required?
-- **Reporting** — which reports change?
-- **Permissions** — who can perform or approve it?
-- **Audit** — what must be recorded?
-- **Alerts** — should management be notified?
-- **Reconciliation** — what should this transaction later reconcile against?
+## 6. Job Type Must Not Control Everything
 
-A feature that works on its own screen but does not correctly propagate through the rest of the system is incomplete.
+Job Type supplies defaults (workflow, fields, reports, documents, capabilities) but must **not** become a rigid programming structure. E.g. Job Type "Transportation" normally activates driver, truck, transporter, trip, quantity — but an authorized user can still add equipment, expense, special document, field activity, or custom cost if the job requires it.
 
-## 6. Product Sizes
+## 7. Template System
 
-Products support multiple sizes (e.g. Latte: Small / Medium / Large). Each size may have a different selling price, recipe, ingredient quantities, packaging, cost, margin, and availability. Do not force users to create unrelated products for every size.
+Job Templates provide defaults, not rigid restrictions; users can modify capabilities when necessary.
 
-Reports support product totals and sales, quantity, revenue, cost, and margin **by size**.
+- **Petroleum Transportation:** transportation, driver, truck, transporter, quantity, advance, settlement, documents
+- **Product Supply:** product, quantity, supplier, purchase, delivery, customer billing
+- **Field Service:** site, work order, labor, equipment, materials, expenses, completion
+- **General Service:** activities, employees, expenses, documents, revenue
 
-## 7. Add-ons / Modifiers
+## 8. Custom Fields — Use Carefully
 
-Support proper modifiers (extra scoop, oat milk, extra shot, syrup, topping, sauce, extra ingredient). Each modifier supports: name, selling price, cost, inventory consumption, quantity consumed, availability, category, product compatibility, optional/required status, price history where appropriate.
+Support custom fields for customer/project/job-specific information (customer reference number, field permit number, special delivery instruction, site code, contract reference).
 
-Example: Extra espresso shot — selling price $1, consumes X grams of espresso beans. The system automatically updates sale value, inventory, COGS, margin, accounting, and reporting.
+Custom fields are **not** a replacement for proper database entities. If a field is repeated frequently, used for reporting, calculations, relationships or filtering, or is financially important, it should become a proper structured field/entity.
 
-Do not create a separate product called "Latte + Extra Shot."
+## 9. Activities / Tasks
 
-## 8. Payments
+A Job can contain lightweight activities, e.g.:
+- "Fuel Delivery to Field X": purchase product → arrange truck → load → transport → deliver → collect document → invoice customer
+- "Field Maintenance": mobilize team → purchase materials → perform work → inspect → complete → invoice
 
-Support cash, card, delivery platform, other configured methods, and split payments. A single sale may be paid by multiple methods (e.g. $20 = $12 cash + $8 card). This remains **one sale with multiple payment allocations** — never two sales.
+Do not turn activities into a complicated project-management system unless the company actually needs it.
 
-## 9. Multi-Currency — IQD and USD
+## 10. Resources
 
-**Core architectural requirement.** The business actively uses both **IQD (Iraqi Dinar)** and **USD**. Both are first-class currencies. Do not treat USD as an occasional foreign-currency payment. The entire system must be professionally multi-currency.
+A Job can consume: employee, driver, truck, transporter, contractor, equipment, product, material, service, cash, external supplier. Keep the resource model flexible. Do not assume every job requires employees, transportation, or products.
 
-## 10. Currency Architecture
+## 11. Transaction Attachment
 
-Every monetary value must have a clearly defined currency. Never store an unexplained monetary amount.
+Costs and revenues attach to a Job: Expense → Job; Purchase → Job; Transport Trip → Job; Driver Advance → Trip → Job; Supplier Payment → Job; Customer Invoice → Job; Equipment Cost → Job; Field Expense → Job.
 
-Support: original amount, original currency, exchange rate where applicable, exchange-rate date/time, reporting/base-currency equivalent, historical exchange rate.
+This enables profitability without requiring every module to understand every other module.
 
-Adding a `currency` field to a few tables is not multi-currency. Review **every** monetary entity in the database.
+## 12. Cost Engine
 
-## 11. Base / Reporting Currency
+One general cost framework. A cost can originate from: purchase, expense, employee labor, contractor, transporter, driver, equipment, material, inventory, bank payment, cash payment, other approved cost. Link it to company, department, project, job, activity, cost center where applicable.
 
-Support a configurable reporting/base currency. If IQD is the reporting currency, USD transactions remain recorded in USD and may additionally show their IQD equivalent. Never replace the original USD amount.
+## 13. Revenue Engine
 
-Example: original $100 USD; rate 1 USD = 1,500 IQD; reporting equivalent 150,000 IQD. Retain all three.
+One general revenue framework. Revenue can originate from: product sale, service, transportation, field work, contract milestone, job completion, other commercial activity. Link it to customer, contract, project, job, product/service, invoice where applicable.
 
-## 12. Historical Exchange Rates
+## 14. General Profitability Engine
 
-Historical transactions retain the rate used when they occurred.
+One profitability engine: `Revenue − Direct Costs − Applicable Allocated Costs = Job Profitability`, with different cost sources per job type:
+- **Transportation:** Revenue − Transporter − Driver − Reward − Other direct costs
+- **Field service:** Revenue − Labor − Materials − Equipment − Transportation − Other costs
+- **Product supply:** Sales − Purchase cost − Transportation − Other costs
 
-- Sept 1: $100 × 1,500 = 150,000 IQD
-- Sept 10: $100 × 1,520 = 152,000 IQD
+Do not create a separate accounting system per job type.
 
-The Sept 1 transaction stays at its historical rate. Changing today's rate must not rewrite yesterday's transaction.
+## 15. Simple Jobs Must Stay Simple
 
-## 13. Exchange-Rate Management
+"Supply 10 generators to Customer A" must **not** force driver, truck, demurrage, manifest, MT, transporter, field work, inventory batch, or project phases unless required.
 
-Exchange rates are controlled business data. Store: rate, effective date/time, source/type, user who entered it, previous rate, new rate, audit trail.
+## 16. Complexity Appears Only When Needed (Progressive Disclosure)
 
-Where the business requires different rates for different purposes, support that without complicating normal employee workflows.
+User creates a Job → only basic fields appear. Selects "Transportation" → transportation fields appear. Selects "External Transporter" → transporter fields appear. Selects "Driver Settlement Required" → settlement functionality appears. Selects "Customer-Reimbursable Costs" → receivable tracking appears.
 
-## 14. Sales in IQD and USD
+Never show every possible ERP field on every screen.
 
-Products support IQD prices, USD prices, configurable pricing behavior, and optional conversion. Do not assume USD prices are always calculated from IQD — businesses may intentionally maintain separate IQD and USD prices.
+## 17. Configuration Over Development
 
-## 15. Mixed-Currency Payments
+Prefer: business user changes configuration → workflow changes; over: business user requests change → developer changes code.
 
-A single bill may be paid in multiple currencies (e.g. bill $20; customer pays $10 USD + 15,000 IQD). The system calculates the combined payment value using the applicable exchange rate. It remains one sale.
+Configurable: job types, templates, required fields, approval rules, rates, fees, statuses, documents, customer requirements, cost categories, revenue categories.
 
-Each payment allocation retains: amount, currency, payment method, exchange rate where applicable, reporting equivalent.
+Configuration must be **controlled** — users must not be able to accidentally break financial logic.
 
-## 16. Payment Currency vs Sale Currency
+## 18. Customer-Specific Requirements
 
-These are different concepts. A bill may be denominated in USD and paid partly or fully in IQD, or vice versa. Handle both correctly. Employees must not manually calculate conversions.
+Customers may differ in documents, pricing, approvals, billing, quantity rules, settlement rules, payment terms, reporting. Support customer-specific configuration (e.g. Customer A: manifest + delivery certificate + approval; Customer B: invoice only; Customer C: extra field-service documents). The core ERP stays the same.
 
-## 17. Cash Drawers and Currencies
+## 19. Contract-Specific Rules
 
-Cash is tracked separately by currency (e.g. drawer: IQD 500,000; USD $200). Never combine them into a single meaningless cash number. Safe and bank balances are also currency-specific.
+Conceptual override priority (lowest → highest):
 
-## 18. Blind Cash Count
+System Default → Job Type Default → Customer Configuration → Contract → Job-specific approved rule
 
-The stock-count blindness principle also applies to cash. The cashier must not see expected cash before entering the actual count.
+The exact hierarchy must be clearly defined in code. Do not let users unknowingly override contract terms.
 
-1. Select session.
-2. Count IQD.
-3. Count USD.
-4. Submit.
-5. System calculates expected amounts.
-6. System reveals expected vs actual.
-7. System calculates over/short.
+## 20. Projects Are Not Required for Everything
 
-Example: expected IQD 300,000 / USD $100; actual IQD 295,000 / USD $95. Report each currency's difference separately.
+All of these are valid: Customer → Job; Customer → Project → Job; Customer → Contract → Project → Job; Customer → Contract → Job. Do not force unnecessary hierarchy.
 
-## 19. Cash Denominations
+## 21. Contracts Are Not Required for Everything
 
-Support denomination counting where practical, with a **configurable** denomination list.
-- IQD (e.g.): 250, 500, 1,000, 5,000, 10,000, 25,000, 50,000
-- USD (e.g.): $1, $5, $10, $20, $50, $100
+Work may be one-time, verbal/operationally approved, small, ad hoc, or emergency. Allow legitimate work without a full contract workflow — but financially significant transactions still follow approval/control requirements.
 
-## 20. Cashier Sessions
+## 22. Job Lifecycle
 
-Each session tracks: cashier, drawer, opening/closing time, opening cash, cash sales, cash refunds, cash in/out, safe transfers, expected cash, actual cash, over/short, manager overrides.
+Generic: **Draft → Open → In Progress → Pending → Completed → Financially Closed → Cancelled**. Specialized modules may add statuses. Do not create 30 statuses for a simple job.
 
-If a physical drawer is shared, responsibility must remain traceable through explicit session ownership or controlled session transfers.
+## 23. Status vs Data
 
-## 21. Cash Movements
+Do not allow Completed / Financially Closed if critical information is missing. E.g. a transportation job cannot be financially closed if required documents are missing, settlement is incomplete, customer billing is incomplete, or a required approval is missing. The system identifies exactly what remains.
 
-Every cash movement specifies: amount, currency, source, destination, reason, user, date/time, approval where required (e.g. "100,000 IQD to safe", "$500 USD to bank"). Never record "100,000 cash" without currency.
+## 24. "Next Action" Concept
 
-## 22. Partial Refunds
+Every active Job shows a **Next Action** (e.g. waiting for truck, manifest, customer approval, material, payment, settlement, field completion; ready to invoice). This is more useful than `Status = In Progress`.
 
-Support partial refunds (e.g. sale of coffee $4 + cake $6 + juice $5; refund only the cake $6). The original sale remains intact; create a **linked refund transaction**.
+## 25. Exception Management
 
-Automatically reverse the appropriate revenue, payment, inventory, COGS, tax, customer history, accounting, and reports. Refunds require appropriate permission and reason.
+Focus management on exceptions: job delayed, cost exceeds budget, missing document/approval/rate, unreconciled advance, overdue customer/supplier payment, negative margin, quantity discrepancy, failed accounting synchronization. Normal work stays quiet; exceptions become visible.
 
-## 23. Refunds and Multi-Currency
+## 26. Flexible Document Requirements
 
-Refunds preserve currency logic. For mixed payments, clearly identify which payment allocation is being refunded. Never change the original historical exchange rate because a refund occurs later.
+Document requirements are configurable by job type, customer, contract, service, activity. Do not make documents mandatory globally (transportation may require a manifest; consulting may not; field work may require a completion certificate; product supply may require a delivery note).
 
-## 24. Supplier Returns
+## 27. Flexible Financial Requirements
 
-Link returns to the original purchase/delivery whenever possible. Automatically update inventory, supplier balance, purchase records, accounting, reports, audit trail.
+Not every Job needs advance, invoice, purchase, customer receivable, supplier payable, expense, or inventory. Activate these when relevant.
 
-## 25. Supplier Credit Notes
+## 28. Do Not Create "One Giant Form"
 
-Support credit notes with: supplier, original transaction, amount, currency, reason, date, accounting treatment, approval if required. Supplier balances update automatically.
+Job form structure: **Basic Job Information + Relevant sections + Optional capabilities + Related transactions.**
 
-## 26. Delivery Corrections
+## 29. Job Workspace
 
-Provide controlled correction workflows for quantity errors, price errors, wrong item, wrong supplier, wrong date. Do not allow unrestricted editing of historical financial transactions. Preserve original value, new value, user, date/time, reason, audit history.
+Each Job has one central workspace, e.g.:
 
-## 27. Purchase Orders
+```
+JOB-2026-00125
+Customer:    ABC Company
+Service:     Transportation
+Status:      In Progress
+Next Action: Waiting for manifest
+```
 
-Lifecycle: **Draft → Approved → Sent → Partially Received → Fully Received → Closed/Cancelled**.
+Tabs/sections (only relevant ones shown): Overview, Activities, Trips, People, Products, Expenses, Purchases, Documents, Payments, Invoices, Approvals, Profitability, History.
 
-POs include: supplier, items, quantities, expected prices, expected delivery, notes, approval, status.
+## 30. Workspace Is an Aggregation, Not a Copy
 
-Receiving automatically compares PO vs actual delivery and highlights quantity differences, price differences, unexpected items, missing items.
+The Job workspace aggregates and displays underlying records; it does not duplicate them. Trip data belongs to Trip, Expense data to Expense, Invoice data to Invoice.
 
-## 28. Buying / Reorder List
+## 31. Modular Database Design
 
-Low-stock alerts are not enough. Generate suggested purchasing lists using: current stock, minimum stock, target stock, consumption, sales history, production requirements, supplier pack sizes, lead time, open purchase orders, expected deliveries.
+Strong core schema. Core entities may include: BusinessPartner, Customer, Supplier, Employee, Driver, Transporter, Truck, Product, Service, Contract, Project, Job, Activity, Document, Expense, Purchase, Sale, Invoice, Payment, Advance, Settlement, Trip. Specialized entities connect to the core. Never one enormous table containing every possible field.
 
-Example: Milk current 30 L, minimum 40 L, target 100 L → suggested purchase 70 L. **Explain why** each quantity was suggested.
+## 32. General + Specialized Data Model
 
-The manager can accept, modify, remove, add, or convert to a purchase order. Never make purchasing blindly automatic.
+Core entities for common concepts; specialized entities for specific workflows:
+- Job → Transportation Job → Trip
+- Job → Field Service Job → Work Order
+- Job → Product Supply Job → Delivery
 
-## 29. Production Planning
+## 33. Future-Proofing
 
-Support: what to make today, required quantities, existing finished stock, expected demand, ingredient availability, use-by dates, batch dates, batch quantities, made, sold, waste, remaining.
+Today petroleum transportation; tomorrow equipment rental; later construction support or industrial maintenance. Adding a new service requires a new service type (+ a new specialized workflow only if needed), not rebuilding the ERP.
 
-The system helps answer: **What should we make today and why?**
+## 34. Do Not Overengineer Future Requirements
 
-## 30. Production Traceability
+Future flexibility does not mean building everything today. Do not build complex fleet management (we don't own fleets), full HR (not yet required), manufacturing (we don't manufacture), complex warehouse management (inventory is small), heavy project management (projects are simple), or advanced CRM (sales needs are basic). Build the foundation so these can be added later.
 
-Every batch is traceable and must reconcile. Example: Batch B1024 — produced 50 kg, sold 35 kg, waste 5 kg, remaining 10 kg.
+## 35. The ERP Should Feel Like One System
 
-## 31. Staff
+Customer → Job → Transportation → Expense → Invoice → Payment → Accounting → Profitability should feel like one application, not switching between unrelated ones.
 
-Implement: employees, attendance, clock-in/out, scheduled shifts, actual shifts, overtime where appropriate, absence, late arrival, early departure, salaries, salary payments, advances, deductions, payroll history.
+## 36. Integration With Zoho / Other Systems
 
-Salary must not exist only as a generic expense. Accounting is still generated automatically.
+Possible (not mandatory) architecture — evaluate each integration on actual business needs:
+- **Custom ERP:** jobs, operations, transportation, field services, custom settlements, operational documents, business-specific workflows
+- **Zoho Books:** accounting, general ledger, receivables, payables, banking, reconciliation, standard financial reports
+- **Zoho Inventory:** inventory, purchasing, warehousing
+- **CRM:** leads, opportunities, customer relationship management
 
-## 32. Customers
+## 37. System of Record
 
-Support: name, phone, delivery address, notes, order history, preferences where appropriate, loyalty. Customer identification remains optional for normal anonymous walk-in sales.
+For every piece of information, answer **"where does the truth live?"**: transportation trip, driver settlement, operational job → custom ERP; accounting journal → Zoho Books or ERP (per architecture decision); inventory → Zoho Inventory or ERP; CRM → CRM system or ERP. Never allow two systems to independently become authoritative for the same financial fact.
 
-## 33. Loyalty
+## 38. Build vs Integrate
 
-Support configurable loyalty (points, visits, spending thresholds, rewards). Prevent duplicate points, points from cancelled or refunded sales, and unauthorized manual adjustments. Audit loyalty changes.
+Unique to our business → build. Standard and mature elsewhere → consider integrating. Partly unique → hybrid. Decide on accuracy, cost, integration, maintenance, security, user experience, scalability, local business requirements.
 
-## 34. Waste
+## 39. Most Important UX Principle
 
-Separate categories: expired, spoiled, damaged, production waste, preparation waste, staff meals, free items, samples, other. Do not treat them as one generic waste category.
+Users must not need to understand the ERP architecture. They think: "I need to create a job" → "What does this job need?" — and the system guides them.
 
-Each has appropriate inventory effect, accounting classification, approval, reason, person responsible, and reporting.
+## 40. Most Important Product Principle
 
-## 35. Waste Approval Control
+The ERP adapts to the business; the business should not reorganize itself to fit the ERP. At the same time, the ERP enforces necessary controls around money, approvals, documents, accounting, security, and historical records.
 
-The approval limit must not be bypassable by splitting losses into multiple small entries. Consider related entries by user, shift, day, item, category, and related operation.
+## 41. Final Flexibility Principle
 
-Example: approval limit $50 — a user must not bypass it with $40 + $40 + $40. The system identifies the aggregate activity and requests appropriate approval.
+- **Simple by default** — a simple job is fast.
+- **Modular when needed** — additional capabilities can be activated.
+- **Configurable** — rules change without rewriting the system.
+- **Controlled** — financially important actions require proper authorization.
+- **Traceable** — everything important traces back to its source.
+- **Scalable** — the same architecture supports larger, more complex work later.
 
-## 36. Theoretical vs Actual Usage
+## 42. Final Development Rule — Before Creating a New Module
 
-Implement usage variance analysis:
-- **Theoretical usage** — what recipes say should have been consumed.
-- **Actual usage** — what inventory movement/counts indicate was consumed.
+When implementing any new project type, do **not** immediately create a new module. First ask:
+1. Can the existing Job model handle it?
+2. Can existing Activities handle it?
+3. Can existing Cost/Revenue transactions handle it?
+4. Can existing Documents handle it?
+5. Can existing Approval functionality handle it?
+6. Can an existing specialized capability handle it?
+7. Is a genuinely new entity required?
 
-Example: opening milk 100 L + purchases 50 L − closing 60 L = actual usage 90 L; theoretical 82 L; variance 8 L.
+Only create a new specialized module when the existing model cannot represent the business accurately. This prevents ERP bloat.
 
-Show: item, theoretical usage, actual usage, variance, variance %, sales volume, period, branch.
+## 43. Final Test — Architecture Acceptance Scenarios
 
-Do not automatically accuse employees of theft. Identify discrepancies for investigation. Possible causes: over-pouring, incorrect recipes, unrecorded waste, staff consumption, theft, counting errors, production errors.
+Before approving a new architecture or feature, test it against at least:
+- **A — Simple Product Supply:** customer asks for 20 units → must stay simple.
+- **B — Petroleum Transportation:** product transported by external transporter → activates transportation capabilities.
+- **C — Direct Driver:** company works directly with a driver → works without a transporter.
+- **D — Driver Changes Transporter:** same driver later works through another transporter → historical jobs unchanged.
+- **E — Field Service:** work inside a petroleum field → no truck/driver/MT workflow required.
+- **F — Product + Transportation:** company sells product and arranges transport → both capabilities connect to the same Job.
+- **G — Customer-Specific Requirement:** customer requires a special document and approval → handled by configuration, not by changing the ERP.
+- **H — Completely New Service:** new type of work → existing Job + Activities + Costs + Revenue + Documents handle most of it before any new specialized module.
 
-## 37. Configurable Business Rules
+## 44. Final Architectural Target
 
-Move rules currently hard-coded in the database to an appropriate settings/admin interface (discount limits, waste approval limits, negative-stock behavior, other thresholds). Rules may be configured by role, branch, transaction type, and product/category where appropriate. Changing a rule is itself audited.
+```
+                COMPANY ERP
+                     │
+            ┌────────┴────────┐
+            │                 │
+       GENERAL CORE      SPECIALIZED
+            │                 │
+    ┌───────┼───────┐    ┌────┼────┐
+    │       │       │    │    │    │
+ Customer  Job   Finance  Transport Field Supply
+    │       │       │       │      │
+ Contract Activities       Trip   Work Order
+    │       │               │      │
+ Documents Costs           Driver Materials
+    │       │               │      │
+ Revenue Payments          Truck   Equipment
+    │       │               │      │
+    └───────┴───────────────┴──────┘
+                    │
+              PROFITABILITY
+                    │
+                REPORTING
+                    │
+               MANAGEMENT
+```
 
-## 38. Negative Stock
+**GENERAL AT THE CORE · SPECIALIZED AT THE EDGES · SIMPLE FOR USERS · FLEXIBLE FOR THE BUSINESS · STRICT WITH MONEY AND DATA.**
 
-Configurable policies: block; allow with manager approval; allow with immediate alert; allow for selected items. Never silently create unexplained negative inventory.
-
-## 39. Duplicate Transaction Protection
-
-Duplicate protection covers **all** transactional operations: sales, payments, deliveries, purchases, expenses, waste, production, supplier payments, supplier returns, stock adjustments, transfers, refunds, cash movements.
-
-Use proper backend/database-level idempotency — not just disabled buttons. If the connection drops after submission and the user retries, the system safely identifies the original request and prevents duplication.
-
-## 40. Branches
-
-Support multiple branches without disconnected copies of the application. Relevant records support branch identification: sales, cash, inventory, purchases, waste, production, staff, expenses, reports, transfers.
-
-Management can view one branch, selected branches, or the consolidated company.
-
-## 41. Accounting
-
-All operational transactions integrate correctly with accounting. For each transaction determine:
-1. Operational effect
-2. Inventory effect
-3. Cash/bank effect
-4. Receivable/payable effect
-5. Revenue/cost/expense effect
-6. Required journal entries
-7. Reporting effect
-8. Audit requirements
-
-Accounting is not an afterthought.
-
-## 42. Multi-Currency Accounting
-
-The General Ledger preserves original amount, original currency, exchange rate, and reporting amount. Receivables and payables preserve currency — e.g. a supplier with USD payable $4,000 and IQD payable 2,500,000 IQD shows these separately.
-
-## 43. Foreign Exchange Differences
-
-Support appropriate FX gain/loss treatment. Example: invoice $1,000 at 1,500 = 1,500,000 IQD; payment $1,000 at 1,520 = 1,520,000 IQD; difference 20,000 IQD — handled per the configured accounting treatment. Do not hide currency differences inside unrelated expenses.
-
-## 44. Inventory Costing With Multiple Currencies
-
-Purchases may be in IQD or USD. Always preserve original purchase amount, original currency, exchange rate, and reporting equivalent. Inventory costing uses a consistent, defined methodology. Do not silently mix currencies.
-
-## 45. Production Costing With Multiple Currencies
-
-Production batches correctly consume ingredient costs regardless of purchase currency. Historical cost remains traceable. Current exchange rates must not rewrite historical production costs.
-
-## 46. Reports
-
-- **Sales:** by hour, day of week, date, product, category, size, modifier, employee, payment method, currency, branch; discounts, refunds, voids, cancellations
-- **Waste:** by type, item, employee, branch, period, cost
-- **Inventory:** current stock, stock movement, count variance, usage variance, negative stock, expiring stock
-- **Production:** planned, produced, sold, waste, remaining, batch cost
-- **Suppliers:** purchases, returns, credit notes, payments, outstanding, aging
-- **Cash:** cashier sessions, cash counts, over/short, cash movement, currency breakdown
-
-## 47. Balance Sheet
-
-Implement a proper balance sheet from the actual accounting ledger — not a separate calculation disconnected from accounting.
-- **Assets:** cash, bank, inventory, receivables, other assets
-- **Liabilities:** supplier payables, other liabilities
-- **Equity:** capital, retained earnings, other relevant equity
-
-## 48. Cash Flow Statement
-
-Implement a proper cash-flow statement from accounting/cash transactions, with operating, investing, and financing activities. It must reconcile with cash and bank balances.
-
-## 49. PDF Export
-
-Support PDF export for: sales, purchases, suppliers, waste, inventory, production, cash, P&L, Trial Balance, Balance Sheet, Cash Flow, audit reports.
-
-## 50. Document Attachments
-
-Allow attaching supplier invoices, delivery documents, receipts, credit notes, supporting documents, and relevant images, linked to the appropriate transaction/document.
-
-## 51. Dashboard
-
-Focus on actionable information, not just numbers.
-- **What happened?** Sales, cash, stock, production, waste, purchases, supplier obligations
-- **What is wrong?** Usage variance, cash shortage, negative stock, unusual waste, supplier price changes, delivery discrepancies, reconciliation failures, duplicate transaction risks
-- **What needs action?** Purchase approval, waste review, cash investigation, stock count, refund approval, delivery receiving, supplier payment, production
-
-## 52. Alerts
-
-Priorities: **Critical** (immediate action), **Warning** (requires attention), **Information** (useful information). Alerts should ideally carry an action: review, approve, count, investigate, open transaction, resolve. Do not overwhelm users with meaningless alerts.
-
-## 53. Permissions
-
-Use the existing 9-role architecture. Permissions control: view, create, edit, cancel, refund, approve, export, financial visibility, stock adjustments, cash adjustments, rule changes, accounting corrections. Sensitive operations require appropriate authorization. Important permissions are enforced **server-side**.
-
-## 54. Audit Trail
-
-Sensitive actions record: user, date/time, branch, action, original value, new value, reason, approval, related transaction.
-
-Especially: refunds, voids, cancellations, discounts, waste, stock adjustments, cash adjustments, supplier corrections, accounting corrections, rule changes, exchange-rate changes, permission changes, manual overrides.
-
-## 55. Reconciliation
-
-The system continuously helps answer: **Does reality match what the system says?**
-
-- **Cash:** expected vs actual
-- **Card:** recorded vs bank settlement
-- **Delivery platforms:** recorded orders vs platform statement
-- **Inventory:** system stock vs counted stock
-- **Usage:** theoretical vs actual
-- **Supplier:** purchases vs invoices vs payments vs credits
-- **Production:** produced vs sold vs waste vs remaining
-- **Accounting:** subledgers vs general ledger
-
-## 56. No Silent Data Loss
-
-Never silently delete transactions, rewrite historical transactions, remove audit records, change closed accounting periods, rewrite inventory history, or rewrite payment history. Use reversal, adjustment, correction, or controlled edit where appropriate.
-
-## 57. User Experience
-
-Powerful without feeling complicated. The user should feel "the system understands what I am trying to do," not "I have to understand the system before I can use it."
-
-## 58. Minimize Clicks
-
-For frequent tasks use smart defaults, contextual actions, search, keyboard shortcuts, quick actions, auto-population, templates, clear confirmations, progressive disclosure. Do not hide important financial/control information merely to reduce clicks.
-
-## 59. Information Hierarchy
-
-Every screen answers:
-1. What am I looking at?
-2. What is happening?
-3. What do I need to do?
-4. What happens if I continue?
-5. Is anything wrong?
-
-Basic users see what they need; managers see more detail; accountants/admins access deeper financial and audit information.
-
-## 60. One Unified Operating System
-
-The product must not feel like separate Sales + Inventory + Accounting + HR + Purchasing + Reports applications.
-
-- **Receiving goods:** receiving → inventory → supplier balance → cost → accounting → reports → audit
-- **Selling:** sale → payment → inventory → recipe consumption → COGS → accounting → reports → customer → audit
-- **Recording waste:** waste → inventory → classification → cost → accounting → approval → audit → reporting
-
-## 61. Data Accuracy Over Automation
-
-Never automate an incorrect assumption. If information is missing: ask, warn, require confirmation, or classify it clearly as an adjustment.
-
-Never silently guess: exchange rate, supplier, branch, inventory item, waste reason, accounting treatment.
-
-## 62. Do Not Over-Automate
-
-Automate deterministic repetitive work. Require human confirmation for large refunds, large waste, major stock adjustments, accounting corrections, important rule changes, suspicious discrepancies, significant financial adjustments.
-
-## 63. Database / Backend Quality
-
-Review: transaction integrity, database constraints, unique transaction IDs, idempotency, race conditions, concurrent edits, permissions, audit logging, referential integrity, inventory consistency, accounting consistency, multi-currency integrity. Important controls are enforced server-side.
-
-## 64. Testing
-
-Test realistic scenarios:
-- **Sales:** cash, card, split payment, mixed currency, modifier, size, discount, cancellation, full refund, partial refund
-- **Inventory:** recipe consumption, waste, production, count, usage variance, negative stock, adjustment
-- **Purchasing:** PO, partial delivery, full delivery, wrong quantity, wrong price, return, credit note
-- **Cash:** opening, cash sales, refund, cash transfer, blind count, shortage, overage, two cashier sessions, IQD cash, USD cash, mixed-currency payments
-- **Production:** batch, sale, waste, expiry, remaining stock
-- **Staff:** attendance, shift, payroll, advance, salary
-- **Branches:** Branch A, Branch B, consolidated reports, transfers
-- **Connectivity** — for every transactional operation:
-  1. Start transaction.
-  2. Simulate connection loss.
-  3. Retry.
-  4. Confirm no duplicate transaction exists.
-
-## 65. User Acceptance Standard
-
-A feature is complete only when: the workflow is understandable; steps are reasonable; the user knows what to do; errors are clear; controls cannot easily be bypassed; and financial result, inventory, accounting, reports, audit trail, permissions, multi-currency behavior, and offline/retry behavior are all correct and safe.
-
-## 66. Management Questions
-
-The system continuously helps answer: What happened? Why? Is it normal? Is something wrong? What needs action?
-
-Examples: Why is milk usage higher? Why is cash short? Why did waste increase? What needs ordering? What should be produced? What is expiring? Which supplier price changed? What is owed? What has not been reconciled? Are there suspicious transaction patterns?
-
-## 67. Implementation Method
-
-Before changing code, perform a complete audit and return:
-
-- A. Already implemented correctly
-- B. Partially implemented
-- C. Missing
-- D. Architecture conflicts
-- E. Database changes
-- F. Backend changes
-- G. Frontend changes
-- H. Accounting changes
-- I. Inventory changes
-- J. Reporting changes
-- K. Permissions/security changes
-- L. Multi-currency changes
-- M. Testing matrix
-
-Only after this analysis should implementation begin.
-
-## 68. Priority Order
-
-- **P0 — Integrity and control:** duplicate protection, cashier sessions, blind cash counts, usage variance, partial refunds, supplier corrections, accounting integrity, multi-currency foundation
-- **P1 — Core operations:** product sizes, add-ons, split payments, IQD/USD payments, purchase orders, supplier returns, credit notes, buying list, production planning, waste controls
-- **P2 — People and customers:** staff, attendance, shifts, payroll, customers, delivery information, loyalty
-- **P3 — Management:** advanced reports, waste reports, balance sheet, cash flow, PDF, attachments, branch management, advanced reconciliation
-
-After implementation, perform a complete UX/integration pass.
-
-## 69. Final Product Standard
-
-The finished system must feel like a single intelligent business operating system, not a collection of modules, connecting operations → inventory → money → accounting → people → customers → suppliers → production → reports → controls → management decisions automatically wherever appropriate.
-
-## 70. Final UX Principle
-
-Powerful enough for management, simple enough for an employee who has never used it before. Employees should not need to understand accounting, inventory costing, exchange-rate calculations, COGS, reconciliation, journal entries, FX accounting, or complex reporting unless their role requires it.
-
-The system handles the complexity. The user performs the business operation.
-
-## 71. Final Architectural Principle
-
-Always ask: can the system achieve the same control and accuracy with fewer steps, less manual entry, and less cognitive effort? If yes, use the simpler workflow — but never reduce controls merely to make the interface look simpler.
-
-## 72. Final Definition of Success
-
-- **Employees** can work quickly and comfortably.
-- **Managers** understand what is happening and what requires attention.
-- **Accountants** trust the numbers and can trace transactions.
-- **Owners** trust the system's information when making business decisions.
-- **The business** operates with less manual work, less duplicate recording, fewer errors, and better inventory control, cash control, purchasing, production planning, staff accountability, financial visibility, and management decisions.
-
-## 73. Final Command to Claude
-
-Treat this document as the master specification. Before implementing anything:
-
-1. Inspect the existing system.
-2. Understand what is already built.
-3. Preserve correct functionality.
-4. Identify gaps against this specification.
-5. Identify architecture that must be strengthened.
-6. Identify database changes.
-7. Identify accounting implications.
-8. Identify inventory implications.
-9. Identify multi-currency implications.
-10. Identify UX improvements.
-11. Identify security/control implications.
-12. Identify testing requirements.
-
-Then implement systematically.
-
-- Do not build superficial screens.
-- Do not create disconnected modules.
-- Do not duplicate data entry.
-- Do not silently guess missing information.
-- Do not sacrifice accuracy for convenience.
-- Do not sacrifice control for speed.
-- Do not make employees carry system complexity.
-
-Build the intelligence into the system. The final product should feel simple on the surface and extremely sophisticated underneath:
-
-**Simple for the employee. Powerful for the manager. Trustworthy for the accountant. Reliable for the owner. Accurate throughout the entire business.**
+That is the architecture this project must follow.

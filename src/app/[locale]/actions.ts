@@ -62,7 +62,9 @@ export async function submitCommand(_prev: FormState, form: FormData): Promise<F
   } catch (e) {
     if (!(e instanceof DomainError)) throw e;
     const issues = (e.details?.issues as { path: (string | number)[]; message: string }[] | undefined)?.map((i) => ({ path: i.path.join("."), message: i.message }));
-    return { error: { code: e.code, message: e.message, issues }, approvalRequired: e.code === "approval_required" };
+    // Domain rules list what is missing or wrong, e.g. which trips cannot be billed and why.
+    const missing = (e.details?.missing as (string | { message: string })[] | undefined)?.map((x, i) => ({ path: `${i + 1}`, message: typeof x === "string" ? x : x.message }));
+    return { error: { code: e.code, message: e.message, issues: issues ?? missing }, approvalRequired: e.code === "approval_required" };
   }
   revalidatePath(`/${locale}`, "layout");
   // Optional: go to the created record, e.g. "/en/jobs/{id}". Only same-app paths.

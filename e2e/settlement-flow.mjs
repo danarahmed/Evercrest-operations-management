@@ -28,11 +28,33 @@ await page.waitForSelector("text=Settled STL-");
 // Bill the customer: 29.75 × 55,000 = 1,636,250
 await page.click("summary:has-text('Invoice the customer')");
 await page.locator("form:has(input[name='tripIds[]'])").locator("button.primary").click();
-await page.waitForSelector(".card:has(strong:text-is('TRP-2026-00001')) .badge:text-is('Billed')");
+await page.waitForSelector(".card:has(strong:text-is('TRP-2026-00001')) .badge.state-verified:has-text('Billed')");
 await page.goto(`${base}/en/finance`);
 const invoiceRow = page.locator("tr").filter({ hasText: "North Oil Co" }).filter({ hasText: /1,636,250/ });
 await invoiceRow.first().waitFor({ timeout: 10000 });
 assert.equal(await invoiceRow.count(), 1, "invoice of 29.75 MT × 55,000 IQD");
+
+// The invoice shows each trip with its driver and truck
+await page.click("tr:has-text('INV-2026-00002') a");
+await page.waitForSelector("h1:has-text('INV-2026-00002')");
+const inv = await page.locator("table").innerText();
+assert.match(inv, /TRP-2026-00001[\s\S]*Ahmed Karim[\s\S]*12 B 34567/);
+assert.match(inv, /1,636,250/);
+
+// Driver pay statement: put the settled trip on a statement, see the full calculation, pay it
+await page.goto(`${base}/en/statements`);
+const driverForm = page.locator("details:has(summary:has-text('New driver statement'))");
+await driverForm.locator("tr:has-text('TRP-2026-00001') input[type=checkbox]").check();
+await driverForm.locator("button.primary").click();
+await page.waitForSelector("h1:has-text('PST-2026-')");
+const st = await page.locator("table.statement").innerText();
+assert.match(st, /TRP-2026-00001[\s\S]*Ahmed Karim[\s\S]*12 B 34567/);
+assert.match(st, /1,190,000[\s\S]*30,000[\s\S]*1,160,000/);
+await page.click("summary:has-text('Pay this statement')");
+await page.locator("details:has(summary:has-text('Pay this statement')) button.primary").click();
+await page.waitForSelector("text=Paid (PAY-");
+assert.equal(await page.locator("dd .badge:text-is('Paid')").count(), 1, "statement is paid");
+
 assert.deepEqual(errors, []);
 console.log("e2e settlement flow: OK");
 await browser.close();

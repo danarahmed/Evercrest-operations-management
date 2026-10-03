@@ -14,7 +14,8 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** Which bases make sense for each rule type. */
 const ALLOWED_BASES: Record<RateType, readonly string[]> = {
   driver_pay: ["actual_qty", "per_trip"],
-  transporter_fee: ["actual_qty", "loaded_qty", "discharged_qty", "per_trip"],
+  // Owner rule: transporter fee is price × actual MT, or a fixed amount per trip.
+  transporter_fee: ["actual_qty", "per_trip"],
   customer_price: ["actual_qty", "per_trip"],
   shortage_fine: ["quantity"],
   allowance: ["quantity"],

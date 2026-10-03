@@ -17,6 +17,7 @@ import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { billTrips } from "@/domain/transport/billing";
 import { defineRate, endRate } from "@/domain/transport/rates";
 import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
+import { cancelPayStatement, createPayStatement, payStatement } from "@/domain/transport/statements";
 import { recordArrival } from "@/domain/transport/trips";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
@@ -104,6 +105,9 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "settlements.create": { command: settleTrip },
   "settlements.reverse": { command: reverseSettlement },
   "billing.bill_trips": { command: billTrips },
+  "statements.create": { command: createPayStatement },
+  "statements.pay": { command: payStatement },
+  "statements.cancel": { command: cancelPayStatement },
   "settings.trip_transit_days": {
     command: setSetting,
     prepare: async (_db, _a, i) => ({ key: "alerts.trip_transit_days", value: Number(i.days), reason: i.reason }),

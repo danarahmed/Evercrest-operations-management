@@ -1,9 +1,10 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { accounts, approvalRequests, catalogItems, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { accounts, approvalRequests, catalogItems, invoiceLines, invoices, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
-import { jobProfitability } from "@/domain/finance/invoices";
+import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
+import { awaitingStatement, listStatements, statementDetail } from "@/domain/transport/statements";
 import { tripAdvances } from "@/domain/finance/payments";
 import { getJob, jobBlockers, nextActionInfo } from "@/domain/jobs/commands";
 import { quantityDifference } from "@/domain/transport/trips";
@@ -41,6 +42,17 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     .orderBy(trips.tripNo);
   const showMoney = can(actor, "reports.financial.view") || can(actor, "settlements.create");
   const billed = await billedTripIds(db, tripRows.map((t) => t.trip.id));
+  const tripIds = tripRows.map((t) => t.trip.id);
+  const invoiceOf = new Map(
+    (tripIds.length
+      ? await db
+          .selectDistinct({ tripId: invoiceLines.tripId, id: invoices.id, no: invoices.invoiceNo })
+          .from(invoiceLines)
+          .innerJoin(invoices, eq(invoices.id, invoiceLines.invoiceId))
+          .where(and(inArray(invoiceLines.tripId, tripIds), eq(invoices.kind, "sales"), eq(invoices.status, "posted")))
+      : []
+    ).map((r) => [r.tripId!, { id: r.id, no: r.no }]),
+  );
   const tripsView = await Promise.all(
     tripRows.map(async (t) => {
       const settlement = await postedSettlement(db, t.trip.id);
@@ -49,6 +61,7 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
         difference: await quantityDifference(db, t.trip),
         advances: await tripAdvances(db, actor.companyId, t.trip.id),
         billed: billed.has(t.trip.id),
+        invoice: invoiceOf.get(t.trip.id) ?? null,
         settlement: settlement ? { no: settlement.settlementNo, calc: settlement.calculation as SettlementCalculation } : null,
         // What settling now would produce, or what is missing (only for discharged, unsettled trips).
         preview: showMoney && !settlement && t.trip.status === "discharged" ? await calculateSettlement(db, actor.companyId, t.trip) : null,
@@ -224,4 +237,32 @@ export async function financeOptions(db: Db, actor: Actor) {
     openJobs: await db.select({ id: jobs.id, jobNo: jobs.jobNo, name: jobs.name }).from(jobs).where(and(eq(jobs.companyId, c), inArray(jobs.status, ["open", "in_progress", "pending", "completed"]))).orderBy(desc(jobs.createdAt)).limit(200),
     moneyAccounts: await db.select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency }).from(moneyAccounts).where(and(eq(moneyAccounts.companyId, c), eq(moneyAccounts.active, true))),
   };
+}
+
+/** Pay statements: settled trips waiting for one (per party), existing statements, and money accounts to pay from. */
+export async function statementsOverview(db: Db, actor: Actor) {
+  requirePermission(actor, "settlements.create");
+  const [drivers, transporters, list] = await Promise.all([
+    awaitingStatement(db, actor.companyId, "driver"),
+    awaitingStatement(db, actor.companyId, "transporter"),
+    listStatements(db, actor.companyId),
+  ]);
+  return { awaiting: { driver: drivers, transporter: transporters }, list };
+}
+
+export async function statementView(db: Db, actor: Actor, statementId: string) {
+  requirePermission(actor, "settlements.create");
+  const detail = await statementDetail(db, actor.companyId, statementId);
+  const payFrom = can(actor, "payments.create")
+    ? await db
+        .select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency })
+        .from(moneyAccounts)
+        .where(and(eq(moneyAccounts.companyId, actor.companyId), eq(moneyAccounts.active, true), eq(moneyAccounts.currency, detail.statement.currency)))
+    : [];
+  return { ...detail, payFrom };
+}
+
+export async function invoiceView(db: Db, actor: Actor, invoiceId: string) {
+  requirePermission(actor, "reports.financial.view");
+  return invoiceDetail(db, actor.companyId, invoiceId);
 }

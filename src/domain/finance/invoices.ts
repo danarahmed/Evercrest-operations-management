@@ -1,7 +1,8 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, currencies, invoiceLines, invoices, journalEntries, journalLines, partnerRoles, payments } from "@/db/schema";
+import { accounts, businessPartners, currencies, invoiceLines, invoices, jobs, journalEntries, journalLines, partnerRoles, payments, trips, trucks } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { postEntry, reverseEntry } from "../accounting/ledger";
@@ -246,4 +247,39 @@ export async function partnerBalances(db: Db, companyId: string, partnerId: stri
     .where(and(eq(accounts.companyId, companyId), eq(journalLines.partnerId, partnerId), inArray(accounts.type, ["asset", "liability"])))
     .groupBy(journalLines.currency);
   return Object.fromEntries(rows.filter((r) => !dec(r.bal).isZero()).map((r) => [r.currency, toStr(dec(r.bal))]));
+}
+
+const drivers = alias(businessPartners, "driver");
+
+/**
+ * An invoice with every line; trip lines also show the trip's driver, truck and
+ * quantities, so an invoice covering many drivers lists each of them.
+ */
+export async function invoiceDetail(db: Db, companyId: string, invoiceId: string) {
+  const [inv] = await db
+    .select({ invoice: invoices, partner: businessPartners.name })
+    .from(invoices)
+    .innerJoin(businessPartners, eq(businessPartners.id, invoices.partnerId))
+    .where(and(eq(invoices.id, invoiceId), eq(invoices.companyId, companyId)));
+  if (!inv) throw new NotFound("invoice", invoiceId);
+  const lines = await db
+    .select({ line: invoiceLines, trip: trips, driver: drivers.name, plate: trucks.plate, jobNo: jobs.jobNo })
+    .from(invoiceLines)
+    .leftJoin(trips, eq(trips.id, invoiceLines.tripId))
+    .leftJoin(drivers, eq(drivers.id, trips.driverId))
+    .leftJoin(trucks, eq(trucks.id, trips.truckId))
+    .leftJoin(jobs, eq(jobs.id, invoiceLines.jobId))
+    .where(eq(invoiceLines.invoiceId, invoiceId))
+    .orderBy(asc(invoiceLines.lineNo));
+  const linesTotal = lines.reduce((sum, l) => sum.plus(dec(l.line.amount)), new D(0));
+  const num = (v: string) => toStr(dec(v));
+  return {
+    invoice: { ...inv.invoice, total: num(inv.invoice.total), rounding: num(inv.invoice.rounding) },
+    partner: inv.partner,
+    lines: lines.map((l) => ({ ...l, line: { ...l.line, quantity: num(l.line.quantity), unitPrice: num(l.line.unitPrice), amount: num(l.line.amount) } })),
+    linesTotal: toStr(linesTotal),
+    outstanding: inv.invoice.status === "posted" ? await invoiceOutstanding(db, invoiceId) : "0",
+    tripCount: new Set(lines.map((l) => l.trip?.id).filter(Boolean)).size,
+    driverCount: new Set(lines.map((l) => l.trip?.driverId).filter(Boolean)).size,
+  };
 }

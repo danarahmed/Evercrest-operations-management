@@ -16,7 +16,7 @@ const POSTING_KEYS = [
   "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences",
 ] as const;
 const RATE_TYPES = ["driver_pay", "transporter_fee", "customer_price", "shortage_fine", "allowance", "demurrage_pay", "demurrage_bill"] as const;
-const BASES = ["actual_qty", "loaded_qty", "discharged_qty", "per_trip", "per_day", "quantity"] as const;
+const BASES = ["actual_qty", "per_trip", "per_day", "quantity"] as const;
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

@@ -6,12 +6,14 @@ import { signOut } from "./login/actions";
 
 const LANG_NAMES: Record<string, string> = { en: "English", ar: "العربية", ckb: "کوردی" };
 
-export async function Shell({ locale, userName, path, permissions, children }: {
+export async function Shell({ locale, userName, path, permissions, wide, children }: {
   locale: string;
   userName: string;
   path: string;
   /** Links the user cannot use are not shown (the server still enforces). */
   permissions: ReadonlySet<string>;
+  /** Use the full width for pages with wide tables. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const t = await getTranslations({ locale, namespace: "Nav" });
@@ -23,6 +25,7 @@ export async function Shell({ locale, userName, path, permissions, children }: {
         <Link href={`/${locale}`}><strong>{app("title")}</strong></Link>
         <nav>
           {(permissions.has("reports.financial.view") || permissions.has("invoices.create")) && <Link href={`/${locale}/finance`}>{nl("finance")}</Link>}
+          {permissions.has("settlements.create") && <Link href={`/${locale}/statements`}>{nl("statements")}</Link>}
           {permissions.has("approvals.decide") && <Link href={`/${locale}/approvals`}>{nl("approvals")}</Link>}
           {permissions.has("documents.verify") && <Link href={`/${locale}/documents`}>{nl("documents")}</Link>}
           {["partners.manage", "accounts.manage", "settings.manage", "job_types.manage", "documents.configure", "rates.manage", "catalog.manage"].some((p) => permissions.has(p)) && (
@@ -36,7 +39,7 @@ export async function Shell({ locale, userName, path, permissions, children }: {
           <form action={signOut.bind(null, locale)}><button type="submit">{t("signOut")}</button></form>
         </nav>
       </header>
-      <main>{children}</main>
+      <main className={wide ? "wide" : undefined}>{children}</main>
     </>
   );
 }

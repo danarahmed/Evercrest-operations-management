@@ -41,3 +41,19 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .grid2 { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 details.panel { margin-block: 8px; } details.panel > summary { cursor: pointer; color: var(--accent); padding: 6px 0; }
 button:disabled { opacity: .6; cursor: wait; }
+
+/* Statements and invoice details */
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 12px; }
+.kv dt { color: var(--muted, #666); }
+.kv dd { margin: 0; }
+tr.subtotal td { border-top: 2px solid var(--border); background: var(--bg, transparent); }
+@media print {
+  header.top, .no-print, details.panel { display: none !important; }
+  .table-wrap { overflow: visible; border: none; }
+  table { font-size: 11px; }
+  body { background: #fff; color: #000; }
+}
+/* Pages with wide tables (statements, invoice details) */
+main.wide { max-width: 1500px; }
+table.statement { font-size: 0.85em; }
+table.statement td, table.statement th { white-space: nowrap; padding: 6px 8px; }

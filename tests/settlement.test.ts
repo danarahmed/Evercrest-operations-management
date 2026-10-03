@@ -162,12 +162,14 @@ describe("demurrage", () => {
 
 describe("transporter fee", () => {
   it("is owed to the transporter, never deducted from the driver; its advances are deducted from it", async () => {
-    await rate({ rateType: "transporter_fee", basis: "loaded_qty", amount: "5000", currency: "IQD", unit: "MT", transporterId: ids.transporter });
+    await expect(rate({ rateType: "transporter_fee", basis: "loaded_qty", amount: "5000", currency: "IQD", unit: "MT", transporterId: ids.transporter })).rejects.toThrow(/cannot be charged/);
+    await rate({ rateType: "transporter_fee", basis: "actual_qty", amount: "5000", currency: "IQD", unit: "MT", transporterId: ids.transporter });
     const t = await trip({ loaded: "30", discharged: "29.75", transporter: ids.transporter });
     await run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: ids.iqdCash, amount: "50000", currency: "IQD", paymentDate: "2026-09-10", method: "cash", tripId: t.tripId, partnerId: ids.transporter });
     const r = await calc(t.tripId);
     expect(r.ok && r.calc.driver.netFinal).toBe("1160000"); // 1,190,000 − 30,000 fine; no fee deducted
-    expect(r.ok && r.calc.transporter).toMatchObject({ lines: [{ code: "transporter_fee", amount: "150000" }], advancesDeducted: "50000", netFinal: "100000" });
+    // price × actual MT: 29.75 × 5,000 = 148,750
+    expect(r.ok && r.calc.transporter).toMatchObject({ lines: [{ code: "transporter_fee", amount: "148750" }], advancesDeducted: "50000", netFinal: "98750" });
   });
 
   it("blocks settlement if the trip has a transporter but no fee rule", async () => {

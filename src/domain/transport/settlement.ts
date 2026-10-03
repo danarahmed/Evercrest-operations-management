@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { currencies, invoiceLines, invoices, jobs, payments, trips, tripSettlements } from "@/db/schema";
+import { currencies, invoiceLines, invoices, jobs, payments, payStatementItems, payStatements, trips, tripSettlements } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -313,6 +313,13 @@ export const reverseSettlement = defineCommand({
     const [s] = await tx.select().from(tripSettlements).where(and(eq(tripSettlements.id, settlementId), eq(tripSettlements.companyId, actor.companyId)));
     if (!s) throw new NotFound("trip_settlement", settlementId);
     if (s.status === "reversed") throw new Conflict("Settlement is already reversed");
+    const [onStatement] = await tx
+      .select({ no: payStatements.statementNo })
+      .from(payStatementItems)
+      .innerJoin(payStatements, eq(payStatements.id, payStatementItems.statementId))
+      .where(and(eq(payStatementItems.settlementId, settlementId), eq(payStatementItems.active, true)))
+      .limit(1);
+    if (onStatement) throw new Conflict(`${s.settlementNo} is on pay statement ${onStatement.no}; cancel the statement first`);
     const rev = await reverseEntry(ctx, s.journalEntryId, reversalDate, `${s.settlementNo}: ${reason}`);
     await tx.update(tripSettlements).set({ status: "reversed", reversalEntryId: rev.id }).where(eq(tripSettlements.id, settlementId));
     await audit({ action: "settlements.reverse", entityType: "trip_settlement", entityId: settlementId, before: { status: "posted" }, after: { status: "reversed" }, reason });

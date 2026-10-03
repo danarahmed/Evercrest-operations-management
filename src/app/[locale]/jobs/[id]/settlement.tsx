@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ActionForm } from "@/components/ActionForm";
 import { formatMoney, formatQty } from "@/lib/format";
@@ -6,6 +7,7 @@ import type { PartySettlement, SettlementCalculation } from "@/domain/transport/
 type TripView = {
   trip: { id: string; tripNo: string; status: string };
   billed: boolean;
+  invoice: { id: string; no: string } | null;
   settlement: { no: string; calc: SettlementCalculation } | null;
   preview: { ok: true; calc: SettlementCalculation } | { ok: false; missing: { code: string; message: string }[] } | null;
 };
@@ -59,7 +61,7 @@ export async function SettlementSection({ locale, jobId, trips, canSettle, canBi
               <strong>{x.trip.tripNo}</strong>
               <span>
                 {x.settlement ? <span className="badge state-verified">{t("settled", { no: x.settlement.no })}</span> : <span className="badge">{t("notSettled")}</span>}{" "}
-                {x.billed ? <span className="badge state-verified">{t("billed")}</span> : <span className="badge">{t("notBilled")}</span>}
+                {x.billed ? <span className="badge state-verified">{t("billed")}{x.invoice && <> · <Link href={`/${locale}/finance/invoices/${x.invoice.id}`} dir="ltr">{x.invoice.no}</Link></>}</span> : <span className="badge">{t("notBilled")}</span>}
               </span>
             </div>
             {x.settlement && body(x.settlement.calc)}

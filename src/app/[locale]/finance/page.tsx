@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
@@ -84,7 +85,7 @@ export default async function Finance({ params, searchParams }: { params: Promis
               <thead><tr><th>{t("number")}</th><th>{t("partner")}</th><th>{t("kind")}</th><th>{t("total")}</th><th>{t("outstanding")}</th><th>{t("dueDate")}</th></tr></thead>
               <tbody>{open.map((i) => (
                 <tr key={i.id}>
-                  <td dir="ltr">{i.no}</td><td>{i.partner}</td><td>{i.kind === "sales" ? t("salesInvoice") : t("bill")}</td>
+                  <td dir="ltr"><Link href={`/${locale}/finance/invoices/${i.id}`}>{i.no}</Link></td><td>{i.partner}</td><td>{i.kind === "sales" ? t("salesInvoice") : t("bill")}</td>
                   <td className="num">{m(i.total, i.currency)}</td><td className="num"><strong>{m(i.outstanding, i.currency)}</strong></td>
                   <td className={i.dueDate && i.dueDate < today ? "state-missing" : ""}>{i.dueDate ?? "—"}</td>
                 </tr>

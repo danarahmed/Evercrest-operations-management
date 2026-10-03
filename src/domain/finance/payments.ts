@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, invoices, journalLines, moneyAccounts, payments } from "@/db/schema";
+import { accounts, invoices, journalLines, moneyAccounts, payments, payStatementItems, payStatements } from "@/db/schema";
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
@@ -62,6 +62,8 @@ export const recordPayment = defineCommand({
     tripId: uuid.nullish(),
     /** Settle this invoice (customer receipt or bill payment). */
     invoiceId: uuid.nullish(),
+    /** Pay statement whose payee this pays (purpose "settlement" only). */
+    statementId: uuid.nullish(),
     /** Expense account for a direct expense paid now. */
     counterAccountId: uuid.nullish(),
     reference: z.string().nullish(),
@@ -112,6 +114,9 @@ export const recordPayment = defineCommand({
       if (dec(input.amount).gt(outstanding))
         throw new ValidationError(`Payment exceeds the outstanding ${toStr(outstanding)} ${inv.currency} on ${inv.invoiceNo}`);
       [counter] = await tx.select().from(accounts).where(eq(accounts.id, inv.balanceAccountId));
+    } else if (input.purpose === "settlement" || input.statementId) {
+      counter = await statementPayment(tx, actor.companyId, input, partnerId);
+      jobId = null; // one payment can cover trips of several jobs; the costs already sit on each job
     } else if (input.purpose === "expense") {
       if (input.direction !== "out") throw new ValidationError("An expense is money paid out");
       if (!input.counterAccountId) throw new ValidationError("Choose the expense account");
@@ -144,12 +149,46 @@ export const recordPayment = defineCommand({
     });
     const [row] = await tx
       .insert(payments)
-      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, invoiceId: input.invoiceId ?? null, counterAccountId: counter.id, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
+      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, invoiceId: input.invoiceId ?? null, statementId: input.statementId ?? null, counterAccountId: counter.id, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
       .returning();
     await audit({ action: "payments.record", entityType: "payment", entityId: row.id, after: { paymentNo, ...input, partnerId, jobId } });
     return { id: row.id, paymentNo, journalEntryId: entry.id };
   },
 });
+
+/**
+ * Settlement balances are paid only through a pay statement, for exactly what
+ * the statement says the payee is owed, so a driver cannot be paid twice or
+ * paid an amount nobody calculated.
+ */
+async function statementPayment(
+  tx: Db,
+  companyId: string,
+  input: { purpose: string; direction: string; statementId?: string | null; amount: string; currency: string; tripId?: string | null; invoiceId?: string | null },
+  partnerId: string | null,
+) {
+  if (input.purpose !== "settlement" || !input.statementId) throw new ValidationError("Settlement balances are paid through a pay statement");
+  if (input.direction !== "out") throw new ValidationError("A settlement payment is money paid out");
+  if (input.tripId || input.invoiceId) throw new ValidationError("A statement payment is not linked to a single trip or invoice");
+  if (!partnerId) throw new ValidationError("Choose who is paid");
+  const [st] = await tx.select().from(payStatements).where(and(eq(payStatements.id, input.statementId), eq(payStatements.companyId, companyId)));
+  if (!st) throw new NotFound("pay_statement", input.statementId);
+  if (st.status === "cancelled") throw new Conflict(`${st.statementNo} is cancelled`);
+  if (st.currency !== input.currency) throw new ValidationError(`${st.statementNo} is in ${st.currency}; pay it in ${st.currency}`);
+  const [owed] = await tx
+    .select({ total: sql<string>`coalesce(sum(${payStatementItems.amount}), 0)` })
+    .from(payStatementItems)
+    .where(and(eq(payStatementItems.statementId, st.id), eq(payStatementItems.partnerId, partnerId), eq(payStatementItems.active, true)));
+  if (!dec(owed.total).gt(0)) throw new ValidationError(`Nothing is owed to this payee on ${st.statementNo}`);
+  if (!dec(input.amount).eq(dec(owed.total)))
+    throw new ValidationError(`${st.statementNo} owes this payee ${toStr(dec(owed.total))} ${st.currency}; pay exactly that amount`);
+  const [already] = await tx
+    .select({ no: payments.paymentNo })
+    .from(payments)
+    .where(and(eq(payments.statementId, st.id), eq(payments.partnerId, partnerId), eq(payments.status, "posted")));
+  if (already) throw new Conflict(`Already paid on ${st.statementNo} (${already.no})`);
+  return postingAccount(tx, companyId, st.party === "driver" ? "payables_to_drivers" : "payables_to_transporters");
+}
 
 /**
  * Payments out above the configured limit need approval. Payments to the same
@@ -200,6 +239,8 @@ export const reversePayment = defineCommand({
     if (p.status === "reversed") throw new Conflict("Payment is already reversed");
     const rev = await reverseEntry(ctx, p.journalEntryId, reversalDate, `${p.paymentNo}: ${reason}`);
     await tx.update(payments).set({ status: "reversed", reversalEntryId: rev.id }).where(eq(payments.id, paymentId));
+    // The payee is owed again, so the statement is open again.
+    if (p.statementId) await tx.update(payStatements).set({ status: "open" }).where(and(eq(payStatements.id, p.statementId), eq(payStatements.status, "paid")));
     await audit({ action: "payments.reverse", entityType: "payment", entityId: paymentId, before: { status: "posted" }, after: { status: "reversed", reversalEntryId: rev.id }, reason });
     return { paymentId, reversalEntryId: rev.id };
   },

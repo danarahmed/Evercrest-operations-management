@@ -3,12 +3,14 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 import { can } from "@/server/authz";
 import { exchangeView } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
-import { FinanceNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +30,8 @@ export default async function ExchangePage({ params }: { params: Promise<{ local
 
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/exchange">
-      <h1>{t("title")}</h1>
-      <FinanceNav locale={locale} current="exchange" />
-      <p className="muted">{t("intro")}</p>
-      {can(actor, "exchanges.create") && active.length > 1 && (
-        <details className="panel" open>
-          <summary>{t("new")}</summary>
+      <PageHeader title={t("title")} subtitle={t("intro")} actions={can(actor, "exchanges.create") && active.length > 1 && (
+        <Modal label={t("new")} variant="primary" icon={<Icon name="exchange" size={16} />}>
           <ActionForm command="exchanges.create" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={f("save")}>
             <div className="grid2">
               <label>{t("from")}<select name="fromMoneyAccountId" required>{active.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency}) · {m(x.balance, x.currency)}</option>)}</select></label>
@@ -44,9 +42,10 @@ export default async function ExchangePage({ params }: { params: Promise<{ local
               <label>{f("reference")}<input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
-        </details>
-      )}
-      {v.exchanges.length === 0 ? <p className="card muted">{t("none")}</p> : (
+        </Modal>
+      )} />
+      <Card flush title={t("history")} icon="exchange">
+      {v.exchanges.length === 0 ? <EmptyState icon="exchange" title={t("none")} /> : (
         <div className="table-wrap"><table>
           <thead><tr><th>{t("no")}</th><th>{f("date")}</th><th className="num">{t("given")}</th><th className="num">{t("received")}</th><th className="num">{t("rate")}</th><th /></tr></thead>
           <tbody>{v.exchanges.map((x) => (
@@ -54,20 +53,22 @@ export default async function ExchangePage({ params }: { params: Promise<{ local
               <td dir="ltr">{x.exchangeNo}</td><td>{x.exchangeDate}</td>
               <td className="num">{m(x.fromAmount, x.fromCurrency)}</td><td className="num">{m(x.toAmount, x.toCurrency)}</td>
               <td className="num" dir="ltr">1 {x.fromCurrency} = {new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(Number(x.rate))} {x.toCurrency}</td>
-              <td>{x.status === "reversed" ? <span className="badge">{t("reversed")}</span> : can(actor, "payments.reverse") && (
-                <details className="no-print">
-                  <summary>{t("reverse")}</summary>
+              <td>{x.status === "reversed" ? <Badge>{t("reversed")}</Badge> : can(actor, "payments.reverse") && (
+                <Modal label={t("reverse")} small variant="ghost" size="sm" title={`${t("reverse")} ${x.exchangeNo}`}>
                   <ActionForm command="exchanges.reverse" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("reverse")}>
                     <input type="hidden" name="exchangeId" value={x.id} />
-                    <input type="date" name="reversalDate" required defaultValue={today} />
-                    <input name="reason" required placeholder={t("reason")} />
+                    <div className="grid2">
+                      <label>{t("date")}<input type="date" name="reversalDate" required defaultValue={today} /></label>
+                      <label>{t("reason")}<input name="reason" required /></label>
+                    </div>
                   </ActionForm>
-                </details>
+                </Modal>
               )}</td>
             </tr>
           ))}</tbody>
         </table></div>
       )}
+      </Card>
     </Shell>
   );
 }

@@ -4,12 +4,14 @@ import { Fragment } from "react";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 import { can } from "@/server/authz";
 import { journalView } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
-import { FinanceNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 const LINES = 4;
@@ -32,13 +34,8 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/journal">
-      <h1>{t("title")}</h1>
-      <FinanceNav locale={locale} current="journal" />
-      <p className="muted">{t("intro")}</p>
-
-      {can(actor, "journal.post") && (
-        <details className="panel">
-          <summary>{t("manual")}</summary>
+      <PageHeader title={t("title")} subtitle={t("intro")} actions={can(actor, "journal.post") && (
+        <Modal label={t("manual")} variant="primary" size="lg" icon={<Icon name="plus" size={16} />}>
           <p className="muted">{t("manualHelp")}</p>
           <ActionForm command="ledger.manual_entry" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("post")}>
             <div className="grid2">
@@ -58,17 +55,19 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
               ))}</tbody>
             </table></div>
           </ActionForm>
-        </details>
-      )}
+        </Modal>
+      )} />
 
-      <form className="row no-print" method="get">
-        <label>{t("from")} <input type="date" name="from" defaultValue={from} /></label>
-        <label>{t("to")} <input type="date" name="to" defaultValue={to} /></label>
-        <button type="submit">{t("show")}</button>
+
+      <form className="filters no-print" method="get">
+        <label>{t("from")}<input type="date" name="from" defaultValue={from} /></label>
+        <label>{t("to")}<input type="date" name="to" defaultValue={to} /></label>
+        <button type="submit"><Icon name="search" size={16} />{t("show")}</button>
       </form>
 
-      {v.entries.length === 0 ? <p className="card muted">{t("none")}</p> : (
-        <div className="table-wrap"><table>
+      <Card flush title={t("entries", { count: v.entries.length })} icon="book">
+      {v.entries.length === 0 ? <EmptyState icon="book" title={t("none")} /> : (
+        <div className="table-wrap"><table className="dense">
           <thead><tr><th>{t("no")}</th><th>{f("date")}</th><th>{t("account")}</th><th>{t("detail")}</th><th className="num">{t("debit")}</th><th className="num">{t("credit")}</th></tr></thead>
           <tbody>{v.entries.map((e) => (
             <Fragment key={e.id}>
@@ -77,19 +76,20 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
                 <td colSpan={2} className="wrap">
                   <strong dir="auto">{e.description}</strong>
                   <span className="muted"> · {e.sourceType === "manual" ? t("manualBy", { name: e.by }) : e.sourceId ?? e.sourceType}</span>
-                  {e.reversedByEntryId && <span className="badge">{t("reversed")}</span>}
-                  {e.reversesEntryId && <span className="badge">{t("reversal")}</span>}
+                  {e.reversedByEntryId && <Badge tone="warning">{t("reversed")}</Badge>}
+                  {e.reversesEntryId && <Badge tone="info">{t("reversal")}</Badge>}
                 </td>
                 <td colSpan={2} className="no-print">
                   {can(actor, "journal.reverse") && e.sourceType === "manual" && !e.reversedByEntryId && !e.reversesEntryId && (
-                    <details>
-                      <summary>{t("reverse")}</summary>
+                    <Modal label={t("reverse")} small size="sm" title={`${t("reverse")} #${e.entryNo}`}>
                       <ActionForm command="ledger.reverse_entry" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("reverse")}>
                         <input type="hidden" name="entryId" value={e.id} />
-                        <input type="date" name="entryDate" required defaultValue={today} />
-                        <input name="reason" required placeholder={t("reason")} />
+                        <div className="grid2">
+                          <label>{t("date")}<input type="date" name="entryDate" required defaultValue={today} /></label>
+                          <label>{t("reason")}<input name="reason" required /></label>
+                        </div>
                       </ActionForm>
-                    </details>
+                    </Modal>
                   )}
                 </td>
               </tr>
@@ -105,6 +105,7 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
           ))}</tbody>
         </table></div>
       )}
+      </Card>
     </Shell>
   );
 }

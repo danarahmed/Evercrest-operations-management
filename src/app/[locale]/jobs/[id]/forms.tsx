@@ -1,15 +1,23 @@
 import { getTranslations } from "next-intl/server";
 import { ActionForm } from "@/components/ActionForm";
-import type { trips } from "@/db/schema";
-import type { FormOptions } from "@/server/queries";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import type { customFields, trips } from "@/db/schema";
 import { CAPABILITIES } from "@/domain/jobs/capabilities";
+import type { FormOptions } from "@/server/queries";
 
 type Trip = typeof trips.$inferSelect;
 const today = () => new Date().toISOString().slice(0, 10);
 const key = () => crypto.randomUUID();
+const METHODS = ["cash", "bank_transfer", "cheque", "other"] as const;
 
-/** Data-entry panels for a job. Only panels relevant to the job's capabilities are shown. */
-export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, options }: {
+/**
+ * The job's data-entry actions, each a button that opens a dialog. Grouped by
+ * what they are about so each tab only shows its own actions.
+ */
+
+/** Trips: start, loading, arrival, discharge, advances. */
+export async function TransportActions({ locale, jobId, jobNo, capabilities, tripList, options }: {
   locale: string;
   jobId: string;
   jobNo: string;
@@ -18,20 +26,17 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
   options: FormOptions;
 }) {
   const t = await getTranslations({ locale, namespace: "Forms" });
-  const st = await getTranslations({ locale, namespace: "JobStatus" });
-  const cap = await getTranslations({ locale, namespace: "Setup" });
   const planned = tripList.filter((x) => x.status === "planned" || x.status === "loaded");
   const loaded = tripList.filter((x) => x.status === "loaded" || x.status === "discharged");
+  const inTransit = tripList.filter((x) => x.status === "loaded");
   const live = tripList.filter((x) => x.status !== "cancelled");
   const unitSelect = (name: string) => (
     <select name={name} required defaultValue="MT">{options.units.map((u) => <option key={u.code} value={u.code}>{u.code}</option>)}</select>
   );
-
   return (
     <>
       {capabilities.includes("transportation") && (
-        <details className="panel">
-          <summary>{t("startTrip")}</summary>
+        <Modal label={t("startTrip")} icon={<Icon name="plus" size={16} />} variant="primary" small>
           <ActionForm command="trips.create" locale={locale} idempotencyKey={key()} submitLabel={t("create")}>
             <input type="hidden" name="jobId" value={jobId} />
             <div className="grid2">
@@ -44,55 +49,47 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("destination")}<input name="destination" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
-
       {planned.length > 0 && (
-        <details className="panel">
-          <summary>{t("recordLoading")}</summary>
+        <Modal label={t("recordLoading")} small>
           <ActionForm command="trips.record_loading" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
             <div className="grid2">
               <label>{t("trip")}<select name="tripId" required>{planned.map((x) => <option key={x.id} value={x.id}>{x.tripNo}</option>)}</select></label>
               <label>{t("date")}<input type="date" name="loadingDate" required defaultValue={today()} /></label>
               <label>{t("quantity")}<input name="loadedQty" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("unit")}{unitSelect("loadedUnit")}</label>
-              <label>{t("correctionReason")}<input name="reason" /></label>
+              <label>{t("correctionReason")} <span className="hint">{t("onlyForCorrections")}</span><input name="reason" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
-
-      {tripList.some((x) => x.status === "loaded") && (
-        <details className="panel">
-          <summary>{t("recordArrival")}</summary>
+      {inTransit.length > 0 && (
+        <Modal label={t("recordArrival")} small>
           <ActionForm command="trips.record_arrival" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
             <div className="grid2">
-              <label>{t("trip")}<select name="tripId" required>{tripList.filter((x) => x.status === "loaded").map((x) => <option key={x.id} value={x.id}>{x.tripNo}</option>)}</select></label>
+              <label>{t("trip")}<select name="tripId" required>{inTransit.map((x) => <option key={x.id} value={x.id}>{x.tripNo}</option>)}</select></label>
               <label>{t("date")}<input type="date" name="arrivalDate" required defaultValue={today()} /></label>
-              <label>{t("correctionReason")}<input name="reason" /></label>
+              <label>{t("correctionReason")} <span className="hint">{t("onlyForCorrections")}</span><input name="reason" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
-
       {loaded.length > 0 && (
-        <details className="panel">
-          <summary>{t("recordDischarge")}</summary>
+        <Modal label={t("recordDischarge")} small>
           <ActionForm command="trips.record_discharge" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
             <div className="grid2">
               <label>{t("trip")}<select name="tripId" required>{loaded.map((x) => <option key={x.id} value={x.id}>{x.tripNo}</option>)}</select></label>
               <label>{t("date")}<input type="date" name="dischargeDate" required defaultValue={today()} /></label>
               <label>{t("quantity")}<input name="dischargedQty" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("unit")}{unitSelect("dischargedUnit")}</label>
-              <label>{t("correctionReason")}<input name="reason" /></label>
+              <label>{t("correctionReason")} <span className="hint">{t("onlyForCorrections")}</span><input name="reason" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
-
       {capabilities.includes("advances") && live.length > 0 && options.moneyAccounts.length > 0 && (
-        <details className="panel">
-          <summary>{t("payAdvance")}</summary>
+        <Modal label={t("payAdvance")} icon={<Icon name="wallet" size={16} />} small>
           <ActionForm command="payments.record" locale={locale} idempotencyKey={key()} submitLabel={t("pay")} summary={`Advance for ${jobNo}`}>
             <input type="hidden" name="direction" value="out" />
             <input type="hidden" name="purpose" value="advance" />
@@ -101,15 +98,22 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("paidFrom")}<select name="moneyAccountId" required>{options.moneyAccounts.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.currency})</option>)}</select></label>
               <label>{t("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("date")}<input type="date" name="paymentDate" required defaultValue={today()} /></label>
-              <label>{t("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((m) => <option key={m} value={m}>{t(m)}</option>)}</select></label>
+              <label>{t("method")}<select name="method" defaultValue="cash">{METHODS.map((m) => <option key={m} value={m}>{t(m)}</option>)}</select></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
+    </>
+  );
+}
 
-      {capabilities.includes("expenses") && options.moneyAccounts.length > 0 && options.expenseAccounts.length > 0 && (
-        <details className="panel">
-          <summary>{t("recordExpense")}</summary>
+/** Costs: an expense paid now, or a supplier/contractor bill to pay later. */
+export async function CostActions({ locale, jobId, jobNo, options }: { locale: string; jobId: string; jobNo: string; options: FormOptions }) {
+  const t = await getTranslations({ locale, namespace: "Forms" });
+  return (
+    <>
+      {options.moneyAccounts.length > 0 && options.expenseAccounts.length > 0 && (
+        <Modal label={t("recordExpense")} icon={<Icon name="plus" size={16} />} variant="primary" small>
           <ActionForm command="payments.record" locale={locale} idempotencyKey={key()} submitLabel={t("save")} summary={`Expense for ${jobNo}`}>
             <input type="hidden" name="direction" value="out" />
             <input type="hidden" name="purpose" value="expense" />
@@ -122,15 +126,13 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("paidFrom")}<select name="moneyAccountId" required>{options.moneyAccounts.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.currency})</option>)}</select></label>
               <label>{t("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("date")}<input type="date" name="paymentDate" required defaultValue={today()} /></label>
-              <label>{t("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((m) => <option key={m} value={m}>{t(m)}</option>)}</select></label>
+              <label>{t("method")}<select name="method" defaultValue="cash">{METHODS.map((m) => <option key={m} value={m}>{t(m)}</option>)}</select></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
-
-      {capabilities.includes("expenses") && options.suppliers.length > 0 && options.expenseAccounts.length > 0 && (
-        <details className="panel">
-          <summary>{t("supplierBill")}</summary>
+      {options.suppliers.length > 0 && options.expenseAccounts.length > 0 && (
+        <Modal label={t("supplierBill")} small>
           <p className="muted">{t("supplierBillHelp")}</p>
           <ActionForm command="invoices.job_bill" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
             <input type="hidden" name="kind" value="bill" />
@@ -147,41 +149,83 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
               <label>{t("dueDate")}<input type="date" name="dueDate" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
+    </>
+  );
+}
 
-      {options.documentTypes.length > 0 && (
-        <details className="panel">
-          <summary>{t("recordDocument")}</summary>
-          <ActionForm command="documents.record" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
-            <div className="grid2">
-              <label>{t("documentType")}<select name="documentTypeId" required>{options.documentTypes.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
-              <label>{t("forTarget")}
-                <select name="__target" required defaultValue={`job:${jobId}`} data-split>
-                  <option value={`job:${jobId}`}>{t("thisJob")}</option>
-                  {live.map((x) => <option key={x.id} value={`trip:${x.id}`}>{x.tripNo}</option>)}
-                </select>
-              </label>
-              <label>{t("reference")}<input name="reference" dir="ltr" /></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
+/** Record a received document (for the job or one of its trips). */
+export async function DocumentAction({ locale, jobId, tripList, options }: { locale: string; jobId: string; tripList: Trip[]; options: FormOptions }) {
+  const t = await getTranslations({ locale, namespace: "Forms" });
+  if (!options.documentTypes.length) return null;
+  const live = tripList.filter((x) => x.status !== "cancelled");
+  return (
+    <Modal label={t("recordDocument")} icon={<Icon name="plus" size={16} />} variant="primary" small>
+      <ActionForm command="documents.record" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+        <div className="grid2">
+          <label>{t("documentType")}<select name="documentTypeId" required>{options.documentTypes.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
+          <label>{t("forTarget")}
+            <select name="__target" required defaultValue={`job:${jobId}`}>
+              <option value={`job:${jobId}`}>{t("thisJob")}</option>
+              {live.map((x) => <option key={x.id} value={`trip:${x.id}`}>{x.tripNo}</option>)}
+            </select>
+          </label>
+          <label>{t("reference")}<input name="reference" dir="ltr" /></label>
+        </div>
+      </ActionForm>
+    </Modal>
+  );
+}
 
-      <details className="panel">
-        <summary>{t("jobNeeds")}</summary>
+/** Job settings: status, what the job needs, extra information, budget. */
+export async function JobSettingsActions({ locale, jobId, capabilities, fields, values, budget }: {
+  locale: string;
+  jobId: string;
+  capabilities: string[];
+  fields: (typeof customFields.$inferSelect)[];
+  values: Record<string, string>;
+  budget: { amount: string | null; currency: string | null };
+}) {
+  const t = await getTranslations({ locale, namespace: "Forms" });
+  const st = await getTranslations({ locale, namespace: "JobStatus" });
+  const cap = await getTranslations({ locale, namespace: "Setup" });
+  return (
+    <>
+      <Modal label={t("jobNeeds")} icon={<Icon name="layers" size={16} />} small>
         <p className="muted">{t("jobNeedsHelp")}</p>
         <ActionForm command="jobs.set_capabilities" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
           <input type="hidden" name="jobId" value={jobId} />
-          <fieldset className="row">
-            {CAPABILITIES.map((c) => <label key={c} className="row"><input type="checkbox" name="capabilities[]" value={c} defaultChecked={capabilities.includes(c)} />{cap(`cap_${c}`)}</label>)}
+          <fieldset>
+            {CAPABILITIES.map((c) => <label key={c} className="check"><input type="checkbox" name="capabilities[]" value={c} defaultChecked={capabilities.includes(c)} />{cap(`cap_${c}`)}</label>)}
           </fieldset>
           <label>{t("reason")}<input name="reason" /></label>
         </ActionForm>
-      </details>
-
-      <details className="panel">
-        <summary>{t("changeStatus")}</summary>
+      </Modal>
+      <Modal label={t("extraInfoAndBudget")} icon={<Icon name="edit" size={16} />} small>
+        {fields.length > 0 && (
+          <>
+            <h3 style={{ marginBlockStart: 0 }}>{t("extraInfo")}</h3>
+            <ActionForm command="jobs.set_custom_values" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+              <input type="hidden" name="jobId" value={jobId} />
+              <div className="grid2">
+                {fields.map((f) => <label key={f.id}>{f.label}{f.required ? " *" : ""}<input name={`cf_${f.key}`} defaultValue={values[f.key] ?? ""} dir="auto" /></label>)}
+              </div>
+            </ActionForm>
+            <div className="divider" />
+          </>
+        )}
+        <h3 style={{ marginBlockStart: 0 }}>{t("budget")}</h3>
+        <p className="muted small">{t("budgetHelp")}</p>
+        <ActionForm command="jobs.set_budget" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
+          <input type="hidden" name="jobId" value={jobId} />
+          <div className="grid2">
+            <label>{t("amount")}<input name="amount" inputMode="decimal" dir="ltr" defaultValue={budget.amount ?? ""} /></label>
+            <label>{t("currency")}<select name="currency" defaultValue={budget.currency ?? "IQD"}><option value="IQD">IQD</option><option value="USD">USD</option></select></label>
+          </div>
+        </ActionForm>
+      </Modal>
+      <Modal label={t("changeStatus")} icon={<Icon name="flag" size={16} />} small>
         <ActionForm command="jobs.change_status" locale={locale} idempotencyKey={key()} submitLabel={t("save")}>
           <input type="hidden" name="jobId" value={jobId} />
           <div className="grid2">
@@ -189,7 +233,7 @@ export async function JobForms({ locale, jobId, jobNo, capabilities, tripList, o
             <label>{t("reason")}<input name="reason" /></label>
           </div>
         </ActionForm>
-      </details>
+      </Modal>
     </>
   );
 }

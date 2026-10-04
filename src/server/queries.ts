@@ -431,3 +431,24 @@ export async function dashboardKpis(db: Db, actor: Actor) {
     }
   return { activeJobs: active.n, inTransit: transit.n, money: { cash: byCur(cash.filter((x) => x.active)), owedToUs, weOwe } };
 }
+
+/** All jobs with simple filters (search by number/name/customer, status, customer, type). */
+export async function jobsList(db: Db, actor: Actor, f: { q?: string; status?: string; customerId?: string; typeId?: string }) {
+  requirePermission(actor, "jobs.view");
+  const conds = [eq(jobs.companyId, actor.companyId)];
+  if (f.status === "active" || !f.status) conds.push(inArray(jobs.status, ["draft", "open", "in_progress", "pending", "completed"]));
+  else if (f.status !== "all") conds.push(eq(jobs.status, f.status as (typeof jobs.$inferSelect)["status"]));
+  if (f.customerId) conds.push(eq(jobs.customerId, f.customerId));
+  if (f.typeId) conds.push(eq(jobs.jobTypeId, f.typeId));
+  if (f.q) conds.push(sql`(${jobs.jobNo} ilike ${`%${f.q}%`} or ${jobs.name} ilike ${`%${f.q}%`} or ${businessPartners.name} ilike ${`%${f.q}%`})`);
+  const rows = await db
+    .select({ job: jobs, customer: businessPartners.name, type: jobTypes.name, responsible: users.displayName })
+    .from(jobs)
+    .innerJoin(businessPartners, eq(businessPartners.id, jobs.customerId))
+    .innerJoin(jobTypes, eq(jobTypes.id, jobs.jobTypeId))
+    .innerJoin(users, eq(users.id, jobs.responsibleUserId))
+    .where(and(...conds))
+    .orderBy(desc(jobs.createdAt))
+    .limit(300);
+  return Promise.all(rows.map(async (r) => ({ ...r, nextAction: ["financially_closed", "cancelled"].includes(r.job.status) ? null : await nextActionInfo(db, r.job) })));
+}

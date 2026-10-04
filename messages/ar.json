@@ -1,7 +1,9 @@
 {
   "App": {
     "title": "إيفركرست للعمليات",
-    "status": "الأساس جاهز. يجري بناء وحدات الأعمال."
+    "status": "الأساس جاهز. يجري بناء وحدات الأعمال.",
+    "tagline": "نظام العمليات",
+    "footer": "نظام إيفركريست للعمليات"
   },
   "Nav": {
     "dashboard": "لوحة التحكم",
@@ -29,7 +31,10 @@
     "kpiInTransit": "شاحنات على الطريق",
     "kpiCash": "النقد والبنك",
     "kpiOwedToUs": "مستحق لنا",
-    "kpiWeOwe": "مستحق علينا"
+    "kpiWeOwe": "مستحق علينا",
+    "welcome": "مرحبًا بعودتك، {name}",
+    "viewAll": "كل الأعمال",
+    "attentionCount": "{count} عناصر"
   },
   "Severity": {
     "critical": "حرج",
@@ -70,7 +75,7 @@
     "discharged": "المُفرَّغ",
     "difference": "الفرق",
     "advances": "السُلف",
-    "missing": "غير متوفر",
+    "missing": "ناقص",
     "notComparable": "غير قابل للمقارنة",
     "documents": "المستندات",
     "document": "المستند",
@@ -99,7 +104,34 @@
     "project": "المشروع",
     "contract": "العقد",
     "history": "السجل",
-    "budget": "الميزانية"
+    "budget": "الميزانية",
+    "tabOverview": "نظرة عامة",
+    "tabSteps": "الخطوات",
+    "tabTrips": "الرحلات",
+    "tabWork": "أوامر العمل",
+    "tabDeliveries": "التسليمات",
+    "tabMoney": "الأموال",
+    "tabDocuments": "المستندات",
+    "tabHistory": "السجل",
+    "backToJobs": "الأعمال",
+    "details": "تفاصيل العمل",
+    "customer": "الزبون",
+    "type": "النوع",
+    "parts": "أجزاء هذا العمل",
+    "whatRemains": "ما المتبقي",
+    "nothingRemains": "لا شيء ناقص.",
+    "blocksCompletion": "مطلوب قبل الإكمال",
+    "blocksClose": "مطلوب قبل الإقفال المالي",
+    "open": "فتح",
+    "stepsDone": "تم {done} من {total} خطوات",
+    "noTrips": "لا رحلات بعد.",
+    "noTransactions": "لا تكاليف أو إيرادات بعد.",
+    "noDocumentsRequired": "لا مستندات مطلوبة لهذا العمل.",
+    "noHistory": "لا شيء مسجّل بعد.",
+    "when": "متى",
+    "who": "من",
+    "what": "ماذا",
+    "detail": "التفاصيل"
   },
   "Codes": {
     "transport_awaiting_loading": "بانتظار تحميل {trip}",
@@ -203,7 +235,9 @@
     "jobNeedsHelp": "شغّل أو أوقف أجزاء العمل. الجزء الذي فيه سجلات لا يمكن إيقافه.",
     "extraInfo": "معلومات إضافية",
     "budget": "الميزانية",
-    "budgetHelp": "اختياري. إذا تجاوزت التكاليف بهذه العملة الميزانية، تُنبَّه الإدارة."
+    "budgetHelp": "اختياري. إذا تجاوزت التكاليف بهذه العملة الميزانية، تُنبَّه الإدارة.",
+    "onlyForCorrections": "(فقط عند التصحيح)",
+    "extraInfoAndBudget": "معلومات إضافية وميزانية"
   },
   "Approvals": {
     "title": "الموافقات",
@@ -213,7 +247,10 @@
     "decision": "القرار",
     "approve": "موافقة",
     "reject": "رفض",
-    "note": "ملاحظة (مطلوبة عند الرفض)"
+    "note": "ملاحظة (مطلوبة عند الرفض)",
+    "subtitle": "المدفوعات فوق الحد والشطب تنتظر هنا. لا أحد يوافق على طلبه.",
+    "noteOptional": "ملاحظة (اختياري)",
+    "whyReject": "لماذا رُفض؟"
   },
   "Verify": {
     "title": "مستندات للتحقق",
@@ -222,16 +259,31 @@
     "decision": "القرار",
     "verify": "تم التحقق — صحيح",
     "reject": "رفض",
-    "note": "ملاحظة (مطلوبة عند الرفض)"
+    "note": "ملاحظة (مطلوبة عند الرفض)",
+    "subtitle": "قارن كل مستند مستلم بالأصل، ثم تحقق منه أو ارفضه.",
+    "waiting": "{count} بالانتظار",
+    "document": "المستند",
+    "for": "لـ",
+    "receivedByCol": "استلمه",
+    "whyReject": "لماذا رُفض؟"
   },
   "NavLinks": {
     "approvals": "الموافقات",
     "documents": "المستندات",
     "setup": "الإعدادات",
-    "finance": "المالية",
+    "finance": "الفواتير والمدفوعات",
     "statements": "كشوفات الدفع",
     "reports": "التقارير",
-    "admin": "الإدارة"
+    "admin": "المستخدمون والأدوار",
+    "dashboard": "لوحة التحكم",
+    "jobs": "الأعمال",
+    "groupOperations": "العمليات",
+    "groupFinance": "المالية",
+    "groupAdmin": "الإدارة",
+    "cashBooks": "النقد والبنك والدفاتر",
+    "partnerAccounts": "حسابات الأطراف",
+    "journal": "اليومية",
+    "exchange": "صرف العملات"
   },
   "Setup": {
     "title": "الإعدادات",
@@ -387,7 +439,7 @@
     "fieldRequired": "إلزامي"
   },
   "Finance": {
-    "title": "المالية",
+    "title": "الفواتير والمدفوعات",
     "newInvoice": "فاتورة جديدة",
     "kind": "النوع",
     "salesInvoice": "فاتورة عميل",
@@ -425,7 +477,22 @@
     "totalAssets": "إجمالي الأصول",
     "retainedEarnings": "ربح لم يُقفل بعد",
     "totalLE": "الالتزامات + حقوق الملكية + الربح",
-    "details": "التفاصيل"
+    "details": "التفاصيل",
+    "subtitle": "ما يزال الزبائن مدينين لنا به وما نزال مدينين به للموردين. افتح الفاتورة لرؤية بنودها ومدفوعاتها.",
+    "billFromHint": "(للفواتير الواردة فقط)",
+    "contractor": "مقاول",
+    "toReceive": "للاستلام",
+    "toPay": "للدفع",
+    "toReceiveTotal": "للاستلام",
+    "toPayTotal": "للدفع",
+    "invoicesCount": "{count} مفتوحة",
+    "overdue": "متأخرة",
+    "receivables": "فواتير الزبائن",
+    "receivablesHelp": "لم تُستلم بالكامل",
+    "payables": "فواتير للدفع",
+    "payablesHelp": "لم تُدفع بالكامل",
+    "noneToReceive": "كل فواتير الزبائن مستلمة.",
+    "noneToPay": "كل الفواتير مدفوعة."
   },
   "Settle": {
     "title": "التسوية والفوترة",
@@ -450,7 +517,12 @@
     "billCustomer": "فوترة العميل",
     "tripsToBill": "الرحلات",
     "createInvoice": "إنشاء الفاتورة",
-    "dueDate": "تاريخ الاستحقاق"
+    "dueDate": "تاريخ الاستحقاق",
+    "loadedShort": "المحمّل",
+    "dischargedShort": "المُفرَّغ",
+    "actualShort": "المحتسب",
+    "cannotSettle": "لا يمكن التسوية بعد",
+    "settleConfirm": "تسوية {trip}؟ ستُقفل الرحلة وتُرحَّل المبالغ إلى الدفاتر."
   },
   "Statements": {
     "title": "كشوفات الدفع",
@@ -526,7 +598,17 @@
     "debtsTitle": "مستحقات للشركة",
     "debtsHelp": "السلف كانت أكبر من الأجرة. يُخصم كل مبلغ تلقائيًا من الكشف القادم للمستفيد، ما لم يُسدَّد أو يُشطب قبل ذلك.",
     "debtAmount": "المبلغ المستحق عليه",
-    "status_nothing": "لا يوجد ما يُدفع"
+    "status_nothing": "لا يوجد ما يُدفع",
+    "pickTrips": "حدّد الرحلات التي تُدفع معًا ثم أنشئ الكشف.",
+    "statDrivers": "رحلات سائقين بالانتظار",
+    "statTransporters": "رحلات ناقلين بالانتظار",
+    "statOpen": "كشوفات للدفع",
+    "statOwed": "مدينون للشركة",
+    "tabDrivers": "سائقون بالانتظار",
+    "tabTransporters": "ناقلون بالانتظار",
+    "noDebts": "لا أحد مدين للشركة.",
+    "lines": "الرحلات والحساب",
+    "tripsCount": "الرحلات"
   },
   "Invoice": {
     "title": "فاتورة {no}",
@@ -551,7 +633,11 @@
     "total": "المجموع",
     "outstanding": "المتبقي",
     "cancelled": "ملغاة",
-    "print": "طباعة"
+    "print": "طباعة",
+    "paidInFull": "مدفوعة بالكامل",
+    "open": "مفتوحة",
+    "lines": "البنود",
+    "tripsDrivers": "الرحلات والسائقون"
   },
   "Reports": {
     "title": "التقارير",
@@ -580,7 +666,10 @@
     "allDone": "لا شيء بالانتظار.",
     "trip": "الرحلة",
     "driver": "السائق",
-    "discharged": "التفريغ"
+    "discharged": "التفريغ",
+    "subtitle": "الربح حسب العمل والشهر، وقائمة الأرباح والخسائر، والميزانية — كل عملة على حدة.",
+    "balanceSheet": "الميزانية العمومية",
+    "waiting": "أعمال بالانتظار"
   },
   "Activities": {
     "title": "الخطوات",
@@ -593,7 +682,10 @@
     "step": "الخطوة",
     "assignee": "المكلّف",
     "due": "الموعد",
-    "requiredHelp": "يجب إنجازها قبل إكمال العمل"
+    "requiredHelp": "يجب إنجازها قبل إكمال العمل",
+    "progress": "تم {done} من {total}",
+    "none": "لا خطوات بعد.",
+    "noneHint": "أضف خطوات هذا العمل إن كان ذلك مفيدًا."
   },
   "Field": {
     "title": "أوامر العمل",
@@ -612,7 +704,8 @@
     "complete": "تحديث أمر عمل",
     "completedDate": "تاريخ الإنجاز",
     "whatWasDone": "ما تم إنجازه / السبب",
-    "save": "حفظ"
+    "save": "حفظ",
+    "none": "لا أوامر عمل بعد."
   },
   "Supply": {
     "title": "التسليمات",
@@ -633,7 +726,8 @@
     "priceIfNoRule": "سعر الوحدة (فقط إن لم توجد قاعدة)",
     "currency": "العملة",
     "fromPriceList": "من قائمة الأسعار",
-    "createInvoice": "إنشاء فاتورة"
+    "createInvoice": "إنشاء فاتورة",
+    "none": "لا تسليمات بعد."
   },
   "FinanceNav": {
     "invoices": "الفواتير والمدفوعات",
@@ -682,7 +776,10 @@
     "period_locked": "مقفل",
     "lock": "إقفال",
     "unlock": "فتح",
-    "reason": "السبب"
+    "reason": "السبب",
+    "subtitle": "المال في كل خزنة وحساب بنكي، والنقل بينها، وميزان المراجعة، وإقفال الأشهر.",
+    "balancedOk": "المدين يساوي الدائن ✓",
+    "accountCol": "الحساب"
   },
   "Journal": {
     "title": "اليومية",
@@ -705,7 +802,9 @@
     "reversed": "معكوس",
     "reversal": "قيد عكسي",
     "reverse": "عكس",
-    "reason": "السبب"
+    "reason": "السبب",
+    "entries": "{count} قيود",
+    "date": "التاريخ"
   },
   "Exchange": {
     "title": "صرف العملات",
@@ -722,7 +821,9 @@
     "rate": "السعر",
     "reversed": "معكوسة",
     "reverse": "عكس",
-    "reason": "السبب"
+    "reason": "السبب",
+    "history": "عمليات الصرف",
+    "date": "التاريخ"
   },
   "PartnerAccounts": {
     "title": "حسابات الأطراف",
@@ -741,7 +842,9 @@
     "account": "الحساب",
     "currency": "العملة",
     "debit": "مدين",
-    "credit": "دائن"
+    "credit": "دائن",
+    "count": "{count} أطراف بأرصدة مفتوحة",
+    "history": "سجل الحساب"
   },
   "Perm": {
     "users_manage": "إدارة المستخدمين",
@@ -821,5 +924,31 @@
     "when": "متى",
     "record": "السجل",
     "details": "التفاصيل"
+  },
+  "Jobs": {
+    "title": "الأعمال",
+    "subtitle": "كل عمل، من تسليم واحد إلى مشروع حقلي طويل.",
+    "newJob": "عمل جديد",
+    "search": "بحث",
+    "searchHint": "رقم العمل أو الاسم أو الزبون",
+    "status": "الحالة",
+    "active": "النشطة",
+    "all": "الكل",
+    "customer": "الزبون",
+    "allCustomers": "كل الزبائن",
+    "type": "النوع",
+    "allTypes": "كل الأنواع",
+    "show": "عرض",
+    "count": "{count} عمل",
+    "none": "لا توجد أعمال مطابقة.",
+    "noneHint": "غيّر عوامل التصفية أو أنشئ عملًا جديدًا.",
+    "job": "العمل",
+    "started": "البدء",
+    "nextAction": "الإجراء التالي",
+    "newSubtitle": "الأساسيات فقط. يُضاف الباقي إلى العمل عند الحاجة.",
+    "basics": "تفاصيل العمل",
+    "namePlaceholder": "مثال: ديزل إلى الحقل X، توريد 10 مولدات",
+    "typesTitle": "أنواع الأعمال",
+    "typesHelp": "النوع يفعّل الأجزاء والخطوات المعتادة؛ يمكنك تغييرها في العمل."
   }
 }

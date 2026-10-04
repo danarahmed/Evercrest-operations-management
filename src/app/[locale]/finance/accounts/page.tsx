@@ -3,13 +3,15 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { dec } from "@/domain/money";
 import { formatMoney } from "@/lib/format";
 import { can } from "@/server/authz";
 import { accountsOverview } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
-import { FinanceNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 
@@ -35,23 +37,9 @@ export default async function AccountsPage({ params, searchParams }: { params: P
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/accounts">
-      <h1>{t("title")}</h1>
-      <FinanceNav locale={locale} current="accounts" />
-
-      <h2>{t("money")}</h2>
-      <div className="table-wrap"><table>
-        <thead><tr><th>{t("moneyAccount")}</th><th>{t("kind")}</th><th>{t("currency")}</th><th className="num">{t("balance")}</th></tr></thead>
-        <tbody>{o.money.map((x) => (
-          <tr key={x.id} className={x.active ? "" : "muted"}>
-            <td>{x.name}</td><td>{t(`kind_${x.kind}`)}</td><td>{x.currency}</td>
-            <td className={`num ${dec(x.balance).lt(0) ? "state-missing" : ""}`}><strong>{m(x.balance, x.currency)}</strong></td>
-          </tr>
-        ))}</tbody>
-      </table></div>
-
+      <PageHeader title={t("title")} subtitle={t("subtitle")} actions={<>
       {can(actor, "payments.create") && active.length > 1 && (
-        <details className="panel">
-          <summary>{t("transfer")}</summary>
+        <Modal label={t("transfer")} icon={<Icon name="exchange" size={16} />}>
           <p className="muted">{t("transferHelp")}</p>
           <ActionForm command="transfers.create" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
             <div className="grid2">
@@ -62,12 +50,11 @@ export default async function AccountsPage({ params, searchParams }: { params: P
               <label>{f("reference")}<input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
 
       {can(actor, "payments.create") && active.length > 0 && (
-        <details className="panel">
-          <summary>{t("other")}</summary>
+        <Modal label={t("other")} variant="primary" icon={<Icon name="plus" size={16} />}>
           <p className="muted">{t("otherHelp")}</p>
           <ActionForm command="payments.record" locale={locale} idempotencyKey={k()} submitLabel={f("save")} summary="Other money movement">
             <input type="hidden" name="purpose" value="other" />
@@ -82,47 +69,59 @@ export default async function AccountsPage({ params, searchParams }: { params: P
               <label>{f("reference")}<input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
-        </details>
+        </Modal>
       )}
 
-      <h2>{t("trialBalance")}</h2>
-      <form className="row no-print" method="get">
-        <label>{t("asOf")} <input type="date" name="asOf" defaultValue={asOf} /></label>
-        <input type="hidden" name="year" value={year} />
-        <button type="submit">{t("show")}</button>
-      </form>
+      </>} />
+
+      <h2 style={{ marginBlockStart: 0 }}>{t("money")}</h2>
+      <div className="stats">
+        {o.money.map((x) => (
+          <Stat key={x.id} label={<>{x.name} · {t(`kind_${x.kind}`)}</>} value={<span className={dec(x.balance).lt(0) ? "neg" : ""}>{m(x.balance, x.currency)}</span>} icon={x.kind === "bank" ? "bank" : "wallet"} tone={x.active ? (dec(x.balance).lt(0) ? "danger" : "success") : undefined} />
+        ))}
+      </div>
+
+      <div className="row between" style={{ marginBlock: "24px 10px" }}>
+        <h2 style={{ margin: 0 }}>{t("trialBalance")}</h2>
+        <form className="filters no-print" method="get" style={{ margin: 0 }}>
+          <label>{t("asOf")}<input type="date" name="asOf" defaultValue={asOf} /></label>
+          <input type="hidden" name="year" value={year} />
+          <button type="submit">{t("show")}</button>
+        </form>
+      </div>
       <p className="muted">{t("tbHelp")}</p>
       {currencies.map((cur) => {
         const rows = o.trialBalance.filter((r) => r.currency === cur);
         const td = rows.reduce((s, r) => s.plus(dec(r.debit)), dec("0"));
         const tc = rows.reduce((s, r) => s.plus(dec(r.credit)), dec("0"));
         return (
-          <div key={cur} className="table-wrap" style={{ marginBlockEnd: 12 }}><table>
-            <thead><tr><th>{cur}</th><th>{t("type")}</th><th className="num">{t("debit")}</th><th className="num">{t("credit")}</th><th className="num">{t("balance")}</th></tr></thead>
+          <Card key={cur} flush title={`${t("trialBalance")} · ${cur}`} icon="book" subtitle={td.eq(tc) ? t("balancedOk") : undefined}><div className="table-wrap"><table>
+            <thead><tr><th>{t("accountCol")}</th><th>{t("type")}</th><th className="num">{t("debit")}</th><th className="num">{t("credit")}</th><th className="num">{t("balance")}</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.accountId}><td>{r.code} · {r.name}</td><td>{t(`type_${r.type}`)}</td><td className="num">{m(r.debit, cur)}</td><td className="num">{m(r.credit, cur)}</td><td className="num">{m(r.balance, cur)}</td></tr>
               ))}
               <tr className="subtotal"><td colSpan={2}><strong>{t("total")}</strong> {td.eq(tc) ? "✓" : <span className="state-missing">{t("unbalanced")}</span>}</td><td className="num"><strong>{m(td.toString(), cur)}</strong></td><td className="num"><strong>{m(tc.toString(), cur)}</strong></td><td /></tr>
             </tbody>
-          </table></div>
+          </table></div></Card>
         );
       })}
 
-      <h2>{t("periods", { year })}</h2>
-      <p className="muted">{t("periodsHelp")}</p>
-      <form className="row no-print" method="get">
-        <input type="hidden" name="asOf" value={asOf} />
-        <label>{t("year")} <input type="number" name="year" defaultValue={year} min={2020} max={2100} style={{ width: "6em" }} /></label>
-        <button type="submit">{t("show")}</button>
-      </form>
+
+      <Card flush title={t("periods", { year })} subtitle={t("periodsHelp")} icon="calendar" actions={
+        <form className="row no-print" method="get">
+          <input type="hidden" name="asOf" value={asOf} />
+          <input type="number" name="year" defaultValue={year} min={2020} max={2100} style={{ width: "6.5em" }} aria-label={t("year")} />
+          <button type="submit" className="sm">{t("show")}</button>
+        </form>
+      }>
       <div className="table-wrap"><table>
         <tbody>{o.periods.map((p) => (
           <tr key={p.month}>
             <td>{monthName(p.month)}</td>
-            <td><span className={`badge ${p.status === "locked" ? "state-missing" : "state-verified"}`}>{t(`period_${p.status}`)}</span></td>
+            <td><Badge tone={p.status === "locked" ? "danger" : "success"}>{t(`period_${p.status}`)}</Badge></td>
             <td>{can(actor, "periods.manage") && (
-              <ActionForm command="ledger.set_period_status" locale={locale} idempotencyKey={k()} submitLabel={p.status === "locked" ? t("unlock") : t("lock")}>
+              <ActionForm command="ledger.set_period_status" locale={locale} idempotencyKey={k()} submitLabel={p.status === "locked" ? t("unlock") : t("lock")} inline variant={p.status === "locked" ? "secondary" : "primary"}>
                 <input type="hidden" name="year" value={year} />
                 <input type="hidden" name="month" value={p.month} />
                 <input type="hidden" name="status" value={p.status === "locked" ? "open" : "locked"} />
@@ -132,6 +131,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
           </tr>
         ))}</tbody>
       </table></div>
+      </Card>
     </Shell>
   );
 }

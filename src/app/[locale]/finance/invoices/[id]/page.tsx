@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
-import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { PrintButton } from "@/components/PrintButton";
+import { Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { dec, toStr } from "@/domain/money";
 import { formatMoney, formatQty } from "@/lib/format";
 import { invoiceView } from "@/server/queries";
@@ -28,18 +28,20 @@ export default async function InvoicePage({ params }: { params: Promise<{ locale
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/finance/invoices/${id}`}>
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 dir="auto">{t("title", { no: inv.invoiceNo })}</h1>
-        <PrintButton label={t("print")} />
+      <PageHeader
+        back={{ href: `/${locale}/finance`, label: fin("title") }}
+        eyebrow={<>{inv.kind === "sales" ? fin("salesInvoice") : fin("bill")}{inv.status === "cancelled" ? <Badge>{t("cancelled")}</Badge> : dec(v.outstanding).isZero() ? <Badge tone="success">{t("paidInFull")}</Badge> : <Badge tone="warning">{t("open")}</Badge>}</>}
+        title={<span className="ltr">{inv.invoiceNo}</span>}
+        subtitle={v.partner}
+        actions={<PrintButton label={t("print")} />}
+      />
+      <div className="stats">
+        <Stat label={t("total")} value={m(inv.total)} icon="receipt" />
+        <Stat label={t("outstanding")} value={m(v.outstanding)} icon="wallet" tone={dec(v.outstanding).isZero() ? "success" : "warning"} />
+        <Stat label={t("date")} value={inv.invoiceDate} icon="calendar" hint={inv.dueDate ? `${t("due")}: ${inv.dueDate}` : undefined} />
+        {hasTrips && <Stat label={t("tripsDrivers")} value={t("summary", { trips: v.tripCount, drivers: v.driverCount })} icon="truck" tone="violet" />}
       </div>
-      <dl className="kv card">
-        <dt>{inv.kind === "sales" ? t("customer") : t("partner")}</dt><dd>{v.partner}</dd>
-        <dt>{t("date")}</dt><dd>{inv.invoiceDate}</dd>
-        {inv.dueDate && <><dt>{t("due")}</dt><dd>{inv.dueDate}</dd></>}
-        {hasTrips && <><dt /><dd>{t("summary", { trips: v.tripCount, drivers: v.driverCount })}</dd></>}
-        {inv.status === "cancelled" && <><dt /><dd><span className="badge">{t("cancelled")}</span></dd></>}
-      </dl>
-
+      <Card flush title={t("lines")} icon="list">
       <div className="table-wrap"><table>
         <thead>
           <tr>
@@ -75,7 +77,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ locale
           {inv.status === "posted" && <tr><td colSpan={hasTrips ? 9 : 4}>{t("outstanding")}</td><td className="num">{m(v.outstanding)}</td></tr>}
         </tbody>
       </table></div>
-      <p className="no-print"><Link href={`/${locale}/finance`}>← {fin("title")}</Link></p>
+      </Card>
     </Shell>
   );
 }

@@ -5,6 +5,9 @@ import { Fragment } from "react";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Badge, Card, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { dec, toStr } from "@/domain/money";
 import { formatMoney, formatQty } from "@/lib/format";
@@ -42,20 +45,83 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
   // Payees who owe the company on this statement and have not cleared it (not brought forward, repaid or written off).
   const debtors = v.payees.filter((p) => p.debt && dec(p.debt.open).gt(0));
 
+  const status = st.status === "paid" && !dec(st.total).gt(0) ? "nothing" : st.status;
+  const methods = ["cash", "bank_transfer", "cheque", "other"];
+  const actions = (
+    <>
+      <PrintButton label={t("print")} />
+      {st.status !== "cancelled" && !v.payees.some((p) => p.payment || p.repayments.length) && can(actor, "settlements.reverse") && (
+        <Modal label={t("cancelTitle")} variant="danger" size="sm">
+          <ActionForm command="statements.cancel" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("cancelSubmit")} variant="danger">
+            <input type="hidden" name="statementId" value={st.id} />
+            <label>{t("reason")}<input name="reason" required /></label>
+          </ActionForm>
+        </Modal>
+      )}
+      {debtors.length > 0 && can(actor, "settlements.reverse") && (
+        <Modal label={t("writeOffTitle")} size="sm">
+          <p className="muted">{t("writeOffHelp")}</p>
+          <ActionForm command="statements.write_off_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("writeOffSubmit")} summary={`${st.statementNo} write-off`}>
+            <input type="hidden" name="statementId" value={st.id} />
+            <div className="grid2">
+              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
+              <label>{f("date")}<input type="date" name="writeOffDate" required defaultValue={today} /></label>
+            </div>
+            <label>{t("reason")}<input name="reason" required /></label>
+          </ActionForm>
+        </Modal>
+      )}
+      {debtors.length > 0 && can(actor, "payments.create") && (
+        <Modal label={t("collectTitle")}>
+          <p className="muted">{t("collectHelp")}</p>
+          <ActionForm command="statements.collect_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("collectSubmit")}>
+            <input type="hidden" name="statementId" value={st.id} />
+            <div className="grid2">
+              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
+              <label>{f("amount")}<input name="amount" inputMode="decimal" dir="ltr" placeholder={t("allOpen")} /></label>
+              <label>{t("receivedIn")}<select name="moneyAccountId" required>{v.payFrom.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
+              <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
+              <label>{f("method")}<select name="method" defaultValue="cash">{methods.map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
+            </div>
+          </ActionForm>
+        </Modal>
+      )}
+      {st.status === "open" && unpaid.length > 0 && can(actor, "payments.create") && (
+        <Modal label={t("payTitle")} variant="primary" icon={<Icon name="wallet" size={16} />}>
+          <ActionForm command="statements.pay" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("paySubmit")} summary={`${st.statementNo} ${m(st.total)}`}>
+            <input type="hidden" name="statementId" value={st.id} />
+            {unpaid.length > 1 && (
+              <fieldset><legend>{t("payOnly")}</legend>
+                {unpaid.map((p) => <label key={p.partnerId} className="check"><input type="checkbox" name="partnerIds[]" value={p.partnerId} />{p.name} ({m(p.total)})</label>)}
+              </fieldset>
+            )}
+            <div className="grid2">
+              <label>{t("payFrom")}<select name="moneyAccountId" required>{v.payFrom.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
+              <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
+              <label>{f("method")}<select name="method" defaultValue="cash">{methods.map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
+            </div>
+          </ActionForm>
+        </Modal>
+      )}
+    </>
+  );
+
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/statements/${id}`}>
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 dir="ltr">{st.statementNo}</h1>
-        <PrintButton label={t("print")} />
+      <PageHeader
+        back={{ href: `/${locale}/statements`, label: t("title") }}
+        eyebrow={<><span>{t(`party_${st.party}`)}</span><StatusBadge status={status === "open" ? "pending" : status} label={t(`status_${status}`)} /></>}
+        title={<span className="ltr">{st.statementNo}</span>}
+        subtitle={st.notes}
+        actions={actions}
+      />
+      <div className="stats">
+        <Stat label={t("total")} value={m(st.total)} icon="dollar" tone={dec(st.total).lt(0) ? "danger" : "success"} />
+        <Stat label={t("date")} value={st.statementDate} icon="calendar" />
+        <Stat label={t("tripsCount")} value={v.lines.length} icon="truck" tone="violet" />
+        <Stat label={t("payees")} value={v.payees.length} icon="users" />
       </div>
-      <dl className="kv card">
-        <dt>{t("party")}</dt><dd>{t(`party_${st.party}`)}</dd>
-        <dt>{t("date")}</dt><dd>{st.statementDate}</dd>
-        <dt>{t("status")}</dt><dd><span className={`badge ${st.status === "paid" ? "state-verified" : ""}`}>{t(`status_${st.status === "paid" && !dec(st.total).gt(0) ? "nothing" : st.status}`)}</span></dd>
-        <dt>{t("total")}</dt><dd className="num"><strong>{m(st.total)}</strong></dd>
-        {st.notes && <><dt>{t("notes")}</dt><dd>{st.notes}</dd></>}
-      </dl>
-
+      <Card flush title={t("lines")} icon="list">
       <div className="table-wrap"><table className="statement">
         <thead>
           <tr>
@@ -72,7 +138,7 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
         <tbody>
           {[...groups.entries()].map(([pid, lines]) => (
             <Fragment key={pid}>
-              {!isDriver && <tr><th colSpan={cols}>{payeeName(pid)}</th></tr>}
+              {!isDriver && <tr className="group"><td colSpan={cols}>{payeeName(pid)}</td></tr>}
               {lines.map((l) => {
                 const qq = l.calc.quantities;
                 return (
@@ -112,19 +178,20 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
           <tr className="subtotal"><td colSpan={cols - 1}><strong>{t("grandTotal")}</strong></td><td className="num"><strong>{m(st.total)}</strong></td></tr>
         </tbody>
       </table></div>
+      </Card>
       {v.lines.some((l) => Object.keys(l.side.advancesOtherCurrency).length) && (
         <ul className="muted">{v.lines.flatMap((l) => Object.entries(l.side.advancesOtherCurrency).map(([c, a]) => <li key={`${l.tripNo}${c}`} dir="auto">{l.tripNo}: {s("otherCurrencyAdvance", { amount: formatMoney(a, c, locale) })}</li>))}</ul>
       )}
 
-      <h2>{t("payees")}</h2>
+      <Card flush title={t("payees")} icon="users">
       <div className="table-wrap"><table>
         <thead><tr><th>{t("payee")}</th><th className="num">{t("owed")}</th><th>{t("status")}</th></tr></thead>
         <tbody>{v.payees.map((p) => (
           <tr key={p.partnerId}>
             <td>{p.name}</td><td className="num">{m(p.total)}</td>
             <td>
-              {p.payment ? <span className="badge state-verified" dir="auto">{t("paid", { no: p.payment.no, date: p.payment.date })}</span>
-                : dec(p.total).gt(0) ? t("unpaid")
+              {p.payment ? <Badge tone="success">{t("paid", { no: p.payment.no, date: p.payment.date })}</Badge>
+                : dec(p.total).gt(0) ? <Badge tone="warning">{t("unpaid")}</Badge>
                 : !p.debt ? "—"
                 : (
                   <span className="stack">
@@ -138,65 +205,8 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
           </tr>
         ))}</tbody>
       </table></div>
+      </Card>
 
-      {st.status === "open" && unpaid.length > 0 && can(actor, "payments.create") && (
-        <details className="panel no-print">
-          <summary>{t("payTitle")}</summary>
-          <ActionForm command="statements.pay" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("paySubmit")} summary={`${st.statementNo} ${m(st.total)}`}>
-            <input type="hidden" name="statementId" value={st.id} />
-            {unpaid.length > 1 && (
-              <fieldset className="row"><legend>{t("payOnly")}</legend>
-                {unpaid.map((p) => <label key={p.partnerId} className="row"><input type="checkbox" name="partnerIds[]" value={p.partnerId} />{p.name} ({m(p.total)})</label>)}
-              </fieldset>
-            )}
-            <div className="grid2">
-              <label>{t("payFrom")}<select name="moneyAccountId" required>{v.payFrom.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
-              <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
-              <label>{f("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-      {debtors.length > 0 && can(actor, "payments.create") && (
-        <details className="panel no-print">
-          <summary>{t("collectTitle")}</summary>
-          <p className="muted">{t("collectHelp")}</p>
-          <ActionForm command="statements.collect_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("collectSubmit")}>
-            <input type="hidden" name="statementId" value={st.id} />
-            <div className="grid2">
-              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
-              <label>{f("amount")}<input name="amount" inputMode="decimal" dir="ltr" placeholder={t("allOpen")} /></label>
-              <label>{t("receivedIn")}<select name="moneyAccountId" required>{v.payFrom.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
-              <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
-              <label>{f("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-      {debtors.length > 0 && can(actor, "settlements.reverse") && (
-        <details className="panel no-print">
-          <summary>{t("writeOffTitle")}</summary>
-          <p className="muted">{t("writeOffHelp")}</p>
-          <ActionForm command="statements.write_off_debt" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("writeOffSubmit")} summary={`${st.statementNo} write-off`}>
-            <input type="hidden" name="statementId" value={st.id} />
-            <div className="grid2">
-              <label>{t("payee")}<select name="partnerId" required>{debtors.map((p) => <option key={p.partnerId} value={p.partnerId}>{p.name} ({m(p.debt!.open)})</option>)}</select></label>
-              <label>{f("date")}<input type="date" name="writeOffDate" required defaultValue={today} /></label>
-              <label>{t("reason")}<input name="reason" required /></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-      {st.status !== "cancelled" && !v.payees.some((p) => p.payment || p.repayments.length) && can(actor, "settlements.reverse") && (
-        <details className="panel no-print">
-          <summary>{t("cancelTitle")}</summary>
-          <ActionForm command="statements.cancel" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("cancelSubmit")}>
-            <input type="hidden" name="statementId" value={st.id} />
-            <label>{t("reason")}<input name="reason" required /></label>
-          </ActionForm>
-        </details>
-      )}
-      <p className="no-print"><Link href={`/${locale}/statements`}>← {t("title")}</Link></p>
     </Shell>
   );
 }

@@ -232,7 +232,8 @@ export interface NextAction {
 /** The single most useful thing to tell a user about an active job (translatable). */
 export async function nextActionInfo(tx: Db, job: Job): Promise<NextAction | null> {
   if (LOCKED.includes(job.status)) return null;
-  const blockers = await jobBlockers(tx, job);
+  // What stops completion comes before what only stops financial close.
+  const blockers = (await jobBlockers(tx, job)).sort((a, b) => (a.blocks === b.blocks ? 0 : a.blocks === "completed" ? -1 : 1));
   if (blockers.length) return { code: blockers[0].code, params: blockers[0].params ?? {}, text: blockers[0].action };
   if (job.status === "completed") return { code: "job.ready_to_close", params: {}, text: "Ready to close financially" };
   // Nothing blocking: point to the next open step of the job's checklist, if any.

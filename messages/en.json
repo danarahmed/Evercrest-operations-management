@@ -1,7 +1,9 @@
 {
   "App": {
     "title": "Evercrest Operations",
-    "status": "Foundation is ready. Business modules are being built."
+    "status": "Foundation is ready. Business modules are being built.",
+    "tagline": "Operations ERP",
+    "footer": "Evercrest Operations ERP"
   },
   "Nav": {
     "dashboard": "Dashboard",
@@ -29,7 +31,10 @@
     "kpiInTransit": "Trucks on the road",
     "kpiCash": "Cash and bank",
     "kpiOwedToUs": "Owed to us",
-    "kpiWeOwe": "We owe"
+    "kpiWeOwe": "We owe",
+    "welcome": "Welcome back, {name}",
+    "viewAll": "All jobs",
+    "attentionCount": "{count} items"
   },
   "Severity": {
     "critical": "Critical",
@@ -75,7 +80,7 @@
     "documents": "Documents",
     "document": "Document",
     "for": "For",
-    "state": "State",
+    "state": "Status",
     "profit": "Profitability",
     "currency": "Currency",
     "revenue": "Revenue",
@@ -99,7 +104,34 @@
     "project": "Project",
     "contract": "Contract",
     "history": "History",
-    "budget": "Budget"
+    "budget": "Budget",
+    "tabOverview": "Overview",
+    "tabSteps": "Steps",
+    "tabTrips": "Trips",
+    "tabWork": "Work orders",
+    "tabDeliveries": "Deliveries",
+    "tabMoney": "Money",
+    "tabDocuments": "Documents",
+    "tabHistory": "History",
+    "backToJobs": "Jobs",
+    "details": "Job details",
+    "customer": "Customer",
+    "type": "Type",
+    "parts": "Parts of this job",
+    "whatRemains": "What remains",
+    "nothingRemains": "Nothing is missing.",
+    "blocksCompletion": "Needed before completion",
+    "blocksClose": "Needed before financial close",
+    "open": "Open",
+    "stepsDone": "{done} of {total} steps done",
+    "noTrips": "No trips yet.",
+    "noTransactions": "No costs or income recorded yet.",
+    "noDocumentsRequired": "No documents are required for this job.",
+    "noHistory": "Nothing recorded yet.",
+    "when": "When",
+    "who": "Who",
+    "what": "What",
+    "detail": "Detail"
   },
   "Codes": {
     "transport_awaiting_loading": "Waiting for loading of {trip}",
@@ -203,7 +235,9 @@
     "jobNeedsHelp": "Switch parts of the job on or off. A part that already has records cannot be switched off.",
     "extraInfo": "Extra information",
     "budget": "Budget",
-    "budgetHelp": "Optional. If costs in this currency go above the budget, management is warned."
+    "budgetHelp": "Optional. If costs in this currency go above the budget, management is warned.",
+    "onlyForCorrections": "(only when correcting)",
+    "extraInfoAndBudget": "Extra info & budget"
   },
   "Approvals": {
     "title": "Approvals",
@@ -213,7 +247,10 @@
     "decision": "Decision",
     "approve": "Approve",
     "reject": "Reject",
-    "note": "Note (required to reject)"
+    "note": "Note (required to reject)",
+    "subtitle": "Payments over the limit and write-offs wait here. Nobody approves their own request.",
+    "noteOptional": "Note (optional)",
+    "whyReject": "Why is it rejected?"
   },
   "Verify": {
     "title": "Documents to verify",
@@ -222,16 +259,31 @@
     "decision": "Decision",
     "verify": "Verified — correct",
     "reject": "Reject",
-    "note": "Note (required to reject)"
+    "note": "Note (required to reject)",
+    "subtitle": "Check each received document against the original, then verify or reject it.",
+    "waiting": "{count} waiting",
+    "document": "Document",
+    "for": "For",
+    "receivedByCol": "Received by",
+    "whyReject": "Why is it rejected?"
   },
   "NavLinks": {
     "approvals": "Approvals",
     "documents": "Documents",
     "setup": "Setup",
-    "finance": "Finance",
+    "finance": "Invoices & payments",
     "statements": "Pay statements",
     "reports": "Reports",
-    "admin": "Admin"
+    "admin": "Users & roles",
+    "dashboard": "Dashboard",
+    "jobs": "Jobs",
+    "groupOperations": "Operations",
+    "groupFinance": "Finance",
+    "groupAdmin": "Administration",
+    "cashBooks": "Cash, bank & books",
+    "partnerAccounts": "Partner accounts",
+    "journal": "Journal",
+    "exchange": "Currency exchange"
   },
   "Setup": {
     "title": "Setup",
@@ -387,7 +439,7 @@
     "fieldRequired": "Required"
   },
   "Finance": {
-    "title": "Finance",
+    "title": "Invoices & payments",
     "newInvoice": "New invoice or bill",
     "kind": "Type",
     "salesInvoice": "Customer invoice",
@@ -425,7 +477,22 @@
     "totalAssets": "Total assets",
     "retainedEarnings": "Profit not yet closed",
     "totalLE": "Liabilities + equity + profit",
-    "details": "Details"
+    "details": "Details",
+    "subtitle": "What customers still owe us and what we still owe suppliers. Open an invoice to see its lines and payments.",
+    "billFromHint": "(bills only)",
+    "contractor": "Contractor",
+    "toReceive": "to receive",
+    "toPay": "to pay",
+    "toReceiveTotal": "To receive",
+    "toPayTotal": "To pay",
+    "invoicesCount": "{count} open",
+    "overdue": "Overdue",
+    "receivables": "Customer invoices",
+    "receivablesHelp": "Not fully received",
+    "payables": "Bills to pay",
+    "payablesHelp": "Not fully paid",
+    "noneToReceive": "All customer invoices are received.",
+    "noneToPay": "All bills are paid."
   },
   "Settle": {
     "title": "Settlement and billing",
@@ -450,7 +517,12 @@
     "billCustomer": "Invoice the customer",
     "tripsToBill": "Trips",
     "createInvoice": "Create invoice",
-    "dueDate": "Due date"
+    "dueDate": "Due date",
+    "loadedShort": "Loaded",
+    "dischargedShort": "Discharged",
+    "actualShort": "Paid on",
+    "cannotSettle": "Cannot settle yet",
+    "settleConfirm": "Settle {trip}? The trip will be locked and the amounts posted to the books."
   },
   "Statements": {
     "title": "Pay statements",
@@ -526,7 +598,17 @@
     "debtsTitle": "Owed to the company",
     "debtsHelp": "Advances were larger than pay. Each amount is deducted from the payee's next statement automatically, unless it is paid back or written off first.",
     "debtAmount": "Owes",
-    "status_nothing": "Nothing to pay"
+    "status_nothing": "Nothing to pay",
+    "pickTrips": "Tick the trips to pay together, then create the statement.",
+    "statDrivers": "Driver trips waiting",
+    "statTransporters": "Transporter trips waiting",
+    "statOpen": "Statements to pay",
+    "statOwed": "Payees who owe us",
+    "tabDrivers": "Drivers waiting",
+    "tabTransporters": "Transporters waiting",
+    "noDebts": "Nobody owes the company.",
+    "lines": "Trips and calculation",
+    "tripsCount": "Trips"
   },
   "Invoice": {
     "title": "Invoice {no}",
@@ -551,7 +633,11 @@
     "total": "Total",
     "outstanding": "Outstanding",
     "cancelled": "Cancelled",
-    "print": "Print"
+    "print": "Print",
+    "paidInFull": "Paid in full",
+    "open": "Open",
+    "lines": "Lines",
+    "tripsDrivers": "Trips and drivers"
   },
   "Reports": {
     "title": "Reports",
@@ -580,7 +666,10 @@
     "allDone": "Nothing waiting.",
     "trip": "Trip",
     "driver": "Driver",
-    "discharged": "Discharged"
+    "discharged": "Discharged",
+    "subtitle": "Profit by job and month, the profit and loss statement and the balance sheet — each currency on its own.",
+    "balanceSheet": "Balance sheet",
+    "waiting": "Waiting work"
   },
   "Activities": {
     "title": "Steps",
@@ -593,7 +682,10 @@
     "step": "Step",
     "assignee": "Who",
     "due": "Due",
-    "requiredHelp": "Must be done before the job can be completed"
+    "requiredHelp": "Must be done before the job can be completed",
+    "progress": "{done} of {total} done",
+    "none": "No steps yet.",
+    "noneHint": "Add the steps this job goes through, if it helps."
   },
   "Field": {
     "title": "Work orders",
@@ -612,7 +704,8 @@
     "complete": "Update a work order",
     "completedDate": "Completion date",
     "whatWasDone": "What was done / why",
-    "save": "Save"
+    "save": "Save",
+    "none": "No work orders yet."
   },
   "Supply": {
     "title": "Deliveries",
@@ -633,7 +726,8 @@
     "priceIfNoRule": "Unit price (only if no price rule)",
     "currency": "Currency",
     "fromPriceList": "From the price list",
-    "createInvoice": "Create invoice"
+    "createInvoice": "Create invoice",
+    "none": "No deliveries yet."
   },
   "FinanceNav": {
     "invoices": "Invoices & payments",
@@ -682,7 +776,10 @@
     "period_locked": "Locked",
     "lock": "Lock",
     "unlock": "Unlock",
-    "reason": "Reason"
+    "reason": "Reason",
+    "subtitle": "Money in each safe and bank account, money movements between them, the trial balance and month locks.",
+    "balancedOk": "Debits equal credits ✓",
+    "accountCol": "Account"
   },
   "Journal": {
     "title": "Journal",
@@ -705,7 +802,9 @@
     "reversed": "Reversed",
     "reversal": "Reversal",
     "reverse": "Reverse",
-    "reason": "Reason"
+    "reason": "Reason",
+    "entries": "{count} entries",
+    "date": "Date"
   },
   "Exchange": {
     "title": "Currency exchange",
@@ -722,7 +821,9 @@
     "rate": "Rate",
     "reversed": "Reversed",
     "reverse": "Reverse",
-    "reason": "Reason"
+    "reason": "Reason",
+    "history": "Exchanges",
+    "date": "Date"
   },
   "PartnerAccounts": {
     "title": "Partner accounts",
@@ -741,7 +842,9 @@
     "account": "Account",
     "currency": "Currency",
     "debit": "Debit",
-    "credit": "Credit"
+    "credit": "Credit",
+    "count": "{count} partners with open balances",
+    "history": "Account history"
   },
   "Perm": {
     "users_manage": "Manage users",
@@ -821,5 +924,31 @@
     "when": "When",
     "record": "Record",
     "details": "Details"
+  },
+  "Jobs": {
+    "title": "Jobs",
+    "subtitle": "Every piece of work, from a single delivery to a long field project.",
+    "newJob": "New job",
+    "search": "Search",
+    "searchHint": "Job no., name or customer",
+    "status": "Status",
+    "active": "Active",
+    "all": "All",
+    "customer": "Customer",
+    "allCustomers": "All customers",
+    "type": "Type",
+    "allTypes": "All types",
+    "show": "Show",
+    "count": "{count} jobs",
+    "none": "No jobs match.",
+    "noneHint": "Change the filters or create a new job.",
+    "job": "Job",
+    "started": "Started",
+    "nextAction": "Next action",
+    "newSubtitle": "Only the basics. Everything else is added to the job when it is needed.",
+    "basics": "Job details",
+    "namePlaceholder": "e.g. Diesel to Field X, Supply 10 generators",
+    "typesTitle": "Job types",
+    "typesHelp": "The type switches on the usual parts and steps; you can change them on the job."
   }
 }

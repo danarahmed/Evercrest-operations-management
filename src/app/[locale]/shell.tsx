@@ -111,7 +111,7 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
         key={i.key}
         href={`/${locale}${i.href}`}
         aria-current={on ? "page" : undefined}
-        className={`group flex items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-semibold no-underline transition-colors duration-150 ${on ? "bg-white text-primary-700 shadow-[0_1px_2px_rgb(60_45_20/0.06)] ring-1 ring-slate-200" : "text-slate-700 hover:bg-[#e9e3d9] hover:text-slate-900"}`}
+        className={`group flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-[14px] font-semibold no-underline transition-colors duration-150 ${on ? "bg-white text-primary-700 shadow-[0_1px_2px_rgb(60_45_20/0.06)] ring-1 ring-slate-200" : "text-slate-700 hover:bg-[#e9e3d9] hover:text-slate-900"}`}
       >
         <Icon name={i.icon} className={on ? "text-primary-500" : "text-slate-400 transition-colors group-hover:text-slate-600"} />
         <span className="min-w-0 truncate">{nl(i.key)}</span>
@@ -125,7 +125,7 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
     <div className="app-shell flex min-h-screen">
       <input type="checkbox" id="nav-toggle" className="peer sr-only" aria-hidden="true" tabIndex={-1} />
       <aside className="fixed inset-y-0 start-0 z-50 flex w-[var(--sidebar-w)] flex-col border-e border-[#e3dbcf] bg-linen transition-transform duration-200 max-lg:invisible max-lg:-translate-x-full max-lg:rtl:translate-x-full peer-checked:visible peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen">
-        <Link href={`/${locale}`} className="flex items-center gap-3 px-6 pt-6 pb-5 no-underline">
+        <Link href={`/${locale}`} className="flex items-center gap-3 px-6 pt-5 pb-4 no-underline">
           <span className="grid size-10 place-items-center rounded-xl bg-primary-500 text-petro-100">
             <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3c3 4 6 7 6 10.5A6 6 0 0 1 6 13.5C6 10 9 7 12 3z" /><path d="M8.5 15.5c1 1.2 2.2 1.8 3.5 1.8" /></svg>
           </span>
@@ -142,7 +142,7 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
             const items = g.items.filter((i) => i.show);
             if (!items.length) return null;
             return (
-              <div key={gi} className={g.label ? "mt-5" : "mt-2"}>
+              <div key={gi} className={g.label ? "mt-4" : "mt-1"}>
                 {g.label && <div className="nav-group-label px-3 pb-1.5 text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{g.label}</div>}
                 <div className="grid gap-0.5">{items.map(navLink)}</div>
               </div>

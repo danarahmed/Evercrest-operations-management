@@ -4,6 +4,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Badge, Card, PageHeader, initials } from "@/components/ui";
 import { can, PERMISSIONS } from "@/server/authz";
 import { adminData } from "@/server/queries";
 import { currentActor } from "@/server/session";
@@ -35,94 +38,94 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
   const held = new Set(d.held);
   const grouped = GROUPS.map(([g, list]) => [g, list.filter((x) => (PERMISSIONS as readonly string[]).includes(x))] as const);
 
+  const permLabel = (x: string) => (p.has(x.replaceAll(".", "_")) ? p(x.replaceAll(".", "_")) : x);
+  const plus = <Icon name="plus" size={16} />;
+
   return (
-    <Shell permissions={actor.permissions} locale={locale} userName={me.displayName} path="/admin">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>{t("title")}</h1>
-        {can(actor, "audit.view") && <Link href={`/${locale}/admin/audit`}>{t("auditLog")} →</Link>}
-      </div>
+    <Shell wide permissions={actor.permissions} locale={locale} userName={me.displayName} path="/admin">
+      <PageHeader title={t("title")} subtitle={t("subtitle")} actions={<>
+        {can(actor, "audit.view") && <Link href={`/${locale}/admin/audit`} className="btn"><Icon name="history" size={16} />{t("auditLog")}</Link>}
+        {d.canRoles && d.roles.length > 0 && (
+          <Modal label={t("assign")} icon={<Icon name="shield" size={16} />}>
+            <ActionForm command="org.assign_role" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+              <div className="grid2">
+                <label>{t("user")}<select name="userId" required>{d.users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.displayName}</option>)}</select></label>
+                <label>{t("role")}<select name="roleId" required>{d.roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+                <label>{t("action")}<select name="grant" defaultValue="true"><option value="true">{t("grant")}</option><option value="false">{t("revoke")}</option></select></label>
+                <label>{t("reason")}<input name="reason" required /></label>
+              </div>
+            </ActionForm>
+          </Modal>
+        )}
+        {d.canUsers && (
+          <Modal label={t("addUser")} variant="primary" icon={plus}>
+            <p className="muted">{t("addUserHelp")}</p>
+            <ActionForm command="org.create_user" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
+              <div className="grid2">
+                <label>{t("name")}<input name="displayName" required /></label>
+                <label>{t("email")}<input name="email" type="email" required dir="ltr" /></label>
+                <label>{t("language")}<select name="locale" defaultValue="ckb"><option value="ckb">کوردی</option><option value="ar">العربية</option><option value="en">English</option></select></label>
+              </div>
+            </ActionForm>
+          </Modal>
+        )}
+      </>} />
 
-      <h2>{t("users")}</h2>
-      <div className="table-wrap"><table>
-        <thead><tr><th>{t("name")}</th><th>{t("email")}</th><th>{t("roles")}</th><th>{t("status")}</th><th /></tr></thead>
-        <tbody>{d.users.map((u) => (
-          <tr key={u.id} className={u.active ? "" : "muted"}>
-            <td>{u.displayName}</td><td dir="ltr">{u.email}</td>
-            <td className="wrap">{u.roles.map((r) => <span key={r.id} className="badge">{r.name}</span>)}</td>
-            <td><span className={`badge ${u.active ? "state-verified" : ""}`}>{u.active ? t("active") : t("inactive")}</span></td>
-            <td>{d.canUsers && u.id !== actor.userId && (
-              <ActionForm command="org.set_user_active" locale={locale} idempotencyKey={k()} submitLabel={u.active ? t("deactivate") : t("activate")}>
-                <input type="hidden" name="userId" value={u.id} />
-                <input type="hidden" name="active" value={u.active ? "false" : "true"} />
-                <input name="reason" required placeholder={t("reason")} />
-              </ActionForm>
-            )}</td>
-          </tr>
-        ))}</tbody>
-      </table></div>
+      <Card flush title={t("users")} subtitle={t("usersCount", { count: d.users.filter((u) => u.active).length })} icon="users">
+        <div className="table-wrap"><table>
+          <thead><tr><th>{t("name")}</th><th>{t("roles")}</th><th>{t("status")}</th><th /></tr></thead>
+          <tbody>{d.users.map((u) => (
+            <tr key={u.id} className={u.active ? "" : "muted"}>
+              <td><div className="row" style={{ gap: 10, flexWrap: "nowrap" }}><span className="avatar">{initials(u.displayName)}</span><div><div className="cell-title">{u.displayName}</div><div className="cell-sub ltr">{u.email}</div></div></div></td>
+              <td className="wrap"><div className="chips">{u.roles.length === 0 ? <span className="muted">—</span> : u.roles.map((r) => <Badge key={r.id} tone="accent" plain>{r.name}</Badge>)}</div></td>
+              <td><Badge tone={u.active ? "success" : undefined}>{u.active ? t("active") : t("inactive")}</Badge></td>
+              <td className="actions-cell">{d.canUsers && u.id !== actor.userId && (
+                <Modal small size="sm" variant={u.active ? "ghost" : "secondary"} label={u.active ? t("deactivate") : t("activate")} title={`${u.active ? t("deactivate") : t("activate")} · ${u.displayName}`}>
+                  <ActionForm command="org.set_user_active" locale={locale} idempotencyKey={k()} submitLabel={u.active ? t("deactivate") : t("activate")} variant={u.active ? "danger" : "primary"}>
+                    <input type="hidden" name="userId" value={u.id} />
+                    <input type="hidden" name="active" value={u.active ? "false" : "true"} />
+                    <label>{t("reason")}<input name="reason" required /></label>
+                  </ActionForm>
+                </Modal>
+              )}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      </Card>
 
-      {d.canUsers && (
-        <details className="panel">
-          <summary>{t("addUser")}</summary>
-          <p className="muted">{t("addUserHelp")}</p>
-          <ActionForm command="org.create_user" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
-            <div className="grid2">
-              <label>{t("name")}<input name="displayName" required /></label>
-              <label>{t("email")}<input name="email" type="email" required dir="ltr" /></label>
-              <label>{t("language")}<select name="locale" defaultValue="ckb"><option value="ckb">کوردی</option><option value="ar">العربية</option><option value="en">English</option></select></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-
-      {d.canRoles && d.roles.length > 0 && (
-        <details className="panel">
-          <summary>{t("assign")}</summary>
-          <ActionForm command="org.assign_role" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
-            <div className="grid2">
-              <label>{t("user")}<select name="userId" required>{d.users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.displayName}</option>)}</select></label>
-              <label>{t("role")}<select name="roleId" required>{d.roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
-              <label>{t("action")}<select name="grant" defaultValue="true"><option value="true">{t("grant")}</option><option value="false">{t("revoke")}</option></select></label>
-              <label>{t("reason")}<input name="reason" required /></label>
-            </div>
-          </ActionForm>
-        </details>
-      )}
-
-      <h2>{t("rolesTitle")}</h2>
-      <p className="muted">{t("rolesHelp")}</p>
-      <div className="table-wrap"><table>
-        <thead><tr><th>{t("role")}</th><th>{t("permissions")}</th></tr></thead>
-        <tbody>{d.roles.map((r) => (
-          <tr key={r.id}>
-            <td><strong>{r.name}</strong><div className="muted" dir="ltr">{r.code}</div></td>
-            <td className="wrap">{r.permissions.map((x) => p.has(x.replaceAll(".", "_")) ? p(x.replaceAll(".", "_")) : x).join(" · ")}</td>
-          </tr>
-        ))}</tbody>
-      </table></div>
-
-      {d.canRoles && (
-        <details className="panel">
-          <summary>{t("defineRole")}</summary>
+      <Card title={t("rolesTitle")} subtitle={t("rolesHelp")} icon="shield" actions={d.canRoles && (
+        <Modal label={t("defineRole")} size="lg" icon={plus}>
           <p className="muted">{t("defineRoleHelp")}</p>
           <ActionForm command="org.define_role" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
             <div className="grid2">
               <label>{t("code")}<input name="code" required dir="ltr" /></label>
               <label>{t("name")}<input name="name" required /></label>
-              <label>{t("reason")}<input name="reason" required /></label>
             </div>
             {grouped.map(([g, list]) => (
-              <fieldset key={g} className="row"><legend>{t(`group_${g}`)}</legend>
+              <fieldset key={g} className="checks"><legend>{t(`group_${g}`)}</legend>
                 {list.map((x) => (
-                  <label key={x} className="row" title={x}>
-                    <input type="checkbox" name="permissions[]" value={x} disabled={!held.has(x)} />{p.has(x.replaceAll(".", "_")) ? p(x.replaceAll(".", "_")) : x}
+                  <label key={x} className="check" title={x}>
+                    <input type="checkbox" name="permissions[]" value={x} disabled={!held.has(x)} />{permLabel(x)}
                   </label>
                 ))}
               </fieldset>
             ))}
+            <label>{t("reason")}<input name="reason" required /></label>
           </ActionForm>
-        </details>
-      )}
+        </Modal>
+      )}>
+        <div className="tiles">{d.roles.map((r) => (
+          <div key={r.id} className="tile">
+            <div className="tile-title">{r.name} <span className="muted ltr small">{r.code}</span></div>
+            {grouped.map(([g, list]) => {
+              const has = list.filter((x) => r.permissions.includes(x));
+              return has.length === 0 ? null : (
+                <div key={g}><div className="muted small" style={{ marginBlockEnd: 4 }}>{t(`group_${g}`)}</div><div className="chips">{has.map((x) => <Badge key={x} plain>{permLabel(x)}</Badge>)}</div></div>
+              );
+            })}
+          </div>
+        ))}</div>
+      </Card>
     </Shell>
   );
 }

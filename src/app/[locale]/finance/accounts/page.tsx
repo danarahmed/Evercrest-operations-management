@@ -108,29 +108,31 @@ export default async function AccountsPage({ params, searchParams }: { params: P
       })}
 
 
-      <Card flush title={t("periods", { year })} subtitle={t("periodsHelp")} icon="calendar" actions={
+      <Card title={t("periods", { year })} subtitle={t("periodsHelp")} icon="calendar" actions={
         <form className="row no-print" method="get">
           <input type="hidden" name="asOf" value={asOf} />
           <input type="number" name="year" defaultValue={year} min={2020} max={2100} style={{ width: "6.5em" }} aria-label={t("year")} />
           <button type="submit" className="sm">{t("show")}</button>
         </form>
       }>
-      <div className="table-wrap"><table>
-        <tbody>{o.periods.map((p) => (
-          <tr key={p.month}>
-            <td>{monthName(p.month)}</td>
-            <td><Badge tone={p.status === "locked" ? "danger" : "success"}>{t(`period_${p.status}`)}</Badge></td>
-            <td>{can(actor, "periods.manage") && (
-              <ActionForm command="ledger.set_period_status" locale={locale} idempotencyKey={k()} submitLabel={p.status === "locked" ? t("unlock") : t("lock")} inline variant={p.status === "locked" ? "secondary" : "primary"}>
-                <input type="hidden" name="year" value={year} />
-                <input type="hidden" name="month" value={p.month} />
-                <input type="hidden" name="status" value={p.status === "locked" ? "open" : "locked"} />
-                <input name="reason" required placeholder={t("reason")} />
-              </ActionForm>
-            )}</td>
-          </tr>
-        ))}</tbody>
-      </table></div>
+      <div className="months">
+        {o.periods.map((p) => (
+          <div key={p.month} className={`month${p.status === "locked" ? " locked" : ""}`}>
+            <div className="month-name"><Icon name={p.status === "locked" ? "lock" : "calendar"} size={15} />{monthName(p.month)}</div>
+            <Badge tone={p.status === "locked" ? "danger" : "success"}>{t(`period_${p.status}`)}</Badge>
+            {can(actor, "periods.manage") && (
+              <Modal small size="sm" variant={p.status === "locked" ? "ghost" : "secondary"} label={p.status === "locked" ? t("unlock") : t("lock")} title={`${p.status === "locked" ? t("unlock") : t("lock")} · ${monthName(p.month)} ${year}`}>
+                <ActionForm command="ledger.set_period_status" locale={locale} idempotencyKey={k()} submitLabel={p.status === "locked" ? t("unlock") : t("lock")} variant={p.status === "locked" ? "secondary" : "primary"}>
+                  <input type="hidden" name="year" value={year} />
+                  <input type="hidden" name="month" value={p.month} />
+                  <input type="hidden" name="status" value={p.status === "locked" ? "open" : "locked"} />
+                  <label>{t("reason")}<input name="reason" required /></label>
+                </ActionForm>
+              </Modal>
+            )}
+          </div>
+        ))}
+      </div>
       </Card>
     </Shell>
   );

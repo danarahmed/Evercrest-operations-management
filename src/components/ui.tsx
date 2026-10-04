@@ -40,11 +40,11 @@ export function Card({ title, subtitle, icon, actions, children, flush, footer, 
     <section className={`card${flush ? " flush" : ""}${className ? ` ${className}` : ""}`} id={id}>
       {(title || actions) && (
         <div className="card-head">
-          <div>
+          <div className="card-head-text">
             {title && <div className="card-title">{icon && <Icon name={icon} />}{title}</div>}
             {subtitle && <div className="card-sub">{subtitle}</div>}
           </div>
-          {actions && <div className="row">{actions}</div>}
+          {actions && <div className="row card-actions">{actions}</div>}
         </div>
       )}
       <div className="card-body">{children}</div>

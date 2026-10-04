@@ -10,11 +10,13 @@ page.on("pageerror", (e) => errors.push(e.message));
 await page.goto(`${base}/en/login`);
 await page.click("button:has-text('Admin')");
 await page.waitForURL(`${base}/en`);
-await page.click("table a:has-text('JOB-2026-00001')");
-await page.waitForLoadState("networkidle");
+page.on("dialog", (d) => d.accept());
+await page.click("a:has-text('Diesel to Field X')");
+await page.waitForURL(/\/jobs\//);
+await page.goto(page.url().split("?")[0] + "?tab=trips");
 
 // TRP-00001 is discharged (30 → 29.75 MT, Zagros, 200 USD advance): preview shows the worked example
-const card = page.locator(".card:has(strong:text-is('TRP-2026-00001'))");
+const card = page.locator("[data-trip='TRP-2026-00001']");
 const txt = await card.innerText();
 assert.match(txt, /Pay[\s\S]*1,190,000/);
 assert.match(txt, /Shortage fine[\s\S]*30,000/);
@@ -26,9 +28,9 @@ await card.locator("button:has-text('Settle this trip')").click();
 await page.waitForSelector("text=Settled STL-");
 
 // Bill the customer: 29.75 × 55,000 = 1,636,250
-await page.click("summary:has-text('Invoice the customer')");
-await page.locator("form:has(input[name='tripIds[]'])").locator("button.primary").click();
-await page.waitForSelector(".card:has(strong:text-is('TRP-2026-00001')) .badge.state-verified:has-text('Billed')");
+await page.click("button:has-text('Invoice the customer')");
+await page.locator("dialog[open] form:has(input[name='tripIds[]'])").locator(".form-actions button >> nth=0").click();
+await page.waitForSelector("[data-trip='TRP-2026-00001'] .badge.success:has-text('Billed')");
 await page.goto(`${base}/en/finance`);
 const invoiceRow = page.locator("tr").filter({ hasText: "North Oil Co" }).filter({ hasText: /1,636,250/ });
 await invoiceRow.first().waitFor({ timeout: 10000 });
@@ -43,18 +45,19 @@ assert.match(inv, /1,636,250/);
 
 // Driver pay statement: put the settled trip on a statement, see the full calculation, pay it
 await page.goto(`${base}/en/statements`);
-const driverForm = page.locator("details:has(summary:has-text('New driver statement'))");
+const driverForm = page.locator("form:has(input[name=party][value=driver])");
 assert.match(await driverForm.locator("tr:has-text('TRP-2026-00001')").innerText(), /Zagros/, "driver list shows the transporter");
 await driverForm.locator("tr:has-text('TRP-2026-00001') input[type=checkbox]").check();
-await driverForm.locator("button.primary").click();
+await driverForm.locator(".form-actions button >> nth=0").click();
 await page.waitForSelector("h1:has-text('PST-2026-')");
 const st = await page.locator("table.statement").innerText();
 assert.match(st, /TRP-2026-00001[\s\S]*Ahmed Karim[\s\S]*12 B 34567/);
 assert.match(st, /1,190,000[\s\S]*30,000[\s\S]*1,160,000/);
-await page.click("summary:has-text('Pay this statement')");
-await page.locator("details:has(summary:has-text('Pay this statement')) button.primary").click();
+await page.click("button:has-text('Pay this statement')");
+await page.locator("dialog[open] .form-actions button >> nth=0").click();
 await page.waitForSelector("text=Paid (PAY-");
-assert.equal(await page.locator("dd .badge:text-is('Paid')").count(), 1, "statement is paid");
+await page.reload();
+assert.equal(await page.locator(".page-head .badge:text-is('Paid')").count(), 1, "statement is paid");
 
 assert.deepEqual(errors, []);
 console.log("e2e settlement flow: OK");

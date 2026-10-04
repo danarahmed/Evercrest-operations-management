@@ -6,7 +6,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
 import { exchangeView } from "@/server/queries";
 import { currentActor } from "@/server/session";
@@ -52,7 +52,7 @@ export default async function ExchangePage({ params }: { params: Promise<{ local
             <tr key={x.id} className={x.status === "reversed" ? "muted" : ""}>
               <td dir="ltr">{x.exchangeNo}</td><td>{x.exchangeDate}</td>
               <td className="num">{m(x.fromAmount, x.fromCurrency)}</td><td className="num">{m(x.toAmount, x.toCurrency)}</td>
-              <td className="num" dir="ltr">1 {x.fromCurrency} = {new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(Number(x.rate))} {x.toCurrency}</td>
+              <td className="num" dir="ltr">1 {x.fromCurrency} = {new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 6 }).format(Number(x.rate))} {x.toCurrency}</td>
               <td>{x.status === "reversed" ? <Badge>{t("reversed")}</Badge> : can(actor, "payments.reverse") && (
                 <Modal label={t("reverse")} small variant="ghost" size="sm" title={`${t("reverse")} ${x.exchangeNo}`}>
                   <ActionForm command="exchanges.reverse" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("reverse")}>

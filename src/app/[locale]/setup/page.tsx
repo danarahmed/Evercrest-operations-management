@@ -9,6 +9,7 @@ import { Modal } from "@/components/Modal";
 import { Badge, Card, EmptyState, PageHeader, Tabs } from "@/components/ui";
 import { CAPABILITIES } from "@/domain/jobs/capabilities";
 import { setupData } from "@/server/queries";
+import { intlLocale } from "@/lib/format";
 import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
 
@@ -149,7 +150,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                     <tr key={r.id}>
                       <td className="cell-title">{t(`rt_${r.rateType}`)}</td>
                       <td>{product ?? <span className="muted">{t("allProducts")}</span>}</td>
-                      <td className="num ltr"><strong>{Number(r.amount).toLocaleString(locale)} {r.currency ?? r.unit}</strong>{r.currency && r.unit ? ` / ${r.unit}` : ""}{r.freeDays !== null && <div className="cell-sub">{t("freeDays")} {r.freeDays}</div>}</td>
+                      <td className="num ltr"><strong>{Number(r.amount).toLocaleString(intlLocale(locale))} {r.currency ?? r.unit}</strong>{r.currency && r.unit ? ` / ${r.unit}` : ""}{r.freeDays !== null && <div className="cell-sub">{t("freeDays")} {r.freeDays}</div>}</td>
                       <td>{t(`basis_${r.basis}`)}{r.startEvent ? <div className="cell-sub">{t(r.startEvent === "arrival" ? "fromArrival" : "fromLoading")}</div> : null}</td>
                       <td>{r.effectiveFrom} → {r.effectiveTo ?? <Badge tone="success">{t("ongoing")}</Badge>}</td>
                       <td className="actions-cell">{!r.effectiveTo && (

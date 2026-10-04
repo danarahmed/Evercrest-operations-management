@@ -117,7 +117,7 @@ export default async function Finance({ params }: { params: Promise<{ locale: st
             <Stat label={t("toPayTotal")} value={<Amounts values={total(bills)} format={m} />} icon="wallet" tone="warning" hint={t("invoicesCount", { count: bills.length })} />
             <Stat label={t("overdue")} value={overdue.length} icon="alert" tone="danger" />
           </div>
-          <div className="grid cols-2">
+          <div className="stack">
             <Card flush title={t("receivables")} subtitle={t("receivablesHelp")} icon="trendingUp">{list(sales, t("noneToReceive"))}</Card>
             <Card flush title={t("payables")} subtitle={t("payablesHelp")} icon="wallet">{list(bills, t("noneToPay"))}</Card>
           </div>

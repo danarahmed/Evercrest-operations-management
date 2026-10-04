@@ -6,7 +6,7 @@ import { users } from "@/db/schema";
 import { Icon, type IconName } from "@/components/icons";
 import { Amounts, Card, EmptyState, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { exceptions } from "@/domain/management/exceptions";
-import { describe, formatMoney } from "@/lib/format";
+import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
 import { activeJobs, dashboardKpis } from "@/server/queries";
 import { currentActor } from "@/server/session";
@@ -40,7 +40,7 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
   const today = new Date().toISOString().slice(0, 10);
   const [alerts, jobList, kpi] = await Promise.all([exceptions(db, actor.companyId, today), activeJobs(db, actor), dashboardKpis(db, actor)]);
   const m = (a: string, c: string) => formatMoney(a, c, locale);
-  const dateLine = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const dateLine = new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="">

@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { summarize } from "@/domain/management/history";
 import { auditView } from "@/server/queries";
+import { intlLocale } from "@/lib/format";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
 
@@ -24,7 +25,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   const from = sp.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const to = sp.to ?? today;
   const v = await auditView(db, actor, { from, to, action: sp.action || undefined, userId: sp.user || undefined });
-  const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+  const fmt = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeStyle: "short" });
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={me.displayName} path="/admin/audit">
       <PageHeader title={t("auditLog")} subtitle={t("auditHelp")} back={{ href: `/${locale}/admin`, label: t("title") }} />

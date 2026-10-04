@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 import { PrintButton } from "@/components/PrintButton";
 import { Card, EmptyState, PageHeader, StatusBadge, Tabs } from "@/components/ui";
 import { dec } from "@/domain/money";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, intlLocale } from "@/lib/format";
 import { financeReports, reportsData } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
@@ -33,7 +33,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
   const tab = (["jobs", "monthly", "pl", "bs", "waiting"].includes(sp.tab ?? "") ? sp.tab : "jobs") as Tab;
   const [r, fr] = await Promise.all([reportsData(db, actor, { from, to, customerId: sp.customer || undefined }), financeReports(db, actor, from, to)]);
   const m = (a: string, c: string) => formatMoney(a, c, locale);
-  const pct = (x: string | null) => (x === null ? "—" : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(x))}%`);
+  const pct = (x: string | null) => (x === null ? "—" : `${new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 1 }).format(Number(x))}%`);
   const neg = (x: string) => (dec(x).lt(0) ? "neg" : "");
   const qs = (k: Tab) => `/${locale}/reports?tab=${k}&from=${from}&to=${to}${sp.customer ? `&customer=${sp.customer}` : ""}`;
 

@@ -6,7 +6,7 @@ import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
 import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@/components/ui";
 import { summarize } from "@/domain/management/history";
-import { describe, formatMoney, formatQty } from "@/lib/format";
+import { describe, formatMoney, formatQty, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
 import { formOptions, jobHistoryView, jobWorkspace } from "@/server/queries";
 import { currentActor } from "@/server/session";
@@ -41,7 +41,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const values = w.job.customValues as Record<string, string>;
   const options = await formOptions(db, actor);
   const history = await jobHistoryView(db, actor, id);
-  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const dtf = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" });
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const open = !["financially_closed", "cancelled"].includes(w.job.status);
   const manage = open && can(actor, "jobs.manage");

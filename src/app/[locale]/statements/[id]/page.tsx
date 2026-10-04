@@ -143,7 +143,7 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
                 const qq = l.calc.quantities;
                 return (
                   <tr key={l.tripNo}>
-                    <td><span dir="ltr">{l.tripNo}</span><br /><small className="muted" dir="ltr">{l.jobNo}</small></td><td>{l.driver}<br /><small className="muted" dir="ltr">{l.plate}</small></td>
+                    <td className="wrap"><span dir="ltr">{l.tripNo}</span><br /><small className="muted" dir="ltr">{l.jobNo}</small></td><td className="wrap">{l.driver}<br /><small className="muted" dir="ltr">{l.plate}</small></td>
                     {isDriver ? (
                       <>
                         <td className="num">{q(qq.loaded, qq.unit)}</td><td className="num">{q(qq.discharged, qq.unit)}</td><td className="num">{q(qq.actual, qq.unit)}</td>
@@ -178,10 +178,10 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
           <tr className="subtotal"><td colSpan={cols - 1}><strong>{t("grandTotal")}</strong></td><td className="num"><strong>{m(st.total)}</strong></td></tr>
         </tbody>
       </table></div>
-      </Card>
       {v.lines.some((l) => Object.keys(l.side.advancesOtherCurrency).length) && (
-        <ul className="muted">{v.lines.flatMap((l) => Object.entries(l.side.advancesOtherCurrency).map(([c, a]) => <li key={`${l.tripNo}${c}`} dir="auto">{l.tripNo}: {s("otherCurrencyAdvance", { amount: formatMoney(a, c, locale) })}</li>))}</ul>
+        <div className="card-note">{v.lines.flatMap((l) => Object.entries(l.side.advancesOtherCurrency).map(([c, a]) => <div key={`${l.tripNo}${c}`}><Icon name="info" size={14} /> <span className="ltr">{l.tripNo}</span>: {s("otherCurrencyAdvance", { amount: formatMoney(a, c, locale) })}</div>))}</div>
       )}
+      </Card>
 
       <Card flush title={t("payees")} icon="users">
       <div className="table-wrap"><table>

@@ -48,8 +48,8 @@ export default async function PartnerAccountPage({ params }: { params: Promise<{
           <tbody>{v.lines.map((l) => (
             <tr key={l.id}>
               <td>{l.date}</td><td dir="ltr">{l.source ?? `#${l.entryNo}`}</td>
-              <td className="wrap" dir="auto">{l.description}{l.jobNo ? ` · ${l.jobNo}` : ""}</td>
-              <td>{l.account}</td><td>{l.currency}</td>
+              <td className="wrap" dir="auto" style={{ minWidth: 180 }}>{l.description}{l.jobNo ? ` · ${l.jobNo}` : ""}</td>
+              <td className="wrap">{l.account}</td><td>{l.currency}</td>
               <td className="num">{m(l.debit, l.currency)}</td><td className="num">{m(l.credit, l.currency)}</td>
               <td className="num">{bal(l.balance, l.currency)}</td>
             </tr>

@@ -1,15 +1,23 @@
+/**
+ * Locale tag for Intl formatters. Owner decision: all languages show Western digits (0-9),
+ * while words, month names and right-to-left layout follow the user's language.
+ */
+export function intlLocale(locale: string): string {
+  return `${locale}-u-nu-latn`;
+}
+
 /** Display an exact decimal amount with its currency, in the user's language. Never converts. */
 export function formatMoney(amount: string, currency: string, locale: string): string {
   const fractionDigits = (amount.split(".")[1] ?? "").length;
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: Math.min(fractionDigits, 3) }).format(Number(amount));
+    return new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: Math.min(fractionDigits, 3) }).format(Number(amount));
   } catch {
     return `${amount} ${currency}`;
   }
 }
 
 export function formatQty(qty: string, unit: string, locale: string): string {
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(Number(qty))} ${unit}`;
+  return `${new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 4 }).format(Number(qty))} ${unit}`;
 }
 
 type Translate = { (key: string, values?: Record<string, string>): string; has(key: string): boolean };

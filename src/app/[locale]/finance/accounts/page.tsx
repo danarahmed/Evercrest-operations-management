@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { dec } from "@/domain/money";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
 import { accountsOverview } from "@/server/queries";
 import { currentActor } from "@/server/session";
@@ -32,7 +32,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const k = () => crypto.randomUUID();
   const active = o.money.filter((x) => x.active);
-  const monthName = (mo: number) => new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(Date.UTC(year, mo - 1, 1)));
+  const monthName = (mo: number) => new Intl.DateTimeFormat(intlLocale(locale), { month: "long" }).format(new Date(Date.UTC(year, mo - 1, 1)));
   const currencies = [...new Set(o.trialBalance.map((r) => r.currency))].sort();
 
   return (

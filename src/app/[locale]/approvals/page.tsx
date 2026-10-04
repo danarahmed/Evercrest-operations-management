@@ -6,7 +6,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { Badge, Card, EmptyState, PageHeader, initials } from "@/components/ui";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, intlLocale } from "@/lib/format";
 import { pendingApprovals } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
@@ -22,7 +22,7 @@ export default async function Approvals({ params }: { params: Promise<{ locale: 
   const [user] = await db.select().from(users).where(eq(users.id, actor.userId));
   const t = await getTranslations({ locale, namespace: "Approvals" });
   const list = await pendingApprovals(db, actor);
-  const dtf = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const dtf = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" });
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/approvals">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />

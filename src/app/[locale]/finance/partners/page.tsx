@@ -8,7 +8,8 @@ import { formatMoney } from "@/lib/format";
 import { partnersFinance } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { Card, Cur, EmptyState, PageHeader, RoleBadge } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,21 +22,22 @@ export default async function PartnersPage({ params }: { params: Promise<{ local
   const [user] = await db.select().from(users).where(eq(users.id, actor.userId));
   const t = await getTranslations({ locale, namespace: "PartnerAccounts" });
   const s = await getTranslations({ locale, namespace: "Setup" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const rows = await partnersFinance(db, actor);
   const show = (a: string, c: string) => (
     <span><strong className={dec(a).gt(0) ? "money-pos" : "neg"}>{formatMoney(dec(a).abs().toString(), c, locale)}</strong> <span className="small muted">{dec(a).gt(0) ? t("owesUs") : t("weOwe")}</span></span>
   );
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/partners">
-      <PageHeader title={t("title")} subtitle={t("intro")} />
+      <PageHeader title={t("title")} subtitle={t("intro")} actions={<ExportButton label={f("export")} filename="evercrest-partner-balances" />} />
       <Card flush title={t("count", { count: rows.length })} icon="wallet">
       {rows.length === 0 ? <EmptyState icon="checkCircle" title={t("none")} /> : (
         <div className="table-wrap"><table>
-          <thead><tr><th>{t("partner")}</th><th>{t("roles")}</th><th className="num">IQD</th><th className="num">USD</th></tr></thead>
+          <thead><tr><th>{t("partner")}</th><th>{t("roles")}</th><th className="num"><Cur code="IQD" /></th><th className="num"><Cur code="USD" /></th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.id}>
               <td><Link href={`/${locale}/finance/partners/${r.id}`} className="cell-title">{r.name}</Link></td>
-              <td>{r.roles.map((x) => s(`role_${x}`)).join(", ")}</td>
+              <td><div className="chips">{r.roles.map((x) => <RoleBadge key={x} role={x} label={s(`role_${x}`)} />)}</div></td>
               <td className="num">{r.balances.IQD ? show(r.balances.IQD, "IQD") : "—"}</td>
               <td className="num">{r.balances.USD ? show(r.balances.USD, "USD") : "—"}</td>
             </tr>

@@ -4,6 +4,8 @@ import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
+
 import { summarize } from "@/domain/management/history";
 import { auditView } from "@/server/queries";
 import { intlLocale } from "@/lib/format";
@@ -20,6 +22,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   const db = getDb();
   const [me] = await db.select().from(users).where(eq(users.id, actor.userId));
   const t = await getTranslations({ locale, namespace: "Admin" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const sp = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
   const from = sp.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
@@ -28,7 +31,7 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   const fmt = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeStyle: "short" });
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={me.displayName} path="/admin/audit">
-      <PageHeader title={t("auditLog")} subtitle={t("auditHelp")} back={{ href: `/${locale}/admin`, label: t("title") }} />
+      <PageHeader title={t("auditLog")} subtitle={t("auditHelp")} back={{ href: `/${locale}/admin`, label: t("title") }} actions={<ExportButton label={f("export")} filename="evercrest-audit-log" />} />
       <form className="filters no-print" method="get">
         <label>{t("from")}<input type="date" name="from" defaultValue={from} /></label>
         <label>{t("to")}<input type="date" name="to" defaultValue={to} /></label>

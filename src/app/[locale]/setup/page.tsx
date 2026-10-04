@@ -6,7 +6,7 @@ import { PARTNER_ROLES } from "@/db/schema/masterdata";
 import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
-import { Badge, Card, EmptyState, PageHeader, Tabs } from "@/components/ui";
+import { Badge, Card, Cur, EmptyState, PageHeader, RoleBadge, Stat, Tabs } from "@/components/ui";
 import { CAPABILITIES } from "@/domain/jobs/capabilities";
 import { setupData } from "@/server/queries";
 import { intlLocale } from "@/lib/format";
@@ -69,6 +69,14 @@ export default async function Setup({ params, searchParams }: { params: Promise<
       <Tabs active={tab} items={tabs.map((x) => ({ key: x.key, label: t(`tab_${x.key}`), href: `${base}?tab=${x.key}`, icon: x.icon }))} />
 
       {tab === "partners" && d.partners && (
+        <div className="stats">
+          <Stat label={t("allPartners")} value={d.partners.length} icon="users" />
+          {(["customer", "transporter", "driver", "supplier"] as const).map((r) => (
+            <Stat key={r} label={t(`role_${r}`)} value={d.partners!.filter((p) => (p.roles ?? []).includes(r)).length} icon={r === "customer" ? "briefcase" : r === "supplier" ? "package" : r === "driver" ? "user" : "truck"} tone={r === "customer" ? "success" : r === "transporter" ? "violet" : r === "driver" ? "warning" : undefined} />
+          ))}
+        </div>
+      )}
+      {tab === "partners" && d.partners && (
         <Card flush title={t("partners")} subtitle={t("partnersHelp")} icon="users" actions={
           <Modal label={t("addPartner")} variant="primary" icon={plus}>
             <ActionForm command="partners.create" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
@@ -89,7 +97,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               <tbody>{d.partners.map((p) => (
                 <tr key={p.id}>
                   <td className="cell-title">{p.name}</td>
-                  <td><div className="chips">{(p.roles ?? []).filter(Boolean).map((r) => <Badge key={r} tone="info" plain>{t(`role_${r}`)}</Badge>)}</div></td>
+                  <td><div className="chips">{(p.roles ?? []).filter(Boolean).map((r) => <RoleBadge key={r} role={r} label={t(`role_${r}`)} />)}</div></td>
                   <td className="ltr">{p.phone ?? <span className="muted">—</span>}</td>
                 </tr>
               ))}</tbody>
@@ -332,6 +340,15 @@ export default async function Setup({ params, searchParams }: { params: Promise<
 
       {tab === "accounting" && (
         <>
+          {d.accounts && (
+            <div className="stats">
+              <Stat label={t("accounts")} value={d.accounts.length} icon="book" />
+              <Stat label={t("type_income")} value={d.accounts.filter((a) => a.type === "income").length} icon="trendingUp" tone="success" />
+              <Stat label={t("type_expense")} value={d.accounts.filter((a) => a.type === "expense").length} icon="receipt" tone="warning" />
+              {d.moneyAccounts && <Stat label={t("moneyAccounts")} value={d.moneyAccounts.length} icon="wallet" tone="violet" />}
+              {d.settings && <Stat label={t("postingAccounts")} value={`${POSTING_KEYS.filter((k) => (d.settings!.posting as Record<string, string>)[k]).length} / ${POSTING_KEYS.length}`} icon="layers" />}
+            </div>
+          )}
           {d.moneyAccounts && (
             <Card flush title={t("moneyAccounts")} subtitle={t("moneyAccountsHelp")} icon="wallet" actions={
               <Modal label={t("addMoneyAccount")} icon={plus}>
@@ -347,7 +364,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
             }>
               <div className="table-wrap"><table>
                 <thead><tr><th>{f("name")}</th><th>{t("kind")}</th><th>{t("currency")}</th></tr></thead>
-                <tbody>{d.moneyAccounts.map((m) => <tr key={m.id}><td className="cell-title"><Icon name={m.kind === "bank" ? "bank" : "wallet"} size={15} /> {m.name}</td><td>{t(m.kind === "cash" ? "cashBox" : "bank")}</td><td>{m.currency}</td></tr>)}</tbody>
+                <tbody>{d.moneyAccounts.map((m) => <tr key={m.id}><td className="cell-title"><Icon name={m.kind === "bank" ? "bank" : "wallet"} size={15} /> {m.name}</td><td>{t(m.kind === "cash" ? "cashBox" : "bank")}</td><td><Cur code={m.currency} /></td></tr>)}</tbody>
               </table></div>
             </Card>
           )}
@@ -385,7 +402,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
             }>
               <div className="table-wrap"><table>
                 <thead><tr><th>{t("code")}</th><th>{f("name")}</th><th>{t("type")}</th><th>{t("onlyCurrency")}</th></tr></thead>
-                <tbody>{d.accounts.map((a) => <tr key={a.id}><td className="ltr cell-title">{a.code}</td><td>{a.name}</td><td>{t(`type_${a.type}`)}</td><td>{a.currency ?? <span className="muted">{t("anyCurrency")}</span>}</td></tr>)}</tbody>
+                <tbody>{d.accounts.map((a) => <tr key={a.id}><td className="ltr font-mono font-semibold text-slate-700">{a.code}</td><td>{a.name}</td><td><Badge tone={({ asset: "info", liability: "warning", equity: "violet", income: "success", expense: "danger" } as const)[a.type as "asset"]} plain>{t(`type_${a.type}`)}</Badge></td><td>{a.currency ? <Cur code={a.currency} /> : <span className="muted">{t("anyCurrency")}</span>}</td></tr>)}</tbody>
               </table></div>
             </Card>
           )}

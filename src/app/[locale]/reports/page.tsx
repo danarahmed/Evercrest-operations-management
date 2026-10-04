@@ -4,8 +4,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
+import { ExportButton } from "@/components/ExportButton";
 import { PrintButton } from "@/components/PrintButton";
-import { Card, EmptyState, PageHeader, StatusBadge, Tabs } from "@/components/ui";
+import { Badge, Card, Cur, EmptyState, PageHeader, Stat, StatusBadge, Tabs } from "@/components/ui";
 import { dec } from "@/domain/money";
 import { formatMoney, intlLocale } from "@/lib/format";
 import { financeReports, reportsData } from "@/server/queries";
@@ -26,6 +27,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
   const t = await getTranslations({ locale, namespace: "Reports" });
   const fin = await getTranslations({ locale, namespace: "Finance" });
   const st = await getTranslations({ locale, namespace: "JobStatus" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const sp = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
   const from = sp.from ?? `${today.slice(0, 4)}-01-01`;
@@ -39,7 +41,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/reports">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} actions={<PrintButton label={t("print")} />} />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} actions={<><ExportButton label={f("export")} filename={`evercrest-${tab}`} /><PrintButton label={t("print")} /></>} />
       <form className="filters no-print" method="get">
         <input type="hidden" name="tab" value={tab} />
         <label>{t("from")}<input type="date" name="from" defaultValue={from} /></label>
@@ -55,6 +57,14 @@ export default async function Reports({ params, searchParams }: { params: Promis
         { key: "waiting", label: t("waiting"), href: qs("waiting"), icon: "clock", count: r.queues.unsettled.length + r.queues.unbilled.length },
       ]} />
 
+      {tab === "jobs" && r.totals.length > 0 && (
+        <div className="stats">
+          {r.totals.map((x) => (
+            <Stat key={x.currency} label={<>{t("profit")} · {x.currency}</>} value={<span className={neg(x.profit)}>{m(x.profit, x.currency)}</span>} icon="trendingUp" tone={dec(x.profit).lt(0) ? "danger" : "success"} hint={<>{t("revenue")} {m(x.revenue, x.currency)} · {t("margin")} {pct(x.marginPct)}</>} />
+          ))}
+          <Stat label={t("jobsCount")} value={new Set(r.jobs.map((j) => j.jobId)).size} icon="briefcase" />
+        </div>
+      )}
       {tab === "jobs" && (
         <Card flush title={t("jobProfit")} subtitle={t("jobProfitHelp")} icon="briefcase">
           {r.jobs.length === 0 ? <EmptyState icon="chart" title={t("noData")} /> : (
@@ -64,14 +74,14 @@ export default async function Reports({ params, searchParams }: { params: Promis
                 {r.jobs.map((j) => (
                   <tr key={`${j.jobId}${j.currency}`}>
                     <td className="wrap"><Link href={`/${locale}/jobs/${j.jobId}?tab=money`} className="cell-title">{j.name}</Link><div className="cell-sub ltr">{j.jobNo}</div></td>
-                    <td>{j.customer}</td><td><StatusBadge status={j.status} label={st(j.status)} /></td><td>{j.currency}</td>
+                    <td>{j.customer}</td><td><StatusBadge status={j.status} label={st(j.status)} /></td><td><Cur code={j.currency} /></td>
                     <td className="num">{m(j.revenue, j.currency)}</td><td className="num">{m(j.costs, j.currency)}</td>
                     <td className={`num ${neg(j.profit)}`}><strong>{m(j.profit, j.currency)}</strong></td><td className={`num ${neg(j.profit)}`}>{pct(j.marginPct)}</td>
                   </tr>
                 ))}
                 {r.totals.map((x) => (
                   <tr key={x.currency} className="subtotal">
-                    <td colSpan={3}>{t("total")}</td><td>{x.currency}</td>
+                    <td colSpan={3}>{t("total")}</td><td><Cur code={x.currency} /></td>
                     <td className="num">{m(x.revenue, x.currency)}</td><td className="num">{m(x.costs, x.currency)}</td>
                     <td className={`num ${neg(x.profit)}`}>{m(x.profit, x.currency)}</td><td className="num">{pct(x.marginPct)}</td>
                   </tr>
@@ -89,7 +99,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
               <thead><tr><th>{t("month")}</th><th>{t("currency")}</th><th className="num">{t("revenue")}</th><th className="num">{t("costs")}</th><th className="num">{t("profit")}</th><th className="num">{t("margin")}</th></tr></thead>
               <tbody>{r.monthly.map((x) => (
                 <tr key={`${x.month}${x.currency}`}>
-                  <td className="ltr"><strong>{x.month}</strong></td><td>{x.currency}</td>
+                  <td className="ltr font-mono"><strong>{x.month}</strong></td><td><Cur code={x.currency} /></td>
                   <td className="num">{m(x.revenue, x.currency)}</td><td className="num">{m(x.costs, x.currency)}</td>
                   <td className={`num ${neg(x.profit)}`}><strong>{m(x.profit, x.currency)}</strong></td><td className="num">{pct(x.marginPct)}</td>
                 </tr>
@@ -101,16 +111,22 @@ export default async function Reports({ params, searchParams }: { params: Promis
 
       {tab === "pl" && (
         fr.pl.length === 0 ? <Card><EmptyState icon="chart" title={t("noData")} /></Card> : (
+          <>
+          <div className="stats">
+            {fr.pl.map((p) => (
+              <Stat key={p.currency} label={<>{fin("netProfit")} · {p.currency}</>} value={<span className={neg(p.netProfit)}>{m(p.netProfit, p.currency)}</span>} icon="trendingUp" tone={dec(p.netProfit).lt(0) ? "danger" : "success"} hint={<>{fin("totalIncome")} {m(p.totalIncome, p.currency)} · {fin("totalExpenses")} {m(p.totalExpenses, p.currency)}</>} />
+            ))}
+          </div>
           <div className="grid cols-2">
             {fr.pl.map((p) => (
-              <Card key={p.currency} flush title={`${fin("pl")} · ${p.currency}`} icon="trendingUp">
+              <Card key={p.currency} flush title={<>{fin("pl")} <Cur code={p.currency} /></>} subtitle={`${from} → ${to}`} icon="trendingUp">
                 <div className="table-wrap"><table>
                   <tbody>
                     <tr className="group"><td colSpan={2}>{fin("totalIncome")}</td></tr>
-                    {p.income.map((l) => <tr key={l.code}><td>{l.code} · {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
+                    {p.income.map((l) => <tr key={l.code}><td><span className="font-mono text-slate-400">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
                     <tr className="subtotal"><td>{fin("totalIncome")}</td><td className="num">{m(p.totalIncome, p.currency)}</td></tr>
                     <tr className="group"><td colSpan={2}>{fin("totalExpenses")}</td></tr>
-                    {p.expenses.map((l) => <tr key={l.code}><td>{l.code} · {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
+                    {p.expenses.map((l) => <tr key={l.code}><td><span className="font-mono text-slate-400">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
                     <tr className="subtotal"><td>{fin("totalExpenses")}</td><td className="num">{m(p.totalExpenses, p.currency)}</td></tr>
                     <tr className="subtotal"><td><strong>{fin("netProfit")}</strong></td><td className={`num ${neg(p.netProfit)}`}><strong>{m(p.netProfit, p.currency)}</strong></td></tr>
                   </tbody>
@@ -118,18 +134,27 @@ export default async function Reports({ params, searchParams }: { params: Promis
               </Card>
             ))}
           </div>
+          </>
         )
       )}
 
       {tab === "bs" && (
+        <>
+        <div className="stats">
+          {fr.bs.map((b) => (
+            <Stat key={b.currency} label={<>{fin("totalAssets")} · {b.currency}</>} value={m(b.totalAssets, b.currency)} icon="bank" tone={b.balanced ? "success" : "danger"} hint={<>{fin("totalLE")} {m(b.totalLiabilitiesAndEquity, b.currency)} · {b.balanced ? t("balancedShort") : fin("unbalanced")}</>} />
+          ))}
+        </div>
         <div className="grid cols-2">
           {fr.bs.map((b) => (
-            <Card key={b.currency} flush title={`${t("balanceSheet")} · ${b.currency}`} subtitle={fin("bs", { date: to })} icon="bank" actions={b.balanced ? <span className="badge success">✓</span> : <span className="badge danger">{fin("unbalanced")}</span>}>
+            <Card key={b.currency} flush title={<>{t("balanceSheet")} <Cur code={b.currency} /></>} subtitle={fin("bs", { date: to })} icon="bank" actions={b.balanced ? <Badge tone="success">{t("balancedShort")}</Badge> : <Badge tone="danger">{fin("unbalanced")}</Badge>}>
               <div className="table-wrap"><table>
                 <tbody>
-                  {b.assets.map((l) => <tr key={l.code}><td>{l.code} · {l.name}</td><td className="num">{m(l.amount, b.currency)}</td></tr>)}
+                  <tr className="group"><td colSpan={2}>{fin("assets")}</td></tr>
+                  {b.assets.map((l) => <tr key={l.code}><td><span className="font-mono text-slate-400">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, b.currency)}</td></tr>)}
                   <tr className="subtotal"><td>{fin("totalAssets")}</td><td className="num">{m(b.totalAssets, b.currency)}</td></tr>
-                  {[...b.liabilities, ...b.equity].map((l) => <tr key={l.code}><td>{l.code} · {l.name}</td><td className="num">{m(l.amount, b.currency)}</td></tr>)}
+                  <tr className="group"><td colSpan={2}>{fin("liabilitiesEquity")}</td></tr>
+                  {[...b.liabilities, ...b.equity].map((l) => <tr key={l.code}><td><span className="font-mono text-slate-400">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, b.currency)}</td></tr>)}
                   <tr><td>{fin("retainedEarnings")}</td><td className="num">{m(b.retainedEarnings, b.currency)}</td></tr>
                   <tr className="subtotal"><td>{fin("totalLE")}</td><td className="num">{m(b.totalLiabilitiesAndEquity, b.currency)}</td></tr>
                 </tbody>
@@ -137,6 +162,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
             </Card>
           ))}
         </div>
+        </>
       )}
 
       {tab === "waiting" && (

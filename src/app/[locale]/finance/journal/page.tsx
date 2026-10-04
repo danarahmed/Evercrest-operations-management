@@ -7,6 +7,8 @@ import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
+
 import { formatMoney } from "@/lib/format";
 import { can } from "@/server/authz";
 import { journalView } from "@/server/queries";
@@ -34,7 +36,7 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/journal">
-      <PageHeader title={t("title")} subtitle={t("intro")} actions={can(actor, "journal.post") && (
+      <PageHeader title={t("title")} subtitle={t("intro")} actions={<><ExportButton label={f("export")} filename="evercrest-journal" />{can(actor, "journal.post") && (
         <Modal label={t("manual")} variant="primary" size="lg" icon={<Icon name="plus" size={16} />}>
           <p className="muted">{t("manualHelp")}</p>
           <ActionForm command="ledger.manual_entry" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("post")}>
@@ -56,7 +58,7 @@ export default async function JournalPage({ params, searchParams }: { params: Pr
             </table></div>
           </ActionForm>
         </Modal>
-      )} />
+      )}</>} />
 
 
       <form className="filters no-print" method="get">

@@ -27,7 +27,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ locale
   const hasTrips = v.tripCount > 0;
 
   return (
-    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/finance/invoices/${id}`}>
+    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/finance/invoices/${id}`} crumb={inv.invoiceNo}>
       <PageHeader
         back={{ href: `/${locale}/finance`, label: fin("title") }}
         eyebrow={<>{inv.kind === "sales" ? fin("salesInvoice") : fin("bill")}{inv.status === "cancelled" ? <Badge>{t("cancelled")}</Badge> : dec(v.outstanding).isZero() ? <Badge tone="success">{t("paidInFull")}</Badge> : <Badge tone="warning">{t("open")}</Badge>}</>}

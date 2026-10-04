@@ -8,7 +8,16 @@
   "Nav": {
     "dashboard": "لوحة التحكم",
     "signOut": "تسجيل الخروج",
-    "signedInAs": "مسجّل الدخول باسم {name}"
+    "signedInAs": "مسجّل الدخول باسم {name}",
+    "menu": "القائمة",
+    "breadcrumbs": "موقعك",
+    "language": "اللغة",
+    "notifications": "الإشعارات",
+    "noNotifications": "لا يوجد ما ينتظرك.",
+    "toApprove": "{count, plural, one {طلب واحد ينتظر} other {# طلبات تنتظر}} الموافقة",
+    "toVerify": "{count, plural, one {مستند واحد} other {# مستندات}} للتحقق",
+    "newJob": "عمل جديد",
+    "auditLog": "سجل التدقيق"
   },
   "Login": {
     "title": "تسجيل الدخول",
@@ -237,7 +246,8 @@
     "budget": "الميزانية",
     "budgetHelp": "اختياري. إذا تجاوزت التكاليف بهذه العملة الميزانية، تُنبَّه الإدارة.",
     "onlyForCorrections": "(فقط عند التصحيح)",
-    "extraInfoAndBudget": "معلومات إضافية وميزانية"
+    "extraInfoAndBudget": "معلومات إضافية وميزانية",
+    "export": "تصدير"
   },
   "Approvals": {
     "title": "الموافقات",
@@ -462,7 +472,8 @@
     "tab_partners": "الشركاء",
     "tab_settings": "الحدود والتقريب",
     "transitDaysHelp": "الأيام المتوقعة بين التحميل والتفريغ؛ الرحلات الأطول تظهر متأخرة.",
-    "validity": "الصلاحية"
+    "validity": "الصلاحية",
+    "allPartners": "كل الشركاء"
   },
   "Finance": {
     "title": "الفواتير والمدفوعات",
@@ -518,7 +529,9 @@
     "payables": "فواتير للدفع",
     "payablesHelp": "لم تُدفع بالكامل",
     "noneToReceive": "كل فواتير الزبائن مستلمة.",
-    "noneToPay": "كل الفواتير مدفوعة."
+    "noneToPay": "كل الفواتير مدفوعة.",
+    "assets": "الأصول",
+    "liabilitiesEquity": "الالتزامات وحقوق الملكية"
   },
   "Settle": {
     "title": "التسوية والفوترة",
@@ -695,7 +708,9 @@
     "discharged": "التفريغ",
     "subtitle": "الربح حسب العمل والشهر، وقائمة الأرباح والخسائر، والميزانية — كل عملة على حدة.",
     "balanceSheet": "الميزانية العمومية",
-    "waiting": "أعمال بالانتظار"
+    "waiting": "أعمال بالانتظار",
+    "jobsCount": "أعمال لها حركة مالية",
+    "balancedShort": "متوازن"
   },
   "Activities": {
     "title": "الخطوات",

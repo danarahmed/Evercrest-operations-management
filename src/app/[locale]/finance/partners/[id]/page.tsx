@@ -9,7 +9,8 @@ import { formatMoney } from "@/lib/format";
 import { partnerAccount } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../../shell";
-import { Card, EmptyState, PageHeader, Stat } from "@/components/ui";
+import { Card, Cur, EmptyState, PageHeader, RoleBadge, Stat } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -22,18 +23,19 @@ export default async function PartnerAccountPage({ params }: { params: Promise<{
   const [user] = await db.select().from(users).where(eq(users.id, actor.userId));
   const t = await getTranslations({ locale, namespace: "PartnerAccounts" });
   const s = await getTranslations({ locale, namespace: "Setup" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const v = await partnerAccount(db, actor, id);
   if (!v) notFound();
   const m = (a: string, c: string) => (a === "0" ? "" : formatMoney(a, c, locale));
   const bal = (a: string, c: string) => <span className={dec(a).lt(0) ? "state-missing" : ""}>{formatMoney(dec(a).abs().toString(), c, locale)} {dec(a).isZero() ? "" : dec(a).gt(0) ? t("owesUs") : t("weOwe")}</span>;
   return (
-    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/finance/partners/${id}`}>
+    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/finance/partners/${id}`} crumb={v.partner.name}>
       <PageHeader
         back={{ href: `/${locale}/finance/partners`, label: t("title") }}
-        eyebrow={v.roles.map((x) => s(`role_${x}`)).join(" · ")}
+        eyebrow={v.roles.map((x) => <RoleBadge key={x} role={x} label={s(`role_${x}`)} />)}
         title={v.partner.name}
         subtitle={v.partner.phone && <span className="ltr">{v.partner.phone}</span>}
-        actions={<PrintButton label={t("print")} />}
+        actions={<><ExportButton label={f("export")} filename="evercrest-partner-account" /><PrintButton label={t("print")} /></>}
       />
       <div className="stats">
         {Object.entries(v.balances).length === 0 && <Stat label={t("balance")} value="—" icon="wallet" />}
@@ -48,8 +50,8 @@ export default async function PartnerAccountPage({ params }: { params: Promise<{
           <tbody>{v.lines.map((l) => (
             <tr key={l.id}>
               <td>{l.date}</td><td dir="ltr">{l.source ?? `#${l.entryNo}`}</td>
-              <td className="wrap" dir="auto" style={{ minWidth: 180 }}>{l.description}{l.jobNo ? ` · ${l.jobNo}` : ""}</td>
-              <td className="wrap">{l.account}</td><td>{l.currency}</td>
+              <td className="wrap" dir="auto" style={{ minWidth: 150 }}>{l.description}{l.jobNo ? ` · ${l.jobNo}` : ""}</td>
+              <td className="wrap">{l.account}</td><td><Cur code={l.currency} /></td>
               <td className="num">{m(l.debit, l.currency)}</td><td className="num">{m(l.credit, l.currency)}</td>
               <td className="num">{bal(l.balance, l.currency)}</td>
             </tr>

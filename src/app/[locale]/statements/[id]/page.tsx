@@ -107,7 +107,7 @@ export default async function StatementPage({ params }: { params: Promise<{ loca
   );
 
   return (
-    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/statements/${id}`}>
+    <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/statements/${id}`} crumb={st.statementNo}>
       <PageHeader
         back={{ href: `/${locale}/statements`, label: t("title") }}
         eyebrow={<><span>{t(`party_${st.party}`)}</span><StatusBadge status={status === "open" ? "pending" : status} label={t(`status_${status}`)} /></>}

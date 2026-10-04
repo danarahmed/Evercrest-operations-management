@@ -5,6 +5,8 @@ import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
+
 import { JOB_STATUSES } from "@/db/schema/jobs";
 import { describe } from "@/lib/format";
 import { can } from "@/server/authz";
@@ -22,6 +24,7 @@ export default async function JobsPage({ params, searchParams }: { params: Promi
   const db = getDb();
   const [user] = await db.select().from(users).where(eq(users.id, actor.userId));
   const t = await getTranslations({ locale, namespace: "Jobs" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const st = await getTranslations({ locale, namespace: "JobStatus" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const sp = await searchParams;
@@ -31,7 +34,7 @@ export default async function JobsPage({ params, searchParams }: { params: Promi
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
-        actions={can(actor, "jobs.create") && <Link href={`/${locale}/jobs/new`} className="btn primary"><Icon name="plus" />{t("newJob")}</Link>}
+        actions={<><ExportButton label={f("export")} filename="evercrest-jobs" />{can(actor, "jobs.create") && <Link href={`/${locale}/jobs/new`} className="btn primary"><Icon name="plus" />{t("newJob")}</Link>}</>}
       />
       <form className="filters no-print" method="get">
         <label>{t("search")}<input name="q" defaultValue={sp.q ?? ""} placeholder={t("searchHint")} /></label>

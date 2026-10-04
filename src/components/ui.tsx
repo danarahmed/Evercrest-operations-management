@@ -14,7 +14,7 @@ export function PageHeader({ title, subtitle, eyebrow, actions, back }: {
   return (
     <div className="page-head">
       <div>
-        {back && <Link href={back.href} className="back-link no-print"><Icon name="arrowLeft" size={15} />{back.label}</Link>}
+        {back && <Link href={back.href} className="back-link no-print sm:!hidden"><Icon name="arrowLeft" size={15} />{back.label}</Link>}
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
         {subtitle && <div className="subtitle">{subtitle}</div>}
@@ -85,11 +85,21 @@ export function Stat({ label, value, icon, tone, href, hint }: { label: ReactNod
       <div style={{ minWidth: 0 }}>
         <div className="stat-label">{label}</div>
         <div className="stat-value">{value}</div>
-        {hint && <div className="small muted">{hint}</div>}
+        {hint && <div className="stat-hint">{hint}</div>}
       </div>
     </>
   );
   return href ? <Link href={href} className="stat">{body}</Link> : <div className="stat">{body}</div>;
+}
+
+/** Partner role as a coloured pill (customer, supplier, transporter, driver, contractor). */
+export function RoleBadge({ role, label }: { role: string; label: ReactNode }) {
+  return <span className={`badge plain role-${role}`}>{label}</span>;
+}
+
+/** Currency code chip. Amounts in IQD and USD are always kept apart; the chip makes that visible. */
+export function Cur({ code }: { code: string }) {
+  return <span className={`cur ${code}`}>{code}</span>;
 }
 
 export function EmptyState({ icon = "layers", title, hint, action }: { icon?: IconName; title: ReactNode; hint?: ReactNode; action?: ReactNode }) {

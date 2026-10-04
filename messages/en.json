@@ -8,7 +8,16 @@
   "Nav": {
     "dashboard": "Dashboard",
     "signOut": "Sign out",
-    "signedInAs": "Signed in as {name}"
+    "signedInAs": "Signed in as {name}",
+    "menu": "Menu",
+    "breadcrumbs": "You are here",
+    "language": "Language",
+    "notifications": "Notifications",
+    "noNotifications": "You're all caught up.",
+    "toApprove": "{count, plural, one {# request waits} other {# requests wait}} for approval",
+    "toVerify": "{count, plural, one {# document} other {# documents}} to verify",
+    "newJob": "New job",
+    "auditLog": "Audit log"
   },
   "Login": {
     "title": "Sign in",
@@ -237,7 +246,8 @@
     "budget": "Budget",
     "budgetHelp": "Optional. If costs in this currency go above the budget, management is warned.",
     "onlyForCorrections": "(only when correcting)",
-    "extraInfoAndBudget": "Extra info & budget"
+    "extraInfoAndBudget": "Extra info & budget",
+    "export": "Export"
   },
   "Approvals": {
     "title": "Approvals",
@@ -462,7 +472,8 @@
     "tab_partners": "Partners",
     "tab_settings": "Limits & rounding",
     "transitDaysHelp": "Expected days between loading and discharge; trips taking longer are shown as delayed.",
-    "validity": "Valid"
+    "validity": "Valid",
+    "allPartners": "All partners"
   },
   "Finance": {
     "title": "Invoices & payments",
@@ -518,7 +529,9 @@
     "payables": "Bills to pay",
     "payablesHelp": "Not fully paid",
     "noneToReceive": "All customer invoices are received.",
-    "noneToPay": "All bills are paid."
+    "noneToPay": "All bills are paid.",
+    "assets": "Assets",
+    "liabilitiesEquity": "Liabilities and equity"
   },
   "Settle": {
     "title": "Settlement and billing",
@@ -695,7 +708,9 @@
     "discharged": "Discharged",
     "subtitle": "Profit by job and month, the profit and loss statement and the balance sheet — each currency on its own.",
     "balanceSheet": "Balance sheet",
-    "waiting": "Waiting work"
+    "waiting": "Waiting work",
+    "jobsCount": "Jobs with money in period",
+    "balancedShort": "Balanced"
   },
   "Activities": {
     "title": "Steps",

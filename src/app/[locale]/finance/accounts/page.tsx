@@ -5,7 +5,9 @@ import { users } from "@/db/schema";
 import { ActionForm } from "@/components/ActionForm";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
-import { Badge, Card, PageHeader, Stat } from "@/components/ui";
+import { Badge, Card, Cur, PageHeader, Stat } from "@/components/ui";
+import { ExportButton } from "@/components/ExportButton";
+
 import { dec } from "@/domain/money";
 import { formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
@@ -38,6 +40,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/finance/accounts">
       <PageHeader title={t("title")} subtitle={t("subtitle")} actions={<>
+      <ExportButton label={f("export")} filename="evercrest-trial-balance" />
       {can(actor, "payments.create") && active.length > 1 && (
         <Modal label={t("transfer")} icon={<Icon name="exchange" size={16} />}>
           <p className="muted">{t("transferHelp")}</p>
@@ -95,11 +98,11 @@ export default async function AccountsPage({ params, searchParams }: { params: P
         const td = rows.reduce((s, r) => s.plus(dec(r.debit)), dec("0"));
         const tc = rows.reduce((s, r) => s.plus(dec(r.credit)), dec("0"));
         return (
-          <Card key={cur} flush title={`${t("trialBalance")} · ${cur}`} icon="book" subtitle={td.eq(tc) ? t("balancedOk") : undefined}><div className="table-wrap"><table>
+          <Card key={cur} flush title={<>{t("trialBalance")} <Cur code={cur} /></>} icon="book" subtitle={td.eq(tc) ? t("balancedOk") : undefined}><div className="table-wrap"><table>
             <thead><tr><th>{t("accountCol")}</th><th>{t("type")}</th><th className="num">{t("debit")}</th><th className="num">{t("credit")}</th><th className="num">{t("balance")}</th></tr></thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.accountId}><td>{r.code} · {r.name}</td><td>{t(`type_${r.type}`)}</td><td className="num">{m(r.debit, cur)}</td><td className="num">{m(r.credit, cur)}</td><td className="num">{m(r.balance, cur)}</td></tr>
+                <tr key={r.accountId}><td><span className="font-mono text-slate-400">{r.code}</span> {r.name}</td><td>{t(`type_${r.type}`)}</td><td className="num">{m(r.debit, cur)}</td><td className="num">{m(r.credit, cur)}</td><td className="num">{m(r.balance, cur)}</td></tr>
               ))}
               <tr className="subtotal"><td colSpan={2}><strong>{t("total")}</strong> {td.eq(tc) ? "✓" : <span className="state-missing">{t("unbalanced")}</span>}</td><td className="num"><strong>{m(td.toString(), cur)}</strong></td><td className="num"><strong>{m(tc.toString(), cur)}</strong></td><td /></tr>
             </tbody>

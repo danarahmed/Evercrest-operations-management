@@ -81,12 +81,12 @@ export function StatusBadge({ status, label }: { status: string; label: ReactNod
 export function Stat({ label, value, icon, tone, href, hint }: { label: ReactNode; value: ReactNode; icon: IconName; tone?: "success" | "warning" | "danger" | "violet"; href?: string; hint?: ReactNode }) {
   const body = (
     <>
-      <div className={`stat-icon${tone ? ` ${tone}` : ""}`}><Icon name={icon} size={20} /></div>
-      <div style={{ minWidth: 0 }}>
+      <div className="stat-top">
         <div className="stat-label">{label}</div>
-        <div className="stat-value">{value}</div>
-        {hint && <div className="stat-hint">{hint}</div>}
+        <div className={`stat-icon${tone ? ` ${tone}` : ""}`}><Icon name={icon} /></div>
       </div>
+      <div className="stat-value">{value}</div>
+      {hint && <div className="stat-hint">{hint}</div>}
     </>
   );
   return href ? <Link href={href} className="stat">{body}</Link> : <div className="stat">{body}</div>;

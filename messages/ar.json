@@ -2,8 +2,9 @@
   "App": {
     "title": "إيفركرست للعمليات",
     "status": "الأساس جاهز. يجري بناء وحدات الأعمال.",
-    "tagline": "نظام العمليات",
-    "footer": "نظام إيفركريست للعمليات"
+    "tagline": "العمليات",
+    "footer": "نظام إيفركريست للعمليات",
+    "brand": "إيفركرست"
   },
   "Nav": {
     "dashboard": "لوحة التحكم",
@@ -17,7 +18,14 @@
     "toApprove": "{count, plural, one {طلب واحد ينتظر} other {# طلبات تنتظر}} الموافقة",
     "toVerify": "{count, plural, one {مستند واحد} other {# مستندات}} للتحقق",
     "newJob": "عمل جديد",
-    "auditLog": "سجل التدقيق"
+    "auditLog": "سجل التدقيق",
+    "newMenu": "جديد",
+    "newInvoice": "فاتورة أو فاتورة مورد",
+    "newStatement": "كشف دفع",
+    "newDocument": "تسجيل مستند",
+    "newJournal": "قيد يومية",
+    "search": "بحث",
+    "searchPlaceholder": "ابحث في الأعمال والرحلات والفواتير والشركاء والمستندات…"
   },
   "Login": {
     "title": "تسجيل الدخول",
@@ -43,7 +51,20 @@
     "kpiWeOwe": "مستحق علينا",
     "welcome": "مرحبًا بعودتك، {name}",
     "viewAll": "كل الأعمال",
-    "attentionCount": "{count} عناصر"
+    "attentionCount": "{count} عناصر",
+    "morning": "صباح الخير، {name}",
+    "afternoon": "مساء الخير، {name}",
+    "evening": "مساء الخير، {name}",
+    "summary": "{jobs, plural, one {عمل واحد قيد التنفيذ} other {# أعمال قيد التنفيذ}}، و{trucks, plural, one {شاحنة واحدة} other {# شاحنات}} على الطريق، و{waiting, plural, =0 {لا شيء ينتظرك} one {أمر واحد ينتظرك} other {# أمور تنتظرك}}.",
+    "attentionHint": "الأكثر إلحاحاً أولاً",
+    "activeJobsHint": "ما ينتظره كل عمل",
+    "open": "فتح",
+    "goTo": "انتقل إلى",
+    "goDocuments": "مكتبة المستندات",
+    "goPay": "دفع للسائقين",
+    "goInvoices": "الفواتير",
+    "goProfit": "تقرير الأرباح",
+    "trucksOnRoad": "{count, plural, one {شاحنة واحدة} other {# شاحنات}} على الطريق"
   },
   "Severity": {
     "critical": "حرج",
@@ -994,5 +1015,47 @@
     "namePlaceholder": "مثال: ديزل إلى الحقل X، توريد 10 مولدات",
     "typesTitle": "أنواع الأعمال",
     "typesHelp": "النوع يفعّل الأجزاء والخطوات المعتادة؛ يمكنك تغييرها في العمل."
+  },
+  "Library": {
+    "title": "المستندات",
+    "subtitle": "كل البيانات وإيصالات التسليم والفواتير والشهادات في مكان واحد — ابحث بالعمل أو الرحلة أو الشريك أو النوع.",
+    "find": "بحث",
+    "findHint": "المرجع أو الرحلة أو العمل أو الشريك",
+    "type": "النوع",
+    "allTypes": "كل الأنواع",
+    "show": "عرض",
+    "status": "الحالة",
+    "st_all": "الكل",
+    "st_to_verify": "للتحقق",
+    "st_missing": "ناقص",
+    "st_verified": "تم التحقق",
+    "st_rejected": "مرفوض",
+    "doc_received": "للتحقق",
+    "doc_verified": "تم التحقق",
+    "doc_rejected": "مرفوض",
+    "none": "لا توجد مستندات هنا",
+    "noneHint": "جرّب حالة أخرى أو امسح البحث.",
+    "recordOnJob": "سجّله في العمل",
+    "receivedOn": "استُلم {date} بواسطة {name}",
+    "beforeCompletion": "مطلوب قبل الإكمال",
+    "beforeClose": "مطلوب قبل الإغلاق المالي"
+  },
+  "Search": {
+    "title": "بحث",
+    "hint": "اكتب حرفين على الأقل في مربع البحث أعلاه.",
+    "resultsFor": "نتائج “{q}”",
+    "found": "{count, plural, =0 {لا نتائج} one {نتيجة واحدة} other {# نتائج}}",
+    "nothing": "لا يوجد تطابق",
+    "nothingHint": "ابحث برقم العمل أو الرحلة أو اسم الشريك أو رقم الفاتورة أو لوحة الشاحنة أو مرجع المستند.",
+    "jobs": "الأعمال",
+    "trips": "الرحلات",
+    "invoices": "الفواتير",
+    "statements": "كشوفات الدفع",
+    "partners": "الشركاء",
+    "documents": "المستندات",
+    "salesInvoice": "فاتورة عميل",
+    "bill": "فاتورة مورد",
+    "party_driver": "السائقون",
+    "party_transporter": "الناقل"
   }
 }

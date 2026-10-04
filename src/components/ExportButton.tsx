@@ -12,7 +12,7 @@ export function ExportButton({ label, filename }: { label: string; filename: str
     const esc = (v: string) => (/[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
     const blocks = tables.map((table) => {
       const title = table.closest(".card")?.querySelector(".card-title")?.textContent?.trim();
-      const rows = [...table.rows].map((r) => [...r.cells].map((c) => esc((c.innerText || "").replace(/\s*\n\s*/g, " ").trim())).join(","));
+      const rows = [...table.rows].map((r) => [...r.cells].map((c) => esc((c.innerText || "").replace(/[\u2066-\u2069]/g, "").replace(/\s*\n\s*/g, " ").trim())).join(","));
       return [...(title ? [esc(title)] : []), ...rows].join("\n");
     });
     const blob = new Blob(["﻿" + blocks.join("\n\n")], { type: "text/csv;charset=utf-8" });

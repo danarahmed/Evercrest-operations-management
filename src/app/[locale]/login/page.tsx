@@ -23,7 +23,7 @@ export default async function Login({ params }: { params: Promise<{ locale: stri
         <div className="brand">
           <span className="brand-mark">E</span>
           <span>
-            <span className="brand-name">{app("title")}</span>
+            <span className="brand-name">{app("brand")}</span>
             <br />
             <span className="brand-sub">{app("tagline")}</span>
           </span>

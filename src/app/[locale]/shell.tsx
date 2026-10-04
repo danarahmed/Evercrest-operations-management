@@ -5,14 +5,14 @@ import type { ReactNode } from "react";
 import { getDb } from "@/db/client";
 import { approvalRequests, documents, roles, userRoles } from "@/db/schema";
 import { Icon, type IconName } from "@/components/icons";
-import { NavSection } from "@/components/NavSection";
-import { type NotificationItem, Notifications } from "@/components/Notifications";
+import { NewMenu, type NotificationItem, Notifications } from "@/components/Notifications";
+import { SearchBox } from "@/components/SearchBox";
 import { initials } from "@/components/ui";
 import { routing } from "@/i18n/routing";
 import { currentActor } from "@/server/session";
 import { signOut } from "./login/actions";
 
-const LANG_NAMES: Record<string, string> = { en: "EN", ar: "العربية", ckb: "کوردی" };
+const LANG_NAMES: Record<string, string> = { en: "English", ar: "العربية", ckb: "کوردی" };
 
 type NavItem = { key: string; href: string; icon: IconName; show: boolean; count?: number; exact?: boolean };
 
@@ -50,14 +50,14 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
       items: [
         { key: "dashboard", href: "", icon: "home", show: true, exact: true },
         { key: "jobs", href: "/jobs", icon: "briefcase", show: has("jobs.view") },
+        { key: "documents", href: "/documents", icon: "file", show: has("jobs.view"), count: toVerify },
+        { key: "approvals", href: "/approvals", icon: "checkCircle", show: has("approvals.decide"), count: pendingApprovals },
       ],
     },
     {
       label: nl("groupOperations"),
       items: [
         { key: "statements", href: "/statements", icon: "users", show: has("settlements.create") },
-        { key: "documents", href: "/documents", icon: "file", show: has("documents.verify"), count: toVerify },
-        { key: "approvals", href: "/approvals", icon: "checkCircle", show: has("approvals.decide"), count: pendingApprovals },
       ],
     },
     {
@@ -86,7 +86,6 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
   const subPage: Record<string, string> = { "/jobs/new": t("newJob"), "/admin/audit": t("auditLog") };
   const crumbs: { label: string; href?: string }[] = [];
   if (current) {
-    if (current.g.label) crumbs.push({ label: current.g.label });
     crumbs.push({ label: nl(current.i.key), href: `/${locale}${current.i.href}` });
   }
   if (subPage[path]) crumbs.push({ label: subPage[path] });
@@ -97,6 +96,14 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
     ...(toVerify ? [{ href: `/${locale}/documents`, icon: "file" as const, title: t("toVerify", { count: toVerify }), tone: "info" as const }] : []),
   ];
 
+  const newItems = [
+    ...(has("jobs.create") ? [{ href: `/${locale}/jobs/new`, icon: "briefcase" as const, label: t("newJob") }] : []),
+    ...(has("invoices.create") ? [{ href: `/${locale}/finance`, icon: "receipt" as const, label: t("newInvoice") }] : []),
+    ...(has("settlements.create") ? [{ href: `/${locale}/statements`, icon: "users" as const, label: t("newStatement") }] : []),
+    ...(has("jobs.view") ? [{ href: `/${locale}/documents`, icon: "file" as const, label: t("newDocument") }] : []),
+    ...(has("journal.post") ? [{ href: `/${locale}/finance/journal`, icon: "book" as const, label: t("newJournal") }] : []),
+  ];
+
   const navLink = (i: NavItem) => {
     const on = isActive(i);
     return (
@@ -104,101 +111,93 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
         key={i.key}
         href={`/${locale}${i.href}`}
         aria-current={on ? "page" : undefined}
-        className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium no-underline transition-all duration-150 ${on ? "bg-primary-500/15 text-white ring-1 ring-inset ring-primary-400/25 shadow-[0_1px_12px_-4px] shadow-primary-500/40" : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-100"}`}
+        className={`group flex items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-semibold no-underline transition-colors duration-150 ${on ? "bg-white text-primary-700 shadow-[0_1px_2px_rgb(60_45_20/0.06)] ring-1 ring-slate-200" : "text-slate-700 hover:bg-[#e9e3d9] hover:text-slate-900"}`}
       >
-        <span className="relative flex">
-          <Icon name={i.icon} className={on ? "text-primary-400" : "text-slate-500 transition-colors group-hover:text-slate-300"} />
-          {!!i.count && (
-            <span className="absolute -top-2 -end-2.5 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-rose-500 px-1 font-mono text-[10px] font-semibold leading-none text-white shadow-md shadow-rose-950/40 ring-2 ring-ink-900">{i.count}</span>
-          )}
-        </span>
-        <span className="truncate">{nl(i.key)}</span>
-        {on && <span className="ms-auto size-1.5 rounded-full bg-primary-400 shadow-[0_0_8px] shadow-primary-400" />}
+        <Icon name={i.icon} className={on ? "text-primary-500" : "text-slate-400 transition-colors group-hover:text-slate-600"} />
+        <span className="min-w-0 truncate">{nl(i.key)}</span>
+        {!!i.count && <span className="ms-auto rounded-full bg-amber-50 px-2 text-[12px] font-extrabold leading-5 text-amber-600">{i.count}</span>}
       </Link>
     );
   };
+  const showCrumbs = crumbs.length > 0 && (crumb || subPage[path]);
 
   return (
     <div className="app-shell flex min-h-screen">
       <input type="checkbox" id="nav-toggle" className="peer sr-only" aria-hidden="true" tabIndex={-1} />
-      <aside className="fixed inset-y-0 start-0 z-50 flex w-[var(--sidebar-w)] flex-col border-e border-white/[0.06] bg-ink-900 bg-[radial-gradient(120%_60%_at_0%_0%,rgb(59_130_246/0.10),transparent_60%),linear-gradient(180deg,var(--color-ink-900),var(--color-ink-950))] text-slate-300 transition-transform duration-200 max-lg:invisible max-lg:-translate-x-full max-lg:rtl:translate-x-full peer-checked:visible peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen">
-        <Link href={`/${locale}`} className="flex items-center gap-3 px-5 pt-5 pb-4 no-underline">
-          <span className="grid size-9 place-items-center rounded-[10px] bg-gradient-to-br from-primary-500 to-petro-500 text-base font-bold text-white shadow-lg shadow-primary-500/30 ring-1 ring-white/20">E</span>
-          <span className="min-w-0">
-            <span className="block truncate text-[14.5px] font-semibold leading-tight text-white">{app("title")}</span>
-            <span className="block text-[11px] tracking-wide text-slate-500">{app("tagline")}</span>
+      <aside className="fixed inset-y-0 start-0 z-50 flex w-[var(--sidebar-w)] flex-col border-e border-[#e3dbcf] bg-linen transition-transform duration-200 max-lg:invisible max-lg:-translate-x-full max-lg:rtl:translate-x-full peer-checked:visible peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen">
+        <Link href={`/${locale}`} className="flex items-center gap-3 px-6 pt-6 pb-5 no-underline">
+          <span className="grid size-10 place-items-center rounded-xl bg-primary-500 text-petro-100">
+            <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3c3 4 6 7 6 10.5A6 6 0 0 1 6 13.5C6 10 9 7 12 3z" /><path d="M8.5 15.5c1 1.2 2.2 1.8 3.5 1.8" /></svg>
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[16.5px] font-extrabold text-slate-900">{app("brand")}</span>
+            <span className="block text-[12.5px] font-semibold text-slate-500">{app("tagline")}</span>
           </span>
         </Link>
-        <div className="mx-5 mb-1 h-px bg-gradient-to-r from-white/10 via-white/[0.06] to-transparent" />
-        <nav className="flex-1 overflow-y-auto px-3 pt-3 pb-4 [scrollbar-width:thin]">
+        <div className="px-4">
+          <NewMenu label={t("newMenu")} items={newItems} />
+        </div>
+        <nav className="flex-1 overflow-y-auto px-4 pb-4 [scrollbar-width:thin]" aria-label={t("menu")}>
           {groups.map((g, gi) => {
             const items = g.items.filter((i) => i.show);
             if (!items.length) return null;
-            if (!g.label) return <div key={gi} className="grid gap-0.5">{items.map(navLink)}</div>;
             return (
-              <NavSection key={gi} id={String(gi)} label={g.label} active={items.some(isActive)}>
-                {items.map(navLink)}
-              </NavSection>
+              <div key={gi} className={g.label ? "mt-5" : "mt-2"}>
+                {g.label && <div className="nav-group-label px-3 pb-1.5 text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{g.label}</div>}
+                <div className="grid gap-0.5">{items.map(navLink)}</div>
+              </div>
             );
           })}
         </nav>
-        <div className="m-3 flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5">
-          <span className="avatar !size-9 ring-2 ring-white/10">{initials(userName)}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold text-white">{userName}</span>
-            <span className="block truncate text-[11.5px] text-slate-500">{roleLabel || app("tagline")}</span>
+        <div className="m-4 mt-0 flex items-center gap-3 rounded-2xl border border-[#e3dbcf] bg-[#f7f3ed] p-3">
+          <span className="avatar">{initials(userName)}</span>
+          <span className="min-w-0 flex-1 leading-snug">
+            <span className="block truncate text-[14px] font-bold text-slate-900">{userName}</span>
+            <span className="block truncate text-[12.5px] text-slate-500">{roleLabel || app("tagline")}</span>
           </span>
           <form action={signOut.bind(null, locale)}>
-            <button type="submit" className="ghost icon-btn !text-slate-400 hover:!bg-white/10 hover:!text-white" title={t("signOut")} aria-label={t("signOut")}><Icon name="logout" size={17} /></button>
+            <button type="submit" className="ghost icon-btn" title={t("signOut")} aria-label={t("signOut")}><Icon name="logout" size={17} /></button>
           </form>
         </div>
       </aside>
-      <label htmlFor="nav-toggle" className="fixed inset-0 z-40 hidden bg-slate-950/50 backdrop-blur-[2px] peer-checked:block lg:!hidden" aria-hidden="true" />
+      <label htmlFor="nav-toggle" className="fixed inset-0 z-40 hidden bg-slate-900/30 backdrop-blur-[2px] peer-checked:block lg:!hidden" aria-hidden="true" />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="topbar sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-md sm:px-6">
+        <header className="topbar sticky top-0 z-30 flex min-h-[68px] flex-wrap items-center gap-3 border-b border-slate-200 bg-[#f8f5f0]/90 px-4 py-3 backdrop-blur-md sm:px-8">
           <label htmlFor="nav-toggle" className="btn ghost icon-btn lg:!hidden" aria-label={t("menu")}><Icon name="menu" /></label>
-          <nav aria-label={t("breadcrumbs")} className="min-w-0 flex-1">
-            <ol className="m-0 flex min-w-0 list-none items-center gap-1.5 p-0 text-[13px]">
-              <li className="flex flex-none">
-                <Link href={`/${locale}`} className="grid size-7 place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={nl("dashboard")}><Icon name="home" size={16} /></Link>
-              </li>
-              {crumbs.map((c, i) => (
-                <li key={i} className={`flex min-w-0 items-center gap-1.5 ${i < crumbs.length - 1 ? "max-sm:hidden" : ""}`}>
-                  <Icon name="chevronRight" size={14} className="flex-none text-slate-300" />
-                  {c.href && i < crumbs.length - 1 ? (
-                    <Link href={c.href} className="truncate font-medium text-slate-500 hover:text-slate-900">{c.label}</Link>
-                  ) : (
-                    <span className={`truncate ${i === crumbs.length - 1 ? "font-semibold text-slate-900" : "font-medium text-slate-400"}`}>{c.label}</span>
-                  )}
-                </li>
+          <SearchBox action={`/${locale}/search`} label={t("search")} placeholder={t("searchPlaceholder")} />
+          <div className="ms-auto flex items-center gap-2.5">
+            <div className="flex items-center rounded-full bg-linen p-[3px]" role="group" aria-label={t("language")}>
+              {routing.locales.map((l) => (
+                <Link
+                  key={l}
+                  href={`/${l}${path}`}
+                  lang={l}
+                  aria-current={l === locale ? "true" : undefined}
+                  className={`rounded-full px-3 py-1 text-[13px] font-bold no-underline transition-colors ${l === locale ? "bg-white text-slate-900 shadow-[0_1px_2px_rgb(60_45_20/0.08)]" : "text-slate-500 hover:text-slate-900"}`}
+                >
+                  {LANG_NAMES[l]}
+                </Link>
               ))}
-            </ol>
-          </nav>
-          <div className="flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label={t("language")}>
-            <Icon name="globe" size={15} className="mx-1.5 text-slate-400 max-sm:hidden" />
-            {routing.locales.map((l) => (
-              <Link
-                key={l}
-                href={`/${l}${path}`}
-                lang={l}
-                aria-current={l === locale ? "true" : undefined}
-                className={`rounded-full px-2.5 py-1 text-[12px] font-semibold no-underline transition-all ${l === locale ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-900"}`}
-              >
-                {LANG_NAMES[l]}
-              </Link>
-            ))}
-          </div>
-          <Notifications items={notifications} label={t("notifications")} empty={t("noNotifications")} />
-          <div className="flex items-center gap-2.5 border-s border-slate-200 ps-3">
-            <span className="avatar">{initials(userName)}</span>
-            <span className="hidden min-w-0 leading-tight md:block">
-              <span className="block max-w-40 truncate text-[13px] font-semibold text-slate-900">{userName}</span>
-              <span className="block max-w-40 truncate text-[11.5px] text-slate-500">{roleLabel}</span>
-            </span>
+            </div>
+            <Notifications items={notifications} label={t("notifications")} empty={t("noNotifications")} />
           </div>
         </header>
-        <main className={`mx-auto w-full flex-1 px-4 pt-6 pb-16 sm:px-6 lg:pt-8 ${wide ? "max-w-[1560px]" : "max-w-[1280px]"}`}>{children}</main>
+        <main className={`mx-auto w-full flex-1 px-4 pt-7 pb-16 sm:px-8 ${wide ? "max-w-[1560px]" : "max-w-[1280px]"}`}>
+          {showCrumbs && (
+            <nav aria-label={t("breadcrumbs")} className="no-print mb-3">
+              <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0 text-[13.5px] font-semibold text-slate-500">
+                {crumbs.map((c, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    {i > 0 && <span className="text-slate-300">/</span>}
+                    {c.href && i < crumbs.length - 1 ? <Link href={c.href} className="text-slate-500 hover:text-slate-900">{c.label}</Link> : <span className={i === crumbs.length - 1 ? "text-slate-900" : ""}>{c.label}</span>}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );

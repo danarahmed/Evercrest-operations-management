@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, trips, trucks, units, users } from "@/db/schema";
+import { customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
 import { auditLog, jobHistory } from "@/domain/management/history";
@@ -451,4 +451,116 @@ export async function jobsList(db: Db, actor: Actor, f: { q?: string; status?: s
     .orderBy(desc(jobs.createdAt))
     .limit(300);
   return Promise.all(rows.map(async (r) => ({ ...r, nextAction: ["financially_closed", "cancelled"].includes(r.job.status) ? null : await nextActionInfo(db, r.job) })));
+}
+
+export type LibraryStatus = "all" | "to_verify" | "missing" | "verified" | "rejected";
+
+/**
+ * Every document the company holds, plus the ones still missing on running jobs
+ * (from the configured requirements), searchable by reference, job, trip or partner.
+ */
+export async function documentLibrary(db: Db, actor: Actor, f: { q?: string; status?: LibraryStatus; typeId?: string }) {
+  requirePermission(actor, "jobs.view");
+  const c = actor.companyId;
+  const rows = await db
+    .select({ doc: documents, type: documentTypes.name, jobNo: jobs.jobNo, jobName: jobs.name, customer: businessPartners.name, receivedBy: users.displayName })
+    .from(documents)
+    .innerJoin(documentTypes, eq(documentTypes.id, documents.documentTypeId))
+    .innerJoin(users, eq(users.id, documents.receivedBy))
+    .leftJoin(jobs, eq(jobs.id, documents.jobId))
+    .leftJoin(businessPartners, eq(businessPartners.id, jobs.customerId))
+    .where(eq(documents.companyId, c))
+    .orderBy(desc(documents.createdAt))
+    .limit(1000);
+  const tripIds = rows.filter((r) => r.doc.entityType === "trip").map((r) => r.doc.entityId);
+  const tripNos = tripIds.length ? await db.select({ id: trips.id, no: trips.tripNo }).from(trips).where(inArray(trips.id, tripIds)) : [];
+
+  // Missing documents: requirements on jobs that are still running.
+  const running = await db.select().from(jobs).where(and(eq(jobs.companyId, c), notInArray(jobs.status, ["financially_closed", "cancelled"]))).limit(300);
+  const customers = running.length ? await db.select({ id: businessPartners.id, name: businessPartners.name }).from(businessPartners).where(inArray(businessPartners.id, [...new Set(running.map((j) => j.customerId))])) : [];
+  const missing: { key: string; type: string; typeId: string; jobId: string; jobNo: string; jobName: string; customer: string; target: string; requiredBefore: string }[] = [];
+  for (const job of running) {
+    for (const r of await documentChecklist(db, job)) {
+      if (r.state !== "missing") continue;
+      missing.push({ key: `${job.id}:${r.documentTypeId}:${r.target.id}`, type: r.documentType, typeId: r.documentTypeId, jobId: job.id, jobNo: job.jobNo, jobName: job.name, customer: customers.find((x) => x.id === job.customerId)?.name ?? "", target: r.target.label, requiredBefore: r.requiredBefore });
+    }
+  }
+
+  const items = rows.map((r) => ({
+    id: r.doc.id,
+    type: r.type,
+    typeId: r.doc.documentTypeId,
+    reference: r.doc.reference,
+    status: r.doc.status,
+    jobId: r.doc.jobId,
+    jobNo: r.jobNo,
+    jobName: r.jobName,
+    customer: r.customer,
+    target: r.doc.entityType === "trip" ? tripNos.find((x) => x.id === r.doc.entityId)?.no ?? "" : r.jobNo ?? "",
+    receivedBy: r.receivedBy,
+    receivedAt: r.doc.createdAt,
+    issuedDate: r.doc.issuedDate,
+    expiryDate: r.doc.expiryDate,
+    reviewNote: r.doc.reviewNote,
+  }));
+  const q = f.q?.trim().toLowerCase();
+  const match = (...v: (string | null | undefined)[]) => !q || v.some((x) => x?.toLowerCase().includes(q));
+  const byType = (id: string) => !f.typeId || id === f.typeId;
+  const docs = items.filter((d) => byType(d.typeId) && match(d.type, d.reference, d.jobNo, d.jobName, d.customer, d.target));
+  const miss = missing.filter((m) => byType(m.typeId) && match(m.type, m.jobNo, m.jobName, m.customer, m.target));
+  const counts = {
+    all: docs.length + miss.length,
+    to_verify: docs.filter((d) => d.status === "received").length,
+    missing: miss.length,
+    verified: docs.filter((d) => d.status === "verified").length,
+    rejected: docs.filter((d) => d.status === "rejected").length,
+  };
+  const status = f.status ?? "all";
+  const statusOf: Record<string, LibraryStatus> = { received: "to_verify", verified: "verified", rejected: "rejected" };
+  return {
+    counts,
+    documents: status === "all" ? docs : status === "missing" ? [] : docs.filter((d) => statusOf[d.status] === status),
+    missing: status === "all" || status === "missing" ? miss : [],
+    types: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, c)).orderBy(documentTypes.name),
+    canVerify: can(actor, "documents.verify"),
+  };
+}
+
+/** One search box for the whole system. Each group is only searched when the user may see it. */
+export async function globalSearch(db: Db, actor: Actor, q: string) {
+  const term = q.trim();
+  if (term.length < 2) return null;
+  const c = actor.companyId;
+  const like = `%${term.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
+  const has = (p: Parameters<typeof can>[1]) => can(actor, p);
+  const finance = has("reports.financial.view") || has("invoices.create");
+  const [jobRows, tripRows, invoiceRows, statementRows, partnerRows, documentRows] = await Promise.all([
+    has("jobs.view")
+      ? db.select({ id: jobs.id, no: jobs.jobNo, name: jobs.name, status: jobs.status, customer: businessPartners.name }).from(jobs).innerJoin(businessPartners, eq(businessPartners.id, jobs.customerId))
+          .where(and(eq(jobs.companyId, c), or(ilike(jobs.jobNo, like), ilike(jobs.name, like), ilike(businessPartners.name, like)))).orderBy(desc(jobs.createdAt)).limit(8)
+      : [],
+    has("jobs.view")
+      ? db.select({ id: trips.id, no: trips.tripNo, jobId: trips.jobId, status: trips.status, driver: businessPartners.name, plate: trucks.plate }).from(trips)
+          .innerJoin(businessPartners, eq(businessPartners.id, trips.driverId)).innerJoin(trucks, eq(trucks.id, trips.truckId))
+          .where(and(eq(trips.companyId, c), or(ilike(trips.tripNo, like), ilike(businessPartners.name, like), ilike(trucks.plate, like)))).orderBy(desc(trips.createdAt)).limit(8)
+      : [],
+    finance
+      ? db.select({ id: invoices.id, no: invoices.invoiceNo, kind: invoices.kind, partner: businessPartners.name, total: invoices.total, currency: invoices.currency }).from(invoices).innerJoin(businessPartners, eq(businessPartners.id, invoices.partnerId))
+          .where(and(eq(invoices.companyId, c), or(ilike(invoices.invoiceNo, like), ilike(invoices.externalRef, like), ilike(businessPartners.name, like)))).orderBy(desc(invoices.createdAt)).limit(8)
+      : [],
+    has("settlements.create")
+      ? db.select({ id: payStatements.id, no: payStatements.statementNo, party: payStatements.party, total: payStatements.total, currency: payStatements.currency, status: payStatements.status }).from(payStatements)
+          .where(and(eq(payStatements.companyId, c), ilike(payStatements.statementNo, like))).orderBy(desc(payStatements.createdAt)).limit(8)
+      : [],
+    has("reports.financial.view") || has("partners.manage")
+      ? db.select({ id: businessPartners.id, name: businessPartners.name, phone: businessPartners.phone }).from(businessPartners)
+          .where(and(eq(businessPartners.companyId, c), or(ilike(businessPartners.name, like), ilike(businessPartners.phone, like)))).orderBy(businessPartners.name).limit(8)
+      : [],
+    has("jobs.view")
+      ? db.select({ id: documents.id, reference: documents.reference, type: documentTypes.name, status: documents.status, jobId: documents.jobId, jobNo: jobs.jobNo }).from(documents)
+          .innerJoin(documentTypes, eq(documentTypes.id, documents.documentTypeId)).leftJoin(jobs, eq(jobs.id, documents.jobId))
+          .where(and(eq(documents.companyId, c), or(ilike(documents.reference, like), ilike(documentTypes.name, like), ilike(jobs.jobNo, like)))).orderBy(desc(documents.createdAt)).limit(8)
+      : [],
+  ]);
+  return { jobs: jobRows, trips: tripRows, invoices: invoiceRows, statements: statementRows, partners: partnerRows, documents: documentRows, partnerLink: has("reports.financial.view") };
 }

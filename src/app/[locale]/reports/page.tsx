@@ -128,7 +128,7 @@ export default async function Reports({ params, searchParams }: { params: Promis
                     <tr className="group"><td colSpan={2}>{fin("totalExpenses")}</td></tr>
                     {p.expenses.map((l) => <tr key={l.code}><td><span className="font-mono text-slate-400">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
                     <tr className="subtotal"><td>{fin("totalExpenses")}</td><td className="num">{m(p.totalExpenses, p.currency)}</td></tr>
-                    <tr className="subtotal"><td><strong>{fin("netProfit")}</strong></td><td className={`num ${neg(p.netProfit)}`}><strong>{m(p.netProfit, p.currency)}</strong></td></tr>
+                    <tr className="subtotal net"><td><strong>{fin("netProfit")}</strong></td><td className={`num ${neg(p.netProfit)}`}><strong>{m(p.netProfit, p.currency)}</strong></td></tr>
                   </tbody>
                 </table></div>
               </Card>

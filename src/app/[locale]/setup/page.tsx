@@ -160,7 +160,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                       <td>{product ?? <span className="muted">{t("allProducts")}</span>}</td>
                       <td className="num ltr"><strong>{Number(r.amount).toLocaleString(intlLocale(locale))} {r.currency ?? r.unit}</strong>{r.currency && r.unit ? ` / ${r.unit}` : ""}{r.freeDays !== null && <div className="cell-sub">{t("freeDays")} {r.freeDays}</div>}</td>
                       <td>{t(`basis_${r.basis}`)}{r.startEvent ? <div className="cell-sub">{t(r.startEvent === "arrival" ? "fromArrival" : "fromLoading")}</div> : null}</td>
-                      <td>{r.effectiveFrom} → {r.effectiveTo ?? <Badge tone="success">{t("ongoing")}</Badge>}</td>
+                      <td className="wrap">{r.effectiveFrom} → {r.effectiveTo ?? <Badge tone="success">{t("ongoing")}</Badge>}</td>
                       <td className="actions-cell">{!r.effectiveTo && (
                         <Modal small size="sm" variant="ghost" label={t("endRule")}>
                           <ActionForm command="rates.end" locale={locale} idempotencyKey={k()} submitLabel={t("endRule")}>

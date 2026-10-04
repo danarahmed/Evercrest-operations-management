@@ -2,8 +2,9 @@
   "App": {
     "title": "Evercrest Operations",
     "status": "Foundation is ready. Business modules are being built.",
-    "tagline": "Operations ERP",
-    "footer": "Evercrest Operations ERP"
+    "tagline": "Operations",
+    "footer": "Evercrest Operations ERP",
+    "brand": "Evercrest"
   },
   "Nav": {
     "dashboard": "Dashboard",
@@ -17,7 +18,14 @@
     "toApprove": "{count, plural, one {# request waits} other {# requests wait}} for approval",
     "toVerify": "{count, plural, one {# document} other {# documents}} to verify",
     "newJob": "New job",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "newMenu": "New",
+    "newInvoice": "Invoice or bill",
+    "newStatement": "Pay statement",
+    "newDocument": "Record a document",
+    "newJournal": "Journal entry",
+    "search": "Search",
+    "searchPlaceholder": "Search jobs, trips, invoices, partners, documents…"
   },
   "Login": {
     "title": "Sign in",
@@ -43,7 +51,20 @@
     "kpiWeOwe": "We owe",
     "welcome": "Welcome back, {name}",
     "viewAll": "All jobs",
-    "attentionCount": "{count} items"
+    "attentionCount": "{count} items",
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}",
+    "summary": "{jobs, plural, one {# job is} other {# jobs are}} running, {trucks, plural, one {# truck is} other {# trucks are}} on the road, and {waiting, plural, =0 {nothing is waiting for you} one {# thing is waiting for you} other {# things are waiting for you}}.",
+    "attentionHint": "The most urgent first",
+    "activeJobsHint": "What each job is waiting for",
+    "open": "Open",
+    "goTo": "Go to",
+    "goDocuments": "Document library",
+    "goPay": "Pay drivers",
+    "goInvoices": "Invoices",
+    "goProfit": "Profit report",
+    "trucksOnRoad": "{count, plural, one {# truck} other {# trucks}} on the road"
   },
   "Severity": {
     "critical": "Critical",
@@ -994,5 +1015,47 @@
     "namePlaceholder": "e.g. Diesel to Field X, Supply 10 generators",
     "typesTitle": "Job types",
     "typesHelp": "The type switches on the usual parts and steps; you can change them on the job."
+  },
+  "Library": {
+    "title": "Documents",
+    "subtitle": "Every manifest, delivery note, invoice and certificate in one place — find it by job, trip, partner or type.",
+    "find": "Find",
+    "findHint": "Reference, trip, job or partner",
+    "type": "Type",
+    "allTypes": "All types",
+    "show": "Show",
+    "status": "Status",
+    "st_all": "All",
+    "st_to_verify": "To verify",
+    "st_missing": "Missing",
+    "st_verified": "Verified",
+    "st_rejected": "Rejected",
+    "doc_received": "To verify",
+    "doc_verified": "Verified",
+    "doc_rejected": "Rejected",
+    "none": "No documents here",
+    "noneHint": "Try another status or clear the search.",
+    "recordOnJob": "Record on the job",
+    "receivedOn": "received {date} by {name}",
+    "beforeCompletion": "needed before completion",
+    "beforeClose": "needed before financial close"
+  },
+  "Search": {
+    "title": "Search",
+    "hint": "Type at least two letters in the search box above.",
+    "resultsFor": "Results for “{q}”",
+    "found": "{count, plural, =0 {Nothing found} one {# match} other {# matches}}",
+    "nothing": "Nothing matches",
+    "nothingHint": "Search by job or trip number, a partner's name, an invoice number, a truck plate or a document reference.",
+    "jobs": "Jobs",
+    "trips": "Trips",
+    "invoices": "Invoices and bills",
+    "statements": "Pay statements",
+    "partners": "Partners",
+    "documents": "Documents",
+    "salesInvoice": "Customer invoice",
+    "bill": "Supplier bill",
+    "party_driver": "Drivers",
+    "party_transporter": "Transporter"
   }
 }

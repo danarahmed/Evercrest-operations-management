@@ -1093,7 +1093,7 @@
   },
   "Welcome": {
     "title": "Set up Evercrest",
-    "intro": "This page appears only once, before the system has a company. It creates the company, you as administrator with every permission, and the starting configuration, then e-mails you a link to choose your password.",
+    "intro": "This page appears only once, before the system has a company. It creates the company, you as administrator with every permission, and the starting configuration. You choose your password here and sign in straight away.",
     "code": "Setup code",
     "codeHint": "the SETUP_TOKEN set in Vercel",
     "companyName": "Company name",
@@ -1108,6 +1108,12 @@
     "err_failed": "Setup did not finish. Check the Supabase settings and try again.",
     "doneInvited": "Done. An invitation is on its way to {email}: open it and choose your password.",
     "doneNoInvite": "Done, but the invitation e-mail could not be sent. Use “Forgot your password?” with {email}.",
-    "toSignIn": "Go to sign in"
+    "toSignIn": "Go to sign in",
+    "password": "Your password",
+    "passwordHint": "at least 10 characters",
+    "confirm": "Repeat the password",
+    "err_weak": "The password needs at least 10 characters.",
+    "err_mismatch": "The two passwords are not the same.",
+    "doneReady": "Done. Sign in with {email} and the password you chose."
   }
 }

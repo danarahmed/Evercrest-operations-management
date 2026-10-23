@@ -10,7 +10,7 @@ import { authMode, siteUrl, supabaseAdmin } from "./supabase";
 export async function sendInvitation(email: string, locale: string) {
   if (authMode() !== "supabase") return;
   const redirectTo = `${siteUrl()}/api/auth/confirm?next=/${locale}/set-password`;
-  const admin = supabaseAdmin();
+  const admin = await supabaseAdmin();
   const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
   if (!error) return;
   if (/already|registered|exists/i.test(error.message)) {

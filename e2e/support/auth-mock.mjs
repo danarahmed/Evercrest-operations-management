@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 // Local stand-in for Supabase (Auth: password sign-in, current user, sign-out, invitations; Storage: buckets). Test use only.
 
 import http from "node:http";
@@ -34,6 +35,13 @@ http.createServer((req, res) => {
     if (url.pathname === "/storage/v1/bucket/documents" && req.method === "PUT") { buckets.set("documents", { ...buckets.get("documents"), ...JSON.parse(body) }); return send(200, { message: "Successfully updated" }); }
     // Invitations
     if (url.pathname === "/auth/v1/invite" && req.method === "POST") { const { email } = JSON.parse(body); invites.push({ email, redirectTo: url.searchParams.get("redirect_to") }); return send(200, { id: "33333333-3333-4333-8333-333333333333", email, aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} }); }
+    // Admin creates a sign-in with a chosen password (first-run setup)
+    if (url.pathname === "/auth/v1/admin/users" && req.method === "POST") {
+      const { email, password } = JSON.parse(body);
+      if (users[email]) return send(422, { code: "email_exists", msg: "A user with this email address has already been registered" });
+      users[email] = { id: crypto.randomUUID(), password };
+      return send(200, userObj(email));
+    }
     // What the test can check afterwards
     if (url.pathname === "/__state") return send(200, { buckets: [...buckets.values()], invites });
     send(404, { msg: "not mocked: " + req.method + " " + url.pathname });

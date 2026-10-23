@@ -1,6 +1,6 @@
 import "server-only";
 import { ValidationError } from "./errors";
-import { DOCUMENTS_BUCKET, supabaseAdmin } from "./supabase";
+import { DOCUMENTS_BUCKET, supabaseAdmin, supabaseSecretKey } from "./supabase";
 
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const ALLOWED: Record<string, string> = {
@@ -11,7 +11,7 @@ const ALLOWED: Record<string, string> = {
   "image/heic": "heic",
 };
 
-const storageConfigured = () => Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY));
+const storageConfigured = async () => Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && (await supabaseSecretKey().catch(() => "")));
 
 /**
  * Store a scanned document in the private Supabase Storage bucket. Files live
@@ -19,25 +19,25 @@ const storageConfigured = () => Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && 
  * ERP's permission-checked download link (a signed URL valid for two minutes).
  */
 export async function storeDocumentFile(companyId: string, file: File): Promise<{ fileKey: string; fileName: string }> {
-  if (!storageConfigured()) throw new ValidationError("File storage is not set up yet (Supabase Storage)");
+  if (!(await storageConfigured())) throw new ValidationError("File storage is not set up yet (Supabase Storage)");
   if (file.size > MAX_FILE_BYTES) throw new ValidationError("The file is larger than 15 MB");
   const ext = ALLOWED[file.type];
   if (!ext) throw new ValidationError("Only PDF or photo files (JPG, PNG, WEBP, HEIC) can be attached");
   const fileName = file.name.slice(0, 200) || `document.${ext}`;
   const fileKey = `${companyId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabaseAdmin().storage.from(DOCUMENTS_BUCKET).upload(fileKey, file, { contentType: file.type, upsert: false });
+  const { error } = await (await supabaseAdmin()).storage.from(DOCUMENTS_BUCKET).upload(fileKey, file, { contentType: file.type, upsert: false });
   if (error) throw new ValidationError(`The file could not be stored: ${error.message}`);
   return { fileKey, fileName };
 }
 
 /** Undo an upload whose record could not be saved (no orphan files). */
 export async function removeStoredFile(fileKey: string) {
-  if (!storageConfigured()) return;
-  await supabaseAdmin().storage.from(DOCUMENTS_BUCKET).remove([fileKey]);
+  if (!(await storageConfigured())) return;
+  await (await supabaseAdmin()).storage.from(DOCUMENTS_BUCKET).remove([fileKey]);
 }
 
 export async function signedFileUrl(fileKey: string, fileName: string | null) {
-  const { data, error } = await supabaseAdmin().storage.from(DOCUMENTS_BUCKET).createSignedUrl(fileKey, 120, fileName ? { download: false } : undefined);
+  const { data, error } = await (await supabaseAdmin()).storage.from(DOCUMENTS_BUCKET).createSignedUrl(fileKey, 120, fileName ? { download: false } : undefined);
   if (error || !data) throw new Error(`Could not open the file: ${error?.message}`);
   return data.signedUrl;
 }

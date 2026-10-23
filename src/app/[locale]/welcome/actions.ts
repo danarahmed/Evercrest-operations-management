@@ -7,9 +7,9 @@ import { provisionCompany } from "@/server/provision";
 import { siteUrl, supabaseSecretKey, supabaseUrl } from "@/server/supabase";
 
 export interface WelcomeState {
-  error?: "code" | "fields" | "already" | "failed";
+  error?: "code" | "fields" | "weak" | "mismatch" | "already" | "failed";
   detail?: string;
-  done?: { email: string; invited: boolean };
+  done?: { email: string; invited: boolean; passwordSet: boolean };
 }
 
 const digest = (s: string) => createHash("sha256").update(s).digest();
@@ -23,10 +23,13 @@ export async function runFirstSetup(_prev: WelcomeState, form: FormData): Promis
   const adminName = String(form.get("adminName") ?? "").trim();
   const adminEmail = String(form.get("adminEmail") ?? "").trim();
   const locale = String(form.get("adminLocale") ?? "en");
+  const adminPassword = String(form.get("password") ?? "");
+  if (adminPassword.length < 10) return { error: "weak" };
+  if (adminPassword !== String(form.get("confirm") ?? "")) return { error: "mismatch" };
   if (!companyName || !adminName || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail) || !["en", "ar", "ckb"].includes(locale)) return { error: "fields" };
   try {
-    const r = await provisionCompany(getDb(), { companyName, adminName, adminEmail, locale: locale as "en" | "ar" | "ckb" }, { url: supabaseUrl(), secretKey: supabaseSecretKey(), siteUrl: siteUrl() });
-    return { done: { email: r.adminEmail, invited: r.invited } };
+    const r = await provisionCompany(getDb(), { companyName, adminName, adminEmail, locale: locale as "en" | "ar" | "ckb", adminPassword }, { url: supabaseUrl(), secretKey: await supabaseSecretKey(), siteUrl: siteUrl() });
+    return { done: { email: r.adminEmail, invited: r.invited, passwordSet: r.passwordSet } };
   } catch (e) {
     if (e instanceof Conflict) return { error: "already" };
     console.error("first-run setup failed", e);

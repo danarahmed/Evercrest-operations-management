@@ -37,6 +37,16 @@ The browser never talks to the database. Supabase's public Data API is closed: e
 6. **Open the invitation e-mail**, choose your password, sign in.
 7. **Then** in Setup set the approval limits (Limits & rounding), the opening balances (Journal), bank accounts, partners, products and price rules; in Users & roles add the team (each gets an invitation) and give them roles.
 
+## How the live project was set up (Frankfurt, `jsttzzpcdmilnzyzzdgl`)
+
+- The server connects as its own login `erp_app` (owns the ERP tables; the Data API roles have no access). It was created with:
+  `create role erp_app login password '…'; grant create, connect, temporary on database postgres to erp_app; grant usage, create on schema public to erp_app;`
+- The Supabase secret key is not in Vercel: a one-time Edge Function (`erp-key-handoff`, now retired) stored it in
+  `erp_private.server_secrets` (row `supabase_secret_key`), readable only by `erp_app`, so it never passed through a person or a chat.
+  `supabaseSecretKey()` (`src/server/supabase.ts`) uses `SUPABASE_SECRET_KEY` when set, otherwise that row. To rotate the key, set `SUPABASE_SECRET_KEY` in Vercel or update the row.
+- The setup page asks the administrator for a password, so the first sign-in needs no e-mail.
+- Invitation links work with Supabase's default e-mail templates too (the session arrives in the address fragment and the sign-in page completes it).
+
 ## Every later release
 
 Production deployments apply new migrations automatically before the build. Migrations are additive; the database guards are part of them.

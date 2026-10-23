@@ -49,6 +49,19 @@ export async function setPassword(_prev: AuthFormState, form: FormData): Promise
   redirect(`/${locale}`);
 }
 
+/**
+ * Links made by Supabase's default e-mail templates return the session in the
+ * address fragment (#access_token=…), which only the browser sees. The login page
+ * hands those tokens here; Supabase verifies them and the session cookie is set.
+ */
+export async function adoptLinkSession(locale: string, accessToken: string, refreshToken: string): Promise<AuthFormState> {
+  const safeLocale = ["en", "ar", "ckb"].includes(locale) ? locale : "en";
+  const sb = await supabaseServer();
+  const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+  if (error) return { error: "failed" };
+  redirect(`/${safeLocale}/set-password`);
+}
+
 export async function signOut(locale: string) {
   if (authMode() === "dev") (await cookies()).delete(SESSION_COOKIE);
   else await (await supabaseServer()).auth.signOut();

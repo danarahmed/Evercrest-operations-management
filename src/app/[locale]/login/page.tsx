@@ -7,7 +7,7 @@ import { initials } from "@/components/ui";
 import { authMode } from "@/server/supabase";
 import { devSignIn } from "./actions";
 import { AuthCard } from "./AuthCard";
-import { ResetForm, SignInForm } from "./AuthForms";
+import { LinkSession, ResetForm, SignInForm } from "./AuthForms";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,14 @@ export default async function Login({ params, searchParams }: { params: Promise<
             </form>
           ))}
         </div>
+      </AuthCard>
+    );
+  }
+
+  if (sp.view === "link") {
+    return (
+      <AuthCard locale={locale} title={t("title")} path="/login">
+        <LinkSession locale={locale} />
       </AuthCard>
     );
   }

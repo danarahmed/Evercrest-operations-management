@@ -26,6 +26,14 @@ step("sign out"); await p.click("button[aria-label='Sign out']"); await at(p, /\
 step("pages closed after sign-out"); await p.goto(`${base}/en/jobs`); await at(p, /\/en\/login/);
 step("valid Supabase account never added in the ERP → no access"); await p.waitForSelector("input[name=email]"); await p.fill("input[name=email]", "stranger@gmail.com"); await p.fill("input[name=password]", "correct-horse-1"); await p.click("button[type=submit]");
 await at(p, /error=no_access/); await p.waitForSelector(".form-msg.error");
+step("link from a default e-mail template (session in the address fragment) → choose password");
+const auth = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321";
+const tok = await (await fetch(`${auth}/auth/v1/token?grant_type=password`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "admin@evercrest.local", password: "correct-horse-1" }) })).json();
+await p.goto(`${base}/api/auth/confirm?next=/ar/set-password#access_token=${tok.access_token}&refresh_token=${tok.refresh_token}&type=invite`);
+await at(p, /\/ar\/set-password/); await p.waitForSelector("input[name=confirm]");
+step("fragment link without a session → expired-link message"); await p.context().clearCookies();
+await p.goto(`${base}/api/auth/confirm?next=/en/set-password#error=access_denied`); await p.waitForSelector(".form-msg.error");
+assert.match(await p.textContent(".form-msg.error"), /expired/);
 step("forgot-password view (Kurdish)"); await p.goto(`${base}/ckb/login?view=forgot`);
 console.log("supabase-mode sign-in flow: OK");
 await b.close();

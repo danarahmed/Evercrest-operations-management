@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { type FormEvent, startTransition, useActionState } from "react";
-import { type AuthFormState, requestPasswordReset, setPassword, signIn } from "./actions";
+import { type FormEvent, startTransition, useActionState, useEffect, useState } from "react";
+import { adoptLinkSession, type AuthFormState, requestPasswordReset, setPassword, signIn } from "./actions";
 
 /**
  * Submit without React's automatic form reset, so a failed attempt keeps what
@@ -65,4 +65,20 @@ export function SetPasswordForm({ locale }: { locale: string }) {
       <button type="submit" className="primary !py-2.5" disabled={pending}>{t("savePassword")}</button>
     </form>
   );
+}
+
+/** Finishes an e-mail link whose session arrived in the address fragment; otherwise the link was not valid. */
+export function LinkSession({ locale }: { locale: string }) {
+  const t = useTranslations("Login");
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const access = hash.get("access_token");
+    const refresh = hash.get("refresh_token");
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (!access || !refresh) return setFailed(true);
+    adoptLinkSession(locale, access, refresh).then((r) => r?.error && setFailed(true), () => setFailed(true));
+  }, [locale]);
+  if (failed) return <div className="form-msg error" role="alert">{t("err_link")}</div>;
+  return <p className="muted !m-0" role="status">{t("signingIn")}</p>;
 }

@@ -27,7 +27,7 @@ The browser never talks to the database. Supabase's public Data API is closed: e
    `AUTH_MODE=supabase`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
    `DATABASE_URL` (transaction pooler, port 6543), `MIGRATION_DATABASE_URL` (session pooler, port 5432),
    `DATABASE_CA_CERT`, `DATABASE_POOL_MAX=5`, `SITE_URL`, and a long random `SETUP_TOKEN`.
-   Functions run in the same region as the database (`vercel.json`: `icn1` for a Seoul project; change it if the project moves).
+   Functions run in the same region as the database (`vercel.json`: `fra1`, next to the Frankfurt database; change both together).
 4. **Deploy.** A production deployment applies the database migrations before building (`scripts/vercel-build.mjs`); preview deployments never touch the live database.
 5. **First-run setup in the browser**: open `SITE_URL/en/welcome`, enter the `SETUP_TOKEN`, the company name, your name, e-mail and language.
    It creates the private `documents` bucket, the company, you as administrator (all permissions), the starter configuration

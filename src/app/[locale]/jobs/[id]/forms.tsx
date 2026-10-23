@@ -173,6 +173,7 @@ export async function DocumentAction({ locale, jobId, tripList, options }: { loc
           </label>
           <label>{t("reference")}<input name="reference" dir="ltr" /></label>
         </div>
+        <label>{t("scannedCopy")} <span className="hint">{t("scannedCopyHint")}</span><input type="file" name="__file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" /></label>
       </ActionForm>
     </Modal>
   );

@@ -5,13 +5,14 @@ import { invoices, moneyAccounts, partnerRoles } from "@/db/schema";
 import { createWorkOrder, setWorkOrderStatus } from "@/domain/field/work-orders";
 import { billDeliveries, cancelDelivery, recordDelivery } from "@/domain/supply/deliveries";
 import { decideApproval } from "@/domain/approvals/approvals";
-import { defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
+import { attachDocumentFile, defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
 import { createInvoice } from "@/domain/finance/invoices";
 import { recordPayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
-import { assignRole, createUser, defineRole, setUserActive } from "@/domain/org/commands";
+import { assignRole, createUser, defineRole, inviteUser, setUserActive } from "@/domain/org/commands";
+import { sendInvitation } from "./invites";
 import { createAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus } from "@/domain/accounting/ledger";
 import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
 import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
@@ -79,7 +80,14 @@ const settingFromFields =
   };
 
 /** Commands that screens may submit. Anything not listed here cannot be called from a form. */
-export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?: Prepare }> = {
+/** Runs after the command committed (e.g. sending an e-mail); a failure here never undoes the saved record. */
+type After = (input: Record<string, unknown>, result: unknown) => Promise<void>;
+
+/**
+ * file: the form may carry a scanned copy in "__file". It is stored first (Supabase
+ * Storage) and the command records it; if the command fails, the upload is removed.
+ */
+export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?: Prepare; after?: After; file?: boolean }> = {
   "jobs.create": { command: createJob },
   "jobs.change_status": { command: changeJobStatus },
   "partners.create": { command: createPartner },
@@ -88,7 +96,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "trips.record_discharge": { command: recordDischarge },
   "trips.cancel": { command: cancelTrip },
   "payments.record": { command: recordPayment, prepare: currencyFromMoneyAccount },
-  "documents.record": { command: recordDocument },
+  "documents.record": { command: recordDocument, file: true },
+  "documents.attach_file": { command: attachDocumentFile, file: true },
   "documents.review": { command: reviewDocument },
   "documents.define_type": { command: defineDocumentType },
   "approvals.decide": { command: decideApproval },
@@ -109,7 +118,9 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "deliveries.bill": { command: billDeliveries },
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
-  "org.create_user": { command: createUser },
+  // Adding a user also e-mails the sign-in invitation (Supabase Auth); it can be re-sent from Users & roles.
+  "org.create_user": { command: createUser, after: async (input) => sendInvitation(String(input.email).toLowerCase(), String(input.locale ?? "en")) },
+  "org.invite_user": { command: inviteUser, after: async (_input, result) => { const r = result as { email: string; locale: string }; await sendInvitation(r.email, r.locale); } },
   "org.set_user_active": { command: setUserActive, prepare: async (_db, _a, i) => ({ ...i, active: i.active === "true" }) },
   "org.define_role": { command: defineRole, prepare: async (_db, _a, i) => ({ ...i, permissions: i.permissions ?? [] }) },
   "org.assign_role": { command: assignRole, prepare: async (_db, _a, i) => ({ ...i, grant: i.grant !== "false" }) },

@@ -31,7 +31,29 @@
     "title": "Sign in",
     "devNotice": "Development sign-in. Real sign-in will replace this.",
     "as": "Continue as {name}",
-    "noUsers": "No users yet. Run the setup script first."
+    "noUsers": "No users yet. Run the setup script first.",
+    "email": "E-mail",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "forgot": "Forgot your password?",
+    "forgotTitle": "Reset your password",
+    "forgotHint": "Enter your e-mail and we will send you a link to choose a new password.",
+    "sendLink": "Send the link",
+    "sent": "If this e-mail belongs to a user, a link is on its way. Check your inbox.",
+    "back": "Back to sign in",
+    "err_invalid": "The e-mail or password is not correct.",
+    "err_missing": "Fill in both fields.",
+    "err_weak": "Use at least 10 characters.",
+    "err_mismatch": "The two passwords are not the same.",
+    "err_failed": "The password could not be saved. Open the link from the e-mail again.",
+    "err_no_access": "This account has no access to Evercrest. Ask an administrator to add you in Users & roles.",
+    "err_link": "This link has expired or was already used. Ask for a new one.",
+    "setTitle": "Choose your password",
+    "setHint": "For {email}. At least 10 characters.",
+    "newPassword": "New password",
+    "confirm": "Repeat the password",
+    "savePassword": "Save and continue"
   },
   "Dashboard": {
     "attention": "Needs attention",
@@ -268,7 +290,10 @@
     "budgetHelp": "Optional. If costs in this currency go above the budget, management is warned.",
     "onlyForCorrections": "(only when correcting)",
     "extraInfoAndBudget": "Extra info & budget",
-    "export": "Export"
+    "export": "Export",
+    "warning_followup_failed": "Saved, but the e-mail could not be sent. Use “Send invitation” to try again.",
+    "scannedCopy": "Scanned copy",
+    "scannedCopyHint": "optional · PDF or photo, up to 15 MB"
   },
   "Approvals": {
     "title": "Approvals",
@@ -959,7 +984,7 @@
     "activate": "Activate",
     "reason": "Reason",
     "addUser": "Add a user",
-    "addUserHelp": "Sign-in will use this email once Supabase sign-in is connected.",
+    "addUserHelp": "They receive an e-mail to choose a password. Give them a role after adding them.",
     "language": "Language",
     "assign": "Give or take a role",
     "user": "User",
@@ -988,7 +1013,11 @@
     "details": "Details",
     "subtitle": "Who can use the system and what each role may do.",
     "usersCount": "{count} active",
-    "noEvents": "Nothing recorded in this period."
+    "noEvents": "Nothing recorded in this period.",
+    "signIn": "Sign-in",
+    "signInReady": "Can sign in",
+    "invited": "Invitation sent",
+    "sendInvite": "Send invitation"
   },
   "Jobs": {
     "title": "Jobs",
@@ -1038,7 +1067,11 @@
     "recordOnJob": "Record on the job",
     "receivedOn": "received {date} by {name}",
     "beforeCompletion": "needed before completion",
-    "beforeClose": "needed before financial close"
+    "beforeClose": "needed before financial close",
+    "viewFile": "View file",
+    "attachFile": "Attach file",
+    "attach": "Attach",
+    "fileLabel": "PDF or photo, up to 15 MB"
   },
   "Search": {
     "title": "Search",

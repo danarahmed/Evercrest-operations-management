@@ -6,21 +6,35 @@ import { getDb } from "@/db/client";
 import "@/domain/register";
 import { loadActor } from "./actor";
 import type { Actor } from "./authz";
+import { linkAuthIdentity } from "./identity";
+import { authMode, supabaseServer } from "./supabase";
 
+/** Development sign-in only: a cookie holding the user id (AUTH_MODE=dev, never in production). */
 export const SESSION_COOKIE = "ev_session";
 
 /**
- * Resolve the signed-in user. Until real authentication (Supabase Auth) is
- * connected, only AUTH_MODE=dev is supported: a cookie holds the user id.
- * Dev mode must never be enabled in production. Cached per request (the shell and the page both ask).
+ * Resolve the signed-in user and their permissions.
+ * - AUTH_MODE=supabase (default): Supabase Auth session → the linked ERP user.
+ * - AUTH_MODE=dev: the development cookie (local work and automated UI tests).
+ * Anyone without a session, without an ERP user, or deactivated goes to the sign-in page.
+ * Cached per request (the shell and the page both ask).
  */
 export const currentActor = cache(async function currentActor(locale: string): Promise<Actor> {
-  if (process.env.AUTH_MODE !== "dev") throw new Error("Authentication is not configured (set up Supabase Auth)");
-  const userId = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!userId) redirect(`/${locale}/login`);
+  const db = getDb();
+  let userId: string | null = null;
+  if (authMode() === "dev") {
+    userId = (await cookies()).get(SESSION_COOKIE)?.value ?? null;
+    if (!userId) redirect(`/${locale}/login`);
+  } else {
+    const sb = await supabaseServer();
+    const { data } = await sb.auth.getUser();
+    if (!data.user) redirect(`/${locale}/login`);
+    userId = await linkAuthIdentity(db, data.user.id, data.user.email);
+    if (!userId) redirect(`/${locale}/login?error=no_access`);
+  }
   try {
-    return await loadActor(getDb(), userId);
+    return await loadActor(db, userId);
   } catch {
-    redirect(`/${locale}/login`);
+    redirect(`/${locale}/login?error=no_access`);
   }
 });

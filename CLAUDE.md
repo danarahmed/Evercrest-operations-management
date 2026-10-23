@@ -27,7 +27,8 @@ npm run db:generate -- --name <change>   # new migration from schema changes (sr
 npx drizzle-kit generate --custom --name <x>   # hand-written SQL migration (triggers, seed data)
 DATABASE_URL=... npm run db:migrate      # apply migrations to a real database
 DATABASE_URL=... npx tsx scripts/seed-dev.ts   # development data only (never production)
-DATABASE_URL=... AUTH_MODE=dev npm run dev     # run the app with the temporary development sign-in
+DATABASE_URL=... AUTH_MODE=dev npm run dev     # run the app with the development sign-in (no Supabase needed)
+npx tsx scripts/setup-production.ts           # one-time live setup on Supabase (see docs/supabase.md)
 BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e2e   # UI flow test (seeded dev data)
 ```
 
@@ -42,7 +43,10 @@ BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e
 - Payments are one engine (`src/domain/finance/payments.ts`): advance, settlement (statement only), customer receipt, bill payment, expense, other; plus transfers (same currency) and currency exchange (`exchange.ts`). Manual journal entries are always `sourceType = manual`; only those can be reversed from the Journal — operational entries are corrected from their own documents.
 - Screens read through `src/server/queries.ts` (permission-checked) and translate domain codes via `describe()` (`src/lib/format.ts`); message keys in `messages/*.json` use `_` instead of `.`.
 - Forms: every form posts to `submitCommand` (`src/app/[locale]/actions.ts`) via `ActionForm`; only commands listed in `src/server/ui-commands.ts` are callable; the idempotency key is generated at render time.
-- Authentication: only `AUTH_MODE=dev` exists (cookie with user id) until Supabase Auth is approved and connected. Never enable dev mode in production.
+- Authentication: `AUTH_MODE=supabase` (default) — Supabase Auth e-mail + password; users are added in Users & roles (which e-mails an invitation via `src/server/invites.ts`) and the first sign-in links the identity by e-mail (`src/server/identity.ts`, audited). `AUTH_MODE=dev` (pick-a-user cookie) is for local work and UI tests only and is refused on Vercel production. Setup and operations: `docs/supabase.md`.
+- Supabase Data API is closed: every table has RLS with no policies and the `anon`/`authenticated` roles have no privileges (migration 0020). A migration that creates a table must also `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` (`tests/lockdown.test.ts` enforces it).
+- Document files: private Supabase Storage bucket `documents`, keys `<companyId>/<uuid>.<ext>`; uploaded in `submitCommand` for UI commands with `file: true`, recorded by `documents.record` / `documents.attach_file`, opened only via `/api/documents/[id]/file` (permission check + 2-minute signed URL).
+- New company: `scripts/setup-production.ts` (company, admin, `src/server/starter.ts` starter configuration, bucket, invitation). The dev seed uses the same starter configuration.
 
 ---
 

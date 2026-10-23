@@ -502,6 +502,8 @@ export async function documentLibrary(db: Db, actor: Actor, f: { q?: string; sta
     issuedDate: r.doc.issuedDate,
     expiryDate: r.doc.expiryDate,
     reviewNote: r.doc.reviewNote,
+    hasFile: Boolean(r.doc.fileKey),
+    fileName: r.doc.fileName,
   }));
   const q = f.q?.trim().toLowerCase();
   const match = (...v: (string | null | undefined)[]) => !q || v.some((x) => x?.toLowerCase().includes(q));
@@ -523,6 +525,7 @@ export async function documentLibrary(db: Db, actor: Actor, f: { q?: string; sta
     missing: status === "all" || status === "missing" ? miss : [],
     types: await db.select({ id: documentTypes.id, name: documentTypes.name }).from(documentTypes).where(eq(documentTypes.companyId, c)).orderBy(documentTypes.name),
     canVerify: can(actor, "documents.verify"),
+    canRecord: can(actor, "documents.record"),
   };
 }
 

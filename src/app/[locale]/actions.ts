@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { submitForApproval } from "@/domain/approvals/approvals";
 import { runCommand } from "@/server/command";
 import { DomainError } from "@/server/errors";
+import { removeStoredFile, storeDocumentFile } from "@/server/files";
 import { currentActor } from "@/server/session";
 import { UI_COMMANDS } from "@/server/ui-commands";
 
@@ -15,6 +16,8 @@ export interface FormState {
   approvalRequired?: boolean;
   /** Fresh key for the next submission after a success. */
   nextKey?: string;
+  /** Saved, but a follow-up step (such as sending an e-mail) did not work. */
+  warning?: "followup_failed";
 }
 
 /** Turn form fields into plain input: "" → absent, "a[]" → array. */
@@ -53,18 +56,40 @@ export async function submitCommand(_prev: FormState, form: FormData): Promise<F
   let input = toInput(form);
   if (entry.prepare) input = await entry.prepare(db, actor, input);
   let result: unknown;
+  let uploaded: string | null = null;
   try {
+    if (entry.file) {
+      // A file reference only ever comes from an upload made here, never from typed form fields.
+      delete input.fileKey;
+      delete input.fileName;
+      const file = form.get("__file");
+      if (file instanceof File && file.size > 0) {
+        Object.assign(input, await storeDocumentFile(actor.companyId, file));
+        uploaded = input.fileKey as string;
+      }
+    }
     if (form.get("__mode") === "approval") {
       await runCommand(db, actor, submitForApproval, { command: name, input, summary: String(form.get("__summary") || name) }, { idempotencyKey: `${key}:approval` });
     } else {
       result = await runCommand(db, actor, entry.command, input, { idempotencyKey: key });
     }
   } catch (e) {
+    if (uploaded) await removeStoredFile(uploaded).catch(() => undefined);
     if (!(e instanceof DomainError)) throw e;
     const issues = (e.details?.issues as { path: (string | number)[]; message: string }[] | undefined)?.map((i) => ({ path: i.path.join("."), message: i.message }));
     // Domain rules list what is missing or wrong, e.g. which trips cannot be billed and why.
     const missing = (e.details?.missing as (string | { message: string })[] | undefined)?.map((x, i) => ({ path: `${i + 1}`, message: typeof x === "string" ? x : x.message }));
     return { error: { code: e.code, message: e.message, issues: issues ?? missing }, approvalRequired: e.code === "approval_required" };
+  }
+  if (entry.after) {
+    try {
+      await entry.after(input, result);
+    } catch (e) {
+      // The record is saved; only the follow-up (e.g. the invitation e-mail) failed and can be retried.
+      console.error(`after-hook of ${name} failed`, e);
+      revalidatePath(`/${locale}`, "layout");
+      return { ok: true, nextKey: crypto.randomUUID(), warning: "followup_failed" };
+    }
   }
   revalidatePath(`/${locale}`, "layout");
   // Optional: go to the created record, e.g. "/en/jobs/{id}". Only same-app paths.

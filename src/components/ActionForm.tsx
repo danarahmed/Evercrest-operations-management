@@ -38,7 +38,7 @@ export function ActionForm({ command, locale, idempotencyKey, submitLabel, summa
   };
   // After a successful save: clear the fields and tell a surrounding dialog to close.
   useEffect(() => {
-    if (!state.ok) return;
+    if (!state.ok || state.warning) return;
     formRef.current?.reset();
     formRef.current?.dispatchEvent(new CustomEvent("actionform:success", { bubbles: true }));
   }, [state]);
@@ -61,6 +61,7 @@ export function ActionForm({ command, locale, idempotencyKey, submitLabel, summa
         </div>
       )}
       {state.ok && !inline && <div className="form-msg ok" role="status">{t("saved")}</div>}
+      {state.warning && <div className="form-msg error" role="alert">{t(`warning_${state.warning}`)}</div>}
       <div className="form-actions">
         <button className={`${btn}${inline ? " sm" : ""}`.trim() || undefined} type="submit" disabled={pending}>{pending ? t("saving") : submitLabel}</button>
         {state.approvalRequired && (

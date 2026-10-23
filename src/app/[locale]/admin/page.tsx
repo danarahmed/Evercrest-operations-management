@@ -9,6 +9,7 @@ import { Modal } from "@/components/Modal";
 import { Badge, Card, PageHeader, initials } from "@/components/ui";
 import { can, PERMISSIONS } from "@/server/authz";
 import { adminData } from "@/server/queries";
+import { authMode } from "@/server/supabase";
 import { currentActor } from "@/server/session";
 import { Shell } from "../shell";
 
@@ -38,6 +39,7 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
   const held = new Set(d.held);
   const grouped = GROUPS.map(([g, list]) => [g, list.filter((x) => (PERMISSIONS as readonly string[]).includes(x))] as const);
 
+  const invites = authMode() === "supabase" && d.canUsers;
   const permLabel = (x: string) => (p.has(x.replaceAll(".", "_")) ? p(x.replaceAll(".", "_")) : x);
   const plus = <Icon name="plus" size={16} />;
 
@@ -73,12 +75,26 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
 
       <Card flush title={t("users")} subtitle={t("usersCount", { count: d.users.filter((u) => u.active).length })} icon="users">
         <div className="table-wrap"><table>
-          <thead><tr><th>{t("name")}</th><th>{t("roles")}</th><th>{t("status")}</th><th /></tr></thead>
+          <thead><tr><th>{t("name")}</th><th>{t("roles")}</th><th>{t("status")}</th>{invites && <th>{t("signIn")}</th>}<th /></tr></thead>
           <tbody>{d.users.map((u) => (
             <tr key={u.id} className={u.active ? "" : "muted"}>
               <td><div className="row" style={{ gap: 10, flexWrap: "nowrap" }}><span className="avatar">{initials(u.displayName)}</span><div><div className="cell-title">{u.displayName}</div><div className="cell-sub ltr">{u.email}</div></div></div></td>
               <td className="wrap"><div className="chips">{u.roles.length === 0 ? <span className="muted">—</span> : u.roles.map((r) => <Badge key={r.id} tone="accent" plain>{r.name}</Badge>)}</div></td>
               <td><Badge tone={u.active ? "success" : undefined}>{u.active ? t("active") : t("inactive")}</Badge></td>
+              {invites && (
+                <td>
+                  {u.authUserId ? <Badge tone="success" plain>{t("signInReady")}</Badge> : (
+                    <div className="flex items-center gap-2">
+                      <Badge tone="warning" plain>{t("invited")}</Badge>
+                      {u.active && (
+                        <ActionForm command="org.invite_user" locale={locale} idempotencyKey={k()} submitLabel={t("sendInvite")} inline variant="secondary">
+                          <input type="hidden" name="userId" value={u.id} />
+                        </ActionForm>
+                      )}
+                    </div>
+                  )}
+                </td>
+              )}
               <td className="actions-cell">{d.canUsers && u.id !== actor.userId && (
                 <Modal small size="sm" variant={u.active ? "ghost" : "secondary"} label={u.active ? t("deactivate") : t("activate")} title={`${u.active ? t("deactivate") : t("activate")} · ${u.displayName}`}>
                   <ActionForm command="org.set_user_active" locale={locale} idempotencyKey={k()} submitLabel={u.active ? t("deactivate") : t("activate")} variant={u.active ? "danger" : "primary"}>

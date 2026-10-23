@@ -95,6 +95,16 @@ export default async function Documents({ params, searchParams }: { params: Prom
                   </span>
                   {d.status === "rejected" && d.reviewNote && <span className="text-[13px] text-rose-600">{d.reviewNote}</span>}
                 </span>
+                {d.hasFile ? (
+                  <a href={`/api/documents/${d.id}/file`} target="_blank" rel="noopener" className="btn sm" title={d.fileName ?? undefined}><Icon name="file" size={15} />{t("viewFile")}</a>
+                ) : lib.canRecord && d.status !== "rejected" ? (
+                  <Modal label={t("attachFile")} small size="sm" variant="ghost" icon={<Icon name="download" size={15} className="rotate-180" />} title={`${t("attachFile")} · ${d.type}${d.reference ? ` ${d.reference}` : ""}`}>
+                    <ActionForm command="documents.attach_file" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("attach")}>
+                      <input type="hidden" name="documentId" value={d.id} />
+                      <label>{t("fileLabel")}<input type="file" name="__file" required accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" /></label>
+                    </ActionForm>
+                  </Modal>
+                ) : null}
                 <Badge tone={d.status === "verified" ? "success" : d.status === "rejected" ? "danger" : "warning"}>{t(`doc_${d.status}`)}</Badge>
                 {d.status === "received" && lib.canVerify && (
                   <div className="flex items-center gap-2">

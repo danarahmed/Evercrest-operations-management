@@ -3,7 +3,7 @@ import { z } from "zod";
 import { branches, rolePermissions, roles, userRoles, users } from "@/db/schema";
 import { PERMISSIONS, type Permission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
-import { NotFound, PermissionDenied } from "@/server/errors";
+import { NotFound, PermissionDenied, ValidationError } from "@/server/errors";
 
 const permissionList = z.array(z.enum(PERMISSIONS)).min(1);
 
@@ -30,6 +30,23 @@ export const createUser = defineCommand({
     const [row] = await tx.insert(users).values({ ...input, companyId: actor.companyId }).returning();
     await audit({ action: "org.create_user", entityType: "user", entityId: row.id, after: input });
     return { id: row.id };
+  },
+});
+
+/**
+ * Record that a sign-in invitation is (re)sent to a user. The e-mail itself is
+ * sent by Supabase Auth after this command succeeds (see ui-commands).
+ */
+export const inviteUser = defineCommand({
+  name: "org.invite_user",
+  permission: "users.manage",
+  input: z.object({ userId: z.string().uuid() }),
+  async handler({ tx, actor, audit }, { userId }) {
+    const [u] = await tx.select().from(users).where(and(eq(users.id, userId), eq(users.companyId, actor.companyId)));
+    if (!u) throw new NotFound("user", userId);
+    if (!u.active) throw new ValidationError("This user is deactivated");
+    await audit({ action: "org.invite_user", entityType: "user", entityId: userId, after: { email: u.email } });
+    return { id: userId, email: u.email, locale: u.locale };
   },
 });
 

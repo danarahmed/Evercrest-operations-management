@@ -15,12 +15,12 @@ const email = `ops${Date.now()}@evercrest.local`;
 await page.goto(`${base}/en/admin`);
 await page.click("button:has-text('Create or change a role')");
 const role = page.locator("dialog[open] form:has(input[name='permissions[]'])");
-await role.locator("input[name=code]").fill("ops");
-await role.locator("input[name=name]").fill("Operations");
+await role.locator("input[name=code]").fill("dispatch");
+await role.locator("input[name=name]").fill("Dispatch");
 await role.locator("input[name=reason]").fill("new team");
 for (const p of ["jobs.view", "jobs.create", "jobs.manage", "trips.manage"]) await role.locator(`input[value='${p}']`).check();
 await role.locator(".form-actions button >> nth=0").click();
-await page.waitForSelector(".tile-title:has-text('Operations')");
+await page.waitForSelector(".tile-title:has-text('Dispatch')");
 await page.waitForSelector("dialog[open]", { state: "detached", timeout: 3000 }).catch(() => {});
 
 await page.click("button:has-text('Add a user')");
@@ -34,10 +34,10 @@ await page.waitForTimeout(500);
 await page.click("button:has-text('Give or take a role')");
 const a = page.locator("dialog[open] form:has(select[name=roleId])");
 await a.locator("select[name=userId]").selectOption({ label: "Hawre Operations" });
-await a.locator("select[name=roleId]").selectOption({ label: "Operations" });
+await a.locator("select[name=roleId]").selectOption({ label: "Dispatch" });
 await a.locator("input[name=reason]").fill("joined");
 await a.locator(".form-actions button >> nth=0").click();
-await page.waitForSelector("tr:has-text('Hawre Operations') .badge:text-is('Operations')");
+await page.waitForSelector("tr:has-text('Hawre Operations') .badge:text-is('Dispatch')");
 
 await page.goto(`${base}/en/admin/audit?action=org`);
 assert.match(await page.locator("table").innerText(), /org\.grant_role/);

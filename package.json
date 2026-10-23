@@ -15,6 +15,8 @@
     "e2e": "node e2e/settlement-flow.mjs && node e2e/transport-flow.mjs && node e2e/setup-flow.mjs && node e2e/finance-flow.mjs && node e2e/books-flow.mjs && node e2e/admin-flow.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "^0.45.3",
     "next": "^16.3.8",

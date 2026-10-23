@@ -87,6 +87,7 @@ export const recordDocument = defineCommand({
         .where(and(eq(documents.companyId, actor.companyId), eq(documents.documentTypeId, type.id), eq(documents.reference, input.reference), ne(documents.status, "rejected")));
       if (dup) throw new Conflict(`${type.name} ${input.reference} is already recorded`, { documentId: dup.id });
     }
+    if (input.fileKey && !input.fileKey.startsWith(`${actor.companyId}/`)) throw new ValidationError("Invalid file");
     const [row] = await tx.insert(documents).values({ ...input, jobId, companyId: actor.companyId, receivedBy: actor.userId }).returning();
     await audit({ action: "documents.record", entityType: "document", entityId: row.id, after: { ...input, jobId } });
     return { id: row.id };
@@ -189,5 +190,24 @@ registerCapabilityModule({
   async inUse(tx: Db, job: Job) {
     const [d] = await tx.select({ id: documents.id }).from(documents).where(and(eq(documents.jobId, job.id), inArray(documents.status, ["received", "verified"]))).limit(1);
     return !!d;
+  },
+});
+
+/**
+ * Attach (or replace) the scanned copy of a recorded document. The file itself
+ * is already in storage; this records which file belongs to the document.
+ * A replaced file is kept in storage, so the audit trail can still show it.
+ */
+export const attachDocumentFile = defineCommand({
+  name: "documents.attach_file",
+  permission: "documents.record",
+  input: z.object({ documentId: uuid, fileKey: z.string().min(1), fileName: z.string().min(1) }),
+  async handler({ tx, actor, audit }, input) {
+    if (!input.fileKey.startsWith(`${actor.companyId}/`)) throw new ValidationError("Invalid file");
+    const [doc] = await tx.select().from(documents).where(and(eq(documents.id, input.documentId), eq(documents.companyId, actor.companyId)));
+    if (!doc) throw new NotFound("document", input.documentId);
+    await tx.update(documents).set({ fileKey: input.fileKey, fileName: input.fileName }).where(eq(documents.id, doc.id));
+    await audit({ action: "documents.attach_file", entityType: "document", entityId: doc.id, before: { fileKey: doc.fileKey, fileName: doc.fileName }, after: { fileKey: input.fileKey, fileName: input.fileName } });
+    return { id: doc.id };
   },
 });

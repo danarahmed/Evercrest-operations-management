@@ -6,7 +6,7 @@ import { type JobStatus } from "@/db/schema/jobs";
 import { requirePermission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
-import { nextNumber } from "../sequences";
+import { nextCode, nextNumber } from "../sequences";
 import { type Blocker, CAPABILITIES, type Capability, capabilityInUse, type Job, modulesFor } from "./capabilities";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -47,12 +47,14 @@ export const createContract = defineCommand({
 export const createProject = defineCommand({
   name: "projects.create",
   permission: "projects.manage",
-  input: z.object({ customerId: uuid, contractId: uuid.nullish(), code: z.string().trim().min(1), name: z.string().trim().min(1) }),
+  input: z.object({ customerId: uuid, contractId: uuid.nullish(), code: z.string().trim().min(1).optional(), name: z.string().trim().min(1) }),
   async handler({ tx, actor, audit }, input) {
     await assertPartnerRole(tx, actor.companyId, input.customerId, "customer");
     if (input.contractId) await assertContractFor(tx, actor.companyId, input.contractId, input.customerId);
-    const [row] = await tx.insert(projects).values({ ...input, companyId: actor.companyId }).returning();
-    await audit({ action: "projects.create", entityType: "project", entityId: row.id, after: input });
+    const taken = async (c: string) => (await tx.select({ id: projects.id }).from(projects).where(and(eq(projects.companyId, actor.companyId), eq(projects.code, c)))).length > 0;
+    const code = input.code ?? (await nextCode(tx, actor.companyId, "PRJ", 4, taken));
+    const [row] = await tx.insert(projects).values({ ...input, code, companyId: actor.companyId }).returning();
+    await audit({ action: "projects.create", entityType: "project", entityId: row.id, after: { ...input, code } });
     return { id: row.id };
   },
 });
@@ -78,18 +80,20 @@ async function assertContractFor(tx: Db, companyId: string, contractId: string, 
   return c;
 }
 
-/** Create or update a job type (template). Changing defaults never alters existing jobs. */
+/** Create (no code: the next JT-001) or update (by code) a job type (template). Changing defaults never alters existing jobs. */
 export const defineJobType = defineCommand({
   name: "job_types.define",
   permission: "job_types.manage",
   input: z.object({
-    code: z.string().trim().min(1),
+    code: z.string().trim().min(1).optional(),
     name: z.string().trim().min(1),
     defaultCapabilities: capabilityList,
     /** Checklist steps copied onto new jobs of this type. */
     defaultActivities: z.array(z.string().trim()).transform((xs) => xs.filter(Boolean)).optional(),
   }),
-  async handler({ tx, actor, audit }, input) {
+  async handler({ tx, actor, audit }, given) {
+    const taken = async (c: string) => (await tx.select({ id: jobTypes.id }).from(jobTypes).where(and(eq(jobTypes.companyId, actor.companyId), eq(jobTypes.code, c)))).length > 0;
+    const input = { ...given, code: given.code ?? (await nextCode(tx, actor.companyId, "JT", 3, taken)) };
     const [prev] = await tx.select().from(jobTypes).where(and(eq(jobTypes.companyId, actor.companyId), eq(jobTypes.code, input.code)));
     const defaultActivities = input.defaultActivities ?? prev?.defaultActivities ?? [];
     const [row] = await tx

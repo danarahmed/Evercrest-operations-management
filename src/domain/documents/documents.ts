@@ -6,6 +6,7 @@ import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { type Blocker, type Job, registerCapabilityModule } from "../jobs/capabilities";
 import { getJob } from "../jobs/commands";
+import { nextCode } from "../sequences";
 import { getTrip } from "../transport/trips";
 
 const uuid = z.string().uuid();
@@ -14,8 +15,11 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const defineDocumentType = defineCommand({
   name: "documents.define_type",
   permission: "documents.configure",
-  input: z.object({ code: z.string().trim().min(1), name: z.string().trim().min(1) }),
-  async handler({ tx, actor, audit }, input) {
+  /** No code: a new type with the next DT-001; with a code: create or rename that type. */
+  input: z.object({ code: z.string().trim().min(1).optional(), name: z.string().trim().min(1) }),
+  async handler({ tx, actor, audit }, given) {
+    const taken = async (c: string) => (await tx.select({ id: documentTypes.id }).from(documentTypes).where(and(eq(documentTypes.companyId, actor.companyId), eq(documentTypes.code, c)))).length > 0;
+    const input = { ...given, code: given.code ?? (await nextCode(tx, actor.companyId, "DT", 3, taken)) };
     const [row] = await tx
       .insert(documentTypes)
       .values({ ...input, companyId: actor.companyId })

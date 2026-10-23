@@ -519,7 +519,9 @@
     "tab_settings": "Limits & rounding",
     "transitDaysHelp": "Expected days between loading and discharge; trips taking longer are shown as delayed.",
     "validity": "Valid",
-    "allPartners": "All partners"
+    "allPartners": "All partners",
+    "codeAuto": "optional",
+    "codeAutoPlaceholder": "Next number"
   },
   "Finance": {
     "title": "Invoices & payments",

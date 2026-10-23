@@ -519,7 +519,9 @@
     "tab_settings": "الحدود والتقريب",
     "transitDaysHelp": "الأيام المتوقعة بين التحميل والتفريغ؛ الرحلات الأطول تظهر متأخرة.",
     "validity": "الصلاحية",
-    "allPartners": "كل الشركاء"
+    "allPartners": "كل الشركاء",
+    "codeAuto": "اختياري",
+    "codeAutoPlaceholder": "الرقم التالي"
   },
   "Finance": {
     "title": "الفواتير والمدفوعات",

@@ -114,7 +114,6 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
           <p className="muted">{t("defineRoleHelp")}</p>
           <ActionForm command="org.define_role" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
             <div className="grid2">
-              <label>{t("code")}<input name="code" required dir="ltr" /></label>
               <label>{t("name")}<input name="name" required /></label>
             </div>
             {grouped.map(([g, list]) => (

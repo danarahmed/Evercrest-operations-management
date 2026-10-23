@@ -4,6 +4,7 @@ import { branches, rolePermissions, roles, userRoles, users } from "@/db/schema"
 import { PERMISSIONS, type Permission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
 import { NotFound, PermissionDenied, ValidationError } from "@/server/errors";
+import { nextCode } from "../sequences";
 
 const permissionList = z.array(z.enum(PERMISSIONS)).min(1);
 
@@ -73,13 +74,15 @@ function assertCanGrant(held: ReadonlySet<string>, wanted: readonly Permission[]
   if (missing.length) throw new PermissionDenied(missing.join(","));
 }
 
-/** Create a role or replace its permission set. */
+/** Create a role (no code: the next ROLE-01) or replace a role's permission set (by code). */
 export const defineRole = defineCommand({
   name: "org.define_role",
   permission: "roles.manage",
-  input: z.object({ code: z.string().min(1), name: z.string().min(1), permissions: permissionList, reason: z.string().min(1) }),
-  async handler({ tx, actor, audit }, { code, name, permissions, reason }) {
+  input: z.object({ code: z.string().min(1).optional(), name: z.string().min(1), permissions: permissionList, reason: z.string().min(1) }),
+  async handler({ tx, actor, audit }, { code: givenCode, name, permissions, reason }) {
     assertCanGrant(actor.permissions, permissions);
+    const taken = async (c: string) => (await tx.select({ id: roles.id }).from(roles).where(and(eq(roles.companyId, actor.companyId), eq(roles.code, c)))).length > 0;
+    const code = givenCode ?? (await nextCode(tx, actor.companyId, "ROLE", 2, taken));
     const [existing] = await tx.select().from(roles).where(and(eq(roles.companyId, actor.companyId), eq(roles.code, code)));
     let roleId: string;
     let before: string[] | null = null;

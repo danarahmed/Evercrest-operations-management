@@ -15,7 +15,6 @@ const email = `ops${Date.now()}@evercrest.local`;
 await page.goto(`${base}/en/admin`);
 await page.click("button:has-text('Create or change a role')");
 const role = page.locator("dialog[open] form:has(input[name='permissions[]'])");
-await role.locator("input[name=code]").fill("dispatch");
 await role.locator("input[name=name]").fill("Dispatch");
 await role.locator("input[name=reason]").fill("new team");
 for (const p of ["jobs.view", "jobs.create", "jobs.manage", "trips.manage"]) await role.locator(`input[value='${p}']`).check();

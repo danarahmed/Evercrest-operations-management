@@ -186,18 +186,41 @@ export const reverseJournalEntry = defineCommand({
   },
 });
 
+const ACCOUNT_RANGES: Record<(typeof ACCOUNT_TYPES)[number], [number, number]> = {
+  asset: [1000, 1999], liability: [2000, 2999], equity: [3000, 3999], income: [4000, 4999], expense: [5000, 9999],
+};
+
+/** Next account number for a type: ten above the highest in its range, or the first free number if the range is full there. */
+async function nextAccountCode(tx: Db, companyId: string, type: (typeof ACCOUNT_TYPES)[number]): Promise<string> {
+  const [lo, hi] = ACCOUNT_RANGES[type];
+  // Serialize concurrent account creation for this company so two people never get the same number.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"accounts:" + companyId}))`);
+  const used = new Set(
+    (await tx.select({ code: accounts.code }).from(accounts).where(eq(accounts.companyId, companyId)))
+      .map((a) => Number(a.code))
+      .filter((n) => Number.isInteger(n) && n >= lo && n <= hi),
+  );
+  if (used.size === 0) return String(lo);
+  const next = Math.floor(Math.max(...used) / 10) * 10 + 10;
+  if (next <= hi) return String(next);
+  for (let n = lo; n <= hi; n++) if (!used.has(n)) return String(n);
+  throw new ValidationError(`No free account number left for ${type} (${lo}–${hi}); enter a code`);
+}
+
 export const createAccount = defineCommand({
   name: "ledger.create_account",
   permission: "accounts.manage",
   input: z.object({
-    code: z.string().min(1),
+    /** Left out: the next free number in the type's range (assets 1xxx, liabilities 2xxx, equity 3xxx, income 4xxx, expenses 5xxx+). */
+    code: z.string().trim().min(1).optional(),
     name: z.string().min(1),
     type: z.enum(ACCOUNT_TYPES),
     currency: currencyCode.nullish(),
     parentId: z.string().uuid().nullish(),
     postable: z.boolean().default(true),
   }),
-  async handler({ tx, actor, audit }, input) {
+  async handler({ tx, actor, audit }, given) {
+    const input = { ...given, code: given.code ?? (await nextAccountCode(tx, actor.companyId, given.type)) };
     const [row] = await tx.insert(accounts).values({ ...input, companyId: actor.companyId }).returning();
     await audit({ action: "ledger.create_account", entityType: "account", entityId: row.id, after: row });
     return { id: row.id };

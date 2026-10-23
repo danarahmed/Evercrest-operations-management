@@ -114,7 +114,6 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                 <ActionForm command="catalog.create_item" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
                   <input type="hidden" name="kind" value="product" />
                   <div className="grid2">
-                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
                     <label>{f("name")}<input name="name" required /></label>
                     <label>{f("unit")}<select name="defaultUnit" defaultValue="MT">{["MT", "KG", "L", "M3", "EA"].map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
                   </div>
@@ -186,7 +185,6 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               <Modal label={t("addJobType")} variant="primary" icon={plus}>
                 <ActionForm command="job_types.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
                   <div className="grid2">
-                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
                     <label>{f("name")}<input name="name" required /></label>
                   </div>
                   <fieldset className="checks"><legend>{t("defaultCapabilities")}</legend>
@@ -211,7 +209,6 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               <Modal label={t("addDocumentType")} icon={plus}>
                 <ActionForm command="documents.define_type" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
                   <div className="grid2">
-                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
                     <label>{f("name")}<input name="name" required /></label>
                   </div>
                 </ActionForm>
@@ -318,7 +315,6 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                 <ActionForm command="projects.create" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
                   <div className="grid2">
                     <label>{f("customer")}<select name="customerId" required>{d.customers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
                     <label>{f("name")}<input name="name" required /></label>
                     <label>{t("contract")}<select name="contractId" defaultValue=""><option value="">—</option>{(d.contracts ?? []).filter(({ c }) => c.status !== "ended").map(({ c, partner }) => <option key={c.id} value={c.id}>{c.reference} · {partner}</option>)}</select></label>
                   </div>
@@ -392,7 +388,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               <Modal label={t("addAccount")} icon={plus}>
                 <ActionForm command="ledger.create_account" locale={locale} idempotencyKey={k()} submitLabel={f("create")}>
                   <div className="grid2">
-                    <label>{t("code")}<input name="code" required dir="ltr" /></label>
+                    <label>{t("code")} <span className="hint">{t("codeAuto")}</span><input name="code" dir="ltr" placeholder={t("codeAutoPlaceholder")} /></label>
                     <label>{f("name")}<input name="name" required /></label>
                     <label>{t("type")}<select name="type" required>{["asset", "liability", "equity", "income", "expense"].map((x) => <option key={x} value={x}>{t(`type_${x}`)}</option>)}</select></label>
                     <label>{t("onlyCurrency")}<select name="currency" defaultValue=""><option value="">{t("anyCurrency")}</option><option value="IQD">IQD</option><option value="USD">USD</option></select></label>

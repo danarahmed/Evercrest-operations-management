@@ -1090,5 +1090,24 @@
     "bill": "Supplier bill",
     "party_driver": "Drivers",
     "party_transporter": "Transporter"
+  },
+  "Welcome": {
+    "title": "Set up Evercrest",
+    "intro": "This page appears only once, before the system has a company. It creates the company, you as administrator with every permission, and the starting configuration, then e-mails you a link to choose your password.",
+    "code": "Setup code",
+    "codeHint": "the SETUP_TOKEN set in Vercel",
+    "companyName": "Company name",
+    "adminName": "Your name",
+    "adminEmail": "Your e-mail",
+    "adminLocale": "Your language",
+    "create": "Create the system",
+    "working": "Setting up…",
+    "err_code": "The setup code is not correct.",
+    "err_fields": "Fill in every field with a valid e-mail.",
+    "err_already": "The system is already set up. Sign in instead.",
+    "err_failed": "Setup did not finish. Check the Supabase settings and try again.",
+    "doneInvited": "Done. An invitation is on its way to {email}: open it and choose your password.",
+    "doneNoInvite": "Done, but the invitation e-mail could not be sent. Use “Forgot your password?” with {email}.",
+    "toSignIn": "Go to sign in"
   }
 }

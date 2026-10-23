@@ -46,7 +46,8 @@ BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e
 - Authentication: `AUTH_MODE=supabase` (default) — Supabase Auth e-mail + password; users are added in Users & roles (which e-mails an invitation via `src/server/invites.ts`) and the first sign-in links the identity by e-mail (`src/server/identity.ts`, audited). `AUTH_MODE=dev` (pick-a-user cookie) is for local work and UI tests only and is refused on Vercel production. Setup and operations: `docs/supabase.md`.
 - Supabase Data API is closed: every table has RLS with no policies and the `anon`/`authenticated` roles have no privileges (migration 0020). A migration that creates a table must also `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` (`tests/lockdown.test.ts` enforces it).
 - Document files: private Supabase Storage bucket `documents`, keys `<companyId>/<uuid>.<ext>`; uploaded in `submitCommand` for UI commands with `file: true`, recorded by `documents.record` / `documents.attach_file`, opened only via `/api/documents/[id]/file` (permission check + 2-minute signed URL).
-- New company: `scripts/setup-production.ts` (company, admin, `src/server/starter.ts` starter configuration, bucket, invitation). The dev seed uses the same starter configuration.
+- New company: first-run page `/[locale]/welcome` (only while no company exists and `SETUP_TOKEN` is set) or `scripts/setup-production.ts`; both call `src/server/provision.ts` (bucket, company + admin under a lock, `src/server/starter.ts` starter configuration, invitation). The dev seed uses the same starter configuration.
+- Vercel: `vercel-build` (`scripts/vercel-build.mjs`) applies migrations on production deployments only, using `MIGRATION_DATABASE_URL`; `vercel.json` pins the function region next to the database.
 
 ---
 

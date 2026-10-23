@@ -31,7 +31,7 @@ export const supabaseUrl = () => env("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL")
 /** The public (publishable / anon) key: identifies the project, grants nothing on its own. */
 export const supabasePublicKey = () => env("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 /** The secret (service role) key: server only, never sent to the browser. */
-const supabaseSecretKey = () => env("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY");
+export const supabaseSecretKey = () => env("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY");
 
 /** Where invitation and password e-mails send people back to. */
 export function siteUrl() {

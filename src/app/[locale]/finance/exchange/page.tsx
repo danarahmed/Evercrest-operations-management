@@ -39,7 +39,7 @@ export default async function ExchangePage({ params }: { params: Promise<{ local
               <label>{t("to")}<select name="toMoneyAccountId" required defaultValue={active.find((x) => x.currency !== active[0].currency)?.id}>{active.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
               <label>{t("amountReceived")}<input name="toAmount" required inputMode="decimal" dir="ltr" /></label>
               <label>{f("date")}<input type="date" name="exchangeDate" required defaultValue={today} /></label>
-              <label>{f("reference")}<input name="reference" dir="ltr" /></label>
+              <label>{f("reference")} <span className="hint">{f("optional")}</span><input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
         </Modal>

@@ -122,7 +122,7 @@ export async function CostActions({ locale, jobId, jobNo, options }: { locale: s
               <label>{t("expenseType")}<select name="counterAccountId" required>{options.expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
               <label>{t("description")}<input name="notes" required /></label>
               <label>{t("paidTo")}<select name="partnerId" defaultValue=""><option value="">—</option>{options.suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-              <label>{t("receiptNo")}<input name="reference" dir="ltr" /></label>
+              <label>{t("receiptNo")} <span className="hint">{t("optional")}</span><input name="reference" dir="ltr" /></label>
               <label>{t("paidFrom")}<select name="moneyAccountId" required>{options.moneyAccounts.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.currency})</option>)}</select></label>
               <label>{t("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
               <label>{t("date")}<input type="date" name="paymentDate" required defaultValue={today()} /></label>
@@ -139,7 +139,7 @@ export async function CostActions({ locale, jobId, jobNo, options }: { locale: s
             <input type="hidden" name="l_jobId[]" value={jobId} />
             <div className="grid2">
               <label>{t("supplier")}<select name="partnerId" required>{options.suppliers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-              <label>{t("supplierBillNo")}<input name="externalRef" dir="ltr" /></label>
+              <label>{t("supplierBillNo")} <span className="hint">{t("optional")}</span><input name="externalRef" dir="ltr" /></label>
               <label>{t("expenseType")}<select name="l_accountId[]" required>{options.expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
               <label>{t("description")}<input name="l_description[]" required /></label>
               <label>{t("quantity")}<input name="l_quantity[]" required inputMode="decimal" dir="ltr" defaultValue="1" /></label>
@@ -171,7 +171,7 @@ export async function DocumentAction({ locale, jobId, tripList, options }: { loc
               {live.map((x) => <option key={x.id} value={`trip:${x.id}`}>{x.tripNo}</option>)}
             </select>
           </label>
-          <label>{t("reference")}<input name="reference" dir="ltr" /></label>
+          <label>{t("reference")} <span className="hint">{t("optional")}</span><input name="reference" dir="ltr" /></label>
         </div>
         <label>{t("scannedCopy")} <span className="hint">{t("scannedCopyHint")}</span><input type="file" name="__file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" /></label>
       </ActionForm>

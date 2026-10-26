@@ -293,7 +293,8 @@
     "export": "تصدير",
     "warning_followup_failed": "تم الحفظ، لكن تعذر إرسال البريد. استخدم «إرسال الدعوة» للمحاولة مجدداً.",
     "scannedCopy": "النسخة الممسوحة",
-    "scannedCopyHint": "اختياري · PDF أو صورة، حتى 15 ميغابايت"
+    "scannedCopyHint": "اختياري · PDF أو صورة، حتى 15 ميغابايت",
+    "optional": "اختياري"
   },
   "Approvals": {
     "title": "الموافقات",

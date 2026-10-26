@@ -83,7 +83,7 @@ export default async function Finance({ params }: { params: Promise<{ locale: st
             <label>{t("currency")}<select name="currency" required><option value="IQD">IQD</option><option value="USD">USD</option></select></label>
             <label>{f("date")}<input type="date" name="invoiceDate" required defaultValue={today} /></label>
             <label>{t("dueDate")}<input type="date" name="dueDate" /></label>
-            <label>{t("externalRef")}<input name="externalRef" dir="ltr" /></label>
+            <label>{t("externalRef")} <span className="hint">{f("optional")}</span><input name="externalRef" dir="ltr" /></label>
           </div>
           <div className="table-wrap" style={{ marginBlockEnd: 0 }}><table className="dense">
             <thead><tr><th>{f("description")}</th><th>{f("quantity")}</th><th>{t("unitPrice")}</th><th>{t("account")}</th><th>{t("job")}</th></tr></thead>

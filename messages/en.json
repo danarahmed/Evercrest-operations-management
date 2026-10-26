@@ -293,7 +293,8 @@
     "export": "Export",
     "warning_followup_failed": "Saved, but the e-mail could not be sent. Use “Send invitation” to try again.",
     "scannedCopy": "Scanned copy",
-    "scannedCopyHint": "optional · PDF or photo, up to 15 MB"
+    "scannedCopyHint": "optional · PDF or photo, up to 15 MB",
+    "optional": "optional"
   },
   "Approvals": {
     "title": "Approvals",

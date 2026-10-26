@@ -50,7 +50,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
               <label>{t("to")}<select name="toMoneyAccountId" required>{active.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.currency})</option>)}</select></label>
               <label>{f("amount")}<input name="amount" required inputMode="decimal" dir="ltr" /></label>
               <label>{f("date")}<input type="date" name="transferDate" required defaultValue={today} /></label>
-              <label>{f("reference")}<input name="reference" dir="ltr" /></label>
+              <label>{f("reference")} <span className="hint">{f("optional")}</span><input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
         </Modal>
@@ -69,7 +69,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
               <label>{f("date")}<input type="date" name="paymentDate" required defaultValue={today} /></label>
               <label>{f("method")}<select name="method" defaultValue="cash">{["cash", "bank_transfer", "cheque", "other"].map((x) => <option key={x} value={x}>{f(x)}</option>)}</select></label>
               <label>{f("description")}<input name="notes" required /></label>
-              <label>{f("reference")}<input name="reference" dir="ltr" /></label>
+              <label>{f("reference")} <span className="hint">{f("optional")}</span><input name="reference" dir="ltr" /></label>
             </div>
           </ActionForm>
         </Modal>

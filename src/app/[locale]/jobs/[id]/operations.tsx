@@ -82,6 +82,7 @@ export async function DeliveriesSection({ locale, jobId, rows, products, units, 
   canBill: boolean;
 }) {
   const t = await getTranslations({ locale, namespace: "Supply" });
+  const f = await getTranslations({ locale, namespace: "Forms" });
   const unbilled = rows.filter((r) => r.d.status === "delivered" && !r.invoiced);
   return (
     <Card
@@ -116,7 +117,7 @@ export async function DeliveriesSection({ locale, jobId, rows, products, units, 
                 <label>{t("unit")}<select name="unit" required defaultValue="EA">{units.map((u) => <option key={u.code} value={u.code}>{u.code}</option>)}</select></label>
                 <label>{t("date")}<input type="date" name="deliveryDate" required defaultValue={today()} /></label>
                 <label>{t("deliveredTo")}<input name="deliveredTo" /></label>
-                <label>{t("note")}<input name="reference" dir="ltr" /></label>
+                <label>{t("note")} <span className="hint">{f("optional")}</span><input name="reference" dir="ltr" /></label>
               </div>
             </ActionForm>
           </Modal>

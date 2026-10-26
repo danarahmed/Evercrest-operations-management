@@ -84,3 +84,12 @@ Answer by number. Where a question has a **proposed default**, a short "ok" is e
 - **#33, #34** Pay rules decided later; payroll must be **linked to attendance time and a daily-work salary** (expected daily hours).
 - **#36** Employees may pay **anything within the rules** the owner set, alone. Outside the rules → the system **warns the owner**; if he accepts, it goes through. The **accountant may pay anything to anyone** (no approval needed); all payments are still recorded and visible to the owner.
 - **#15, #30** Explained again to the owner; answers pending.
+
+## Owner's answers — round 2 (verbatim)
+
+> #15 employee at site, excel, an scanned documents
+> #30 explain me more about the option a how it works what it affects
+
+### Decisions recorded
+- **#15** Remote settlements are made by **our own site employee**, who sends back an **Excel sheet and scanned documents**. → Import their Excel, attach the scans, compare line by line with the system's calculation; differences are on that employee's cash box.
+- **#30** Option A (record at loading, estimate then correct) explained in detail; answer pending.

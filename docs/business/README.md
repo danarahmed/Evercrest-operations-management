@@ -9,3 +9,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | 1 | Company overview and the work we do | [part-1-company.md](part-1-company.md) |
 | 2 | One real job from start to finish | [part-2-job-flow.md](part-2-job-flow.md) |
 | ex | Real job: diesel to Syria (master sheet + transporter settlement form) | [example-diesel-syria.md](example-diesel-syria.md) |
+| 3 | Customers | [part-3-customers.md](part-3-customers.md) |

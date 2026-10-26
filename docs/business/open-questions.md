@@ -62,3 +62,25 @@ Answer by number. Where a question has a **proposed default**, a short "ok" is e
 41. Future companies: shared customers/drivers/transporters, or separate? Can one company work for another?
 42. Checkpoint passage agreements: who pays whom, per truck or per trip, and is it part of our transport jobs or a separate service for outside drivers?
 43. Abroad jobs: which countries/routes, extra papers and costs, which currency?
+
+---
+
+## Owner's answers — round 1 (verbatim)
+
+> #9 leave it, it is nothing
+> #4,5 it is just like the visas or insurances is our fee or then it will be deducted from their settlement
+> #15 explain more
+> #22 customer's the one our revenue comes from their side
+> #30 how is that work explain more
+> #31 okay do it
+> #33,34 we will decide later but it should be connected to their time and salary that they should work daily
+> #36 it can pay alone anything i set the rule for and if it is not in the rule the system has to send me a warning if i accept it it should accept it for the jobs and for the accountant he can pay anything to anyone
+
+### Decisions recorded
+- **#9** Column "کۆمپانیا" in the diesel file: ignore (not needed in the system).
+- **#4, #5** "Setting data", per-trip forgiveness and border MT-fine forgiveness are **fees like visa/insurance**: we pay them (our fee), or they are **deducted from the carrier's settlement** — i.e. ordinary fee types on the rule card with the "deducted from carrier" switch.
+- **#22** The storage/route loss allowance is the **customer's** (the side our revenue comes from).
+- **#31** Shared costs are spread over active jobs **by tons moved** — approved.
+- **#33, #34** Pay rules decided later; payroll must be **linked to attendance time and a daily-work salary** (expected daily hours).
+- **#36** Employees may pay **anything within the rules** the owner set, alone. Outside the rules → the system **warns the owner**; if he accepts, it goes through. The **accountant may pay anything to anyone** (no approval needed); all payments are still recorded and visible to the owner.
+- **#15, #30** Explained again to the owner; answers pending.

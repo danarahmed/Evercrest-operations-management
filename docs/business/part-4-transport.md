@@ -36,8 +36,19 @@ _Owner's answer, verbatim (2026-10)._
 - **Carrier owes us (D11):** independent driver → pays back, or deducted from his next trip; transporter → deducted from the overall settlement.
 - **D13 (accident / spill / contamination / stopped truck):** two ways — (a) the customer agrees and forgives it; (b) we recover the money from the carrier at **an amount we set** (not the shortage fine rate).
 
-## D4 clarification asked by the owner
-Last part of D4: "what must stay correct in old records when a driver changes transporter or a truck changes driver?" — to be explained with an example.
+## D4 clarification
+Explained with an example (driver moves from transporter Masoud to Rekan; truck changes driver). Owner's answer, verbatim:
+
+> see i have this problem all the time we know who is the transporter but we cant rely on it to give them the payment until they bring back the documents, because on their way back to our country or recieving their remaining amount they go to the different transporters who pay them faster so i cant decide which transporter, who is bringing back its debt, last one agreed
+
+→ **Key rule:** the transporter known at loading is **not** necessarily the one paid. On the way back, drivers hand their documents (manifest etc.) to whichever transporter pays them fastest; **that transporter brings the documents to us and claims the trip**. So the payee of a trip is decided only when the documents are presented in a claim (مطالەبە), not at loading. The owner cannot tell, from the loading data, which transporter will bring back a trip and therefore who carries its debt (advance, fines).
+→ Old trips keep their old truck/driver (last part agreed).
+
+### Proposed model (to confirm)
+- A trip records **the transporter at loading** (information only) and later **the claimant** — the transporter (or the independent driver himself) who presents the manifest in a claim. **Money follows the documents:** the trip's net amount goes to the claimant's account.
+- The **advance and fines stay attached to the trip**, not to a transporter: the claimant receives the trip's net (freight ± fines − fees − advance already paid). The claimant who pays the driver early has bought the trip *as it is*, advance already deducted.
+- A trip can be claimed **once**; a second claim for the same manifest is refused (stops double payment).
+- If a trip's net is negative (fine larger than the freight), it is offset inside the claimant's claim; if the trip is never claimed, the debt stays on the **driver**.
 
 ## Open questions (to ask later)
 

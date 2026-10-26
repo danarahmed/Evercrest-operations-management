@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Languages: English (`en`), Arabic (`ar`, RTL), Kurdish Sorani (`ckb`, RTL).
 - Up to ~20 users.
 
+**Current phase (owner's direction, 2026-10):** the live system is a working draft. Work now goes into the business logic and technical correctness, rebuilt around the real operations as the owner explains them. Owner rules override earlier assumptions. Ask before guessing a business rule. Security and hardening work (MFA, plans, key rotation, separate test database) is deferred, but every change must keep the system ready for very strong security: the commands, permissions, audit, append-only books and RLS lock-down are never weakened or bypassed.
+
 **Commands:**
 ```
 npm install

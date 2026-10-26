@@ -12,3 +12,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | 3 | Customers | [part-3-customers.md](part-3-customers.md) |
 | 4 | Transport | [part-4-transport.md](part-4-transport.md) |
 | 5 | Field work and staff | [part-5-field-staff.md](part-5-field-staff.md) |
+| 6 | Product supply | [part-6-product-supply.md](part-6-product-supply.md) |

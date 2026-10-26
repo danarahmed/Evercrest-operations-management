@@ -22,8 +22,13 @@ _Owner's answer, verbatim (2026-10)._
 - **Customer deductions:** the customer applies its own allowance ("forgiveness") and shortage fines to us, at its own price per MT. Their allowance can be **per truck or per MT** (ours to drivers is per trip in tons). → Two separate shortage calculations per trip: customer → us (on the invoice) and us → driver (on the settlement). The difference is our gain or loss on shortages.
 - **Late payment** is normal; nothing can be done, but the money comes eventually. → Need clear receivable tracking: what each customer owes, per job and per invoice, how old it is, and their advances to us.
 
-## Q5 clarification asked by the owner
-Question C5 was: "Does each customer require different documents, approvals or invoice formats?" (e.g. one customer wants the manifest + discharge certificate with every invoice, another wants a monthly summary, another needs their approval before you invoice). To be re-asked in simpler words.
+## Q5 clarification
+Question C5: "Does each customer require different documents, approvals or invoice formats?" Explained with four examples: (a) manifest + discharge papers attached to every invoice, (b) only a monthly summary table, (c) customer must approve quantities before we may invoice, (d) invoice in the customer's own format or language.
+
+Owner's answer, verbatim:
+> question five yes except the last one
+
+→ Customers **do** differ in: which documents go with the invoice (a), whether they get a per-trip detail or a monthly summary (b), and whether their approval of quantities is needed before invoicing (c). **No** customer-specific invoice formats or languages (d): one company invoice layout is enough.
 
 ## Open questions (to ask later)
 

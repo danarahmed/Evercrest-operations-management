@@ -11,3 +11,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | ex | Real job: diesel to Syria (master sheet + transporter settlement form) | [example-diesel-syria.md](example-diesel-syria.md) |
 | 3 | Customers | [part-3-customers.md](part-3-customers.md) |
 | 4 | Transport | [part-4-transport.md](part-4-transport.md) |
+| 5 | Field work and staff | [part-5-field-staff.md](part-5-field-staff.md) |

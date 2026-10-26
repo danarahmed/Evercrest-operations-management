@@ -14,3 +14,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | 5 | Field work and staff | [part-5-field-staff.md](part-5-field-staff.md) |
 | 6 | Product supply | [part-6-product-supply.md](part-6-product-supply.md) |
 | 7 | Suppliers, subcontractors and other costs | [part-7-suppliers-costs.md](part-7-suppliers-costs.md) |
+| 8 | Money handling | [part-8-money.md](part-8-money.md) |

@@ -7,3 +7,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | Part | Topic | File |
 |---|---|---|
 | 1 | Company overview and the work we do | [part-1-company.md](part-1-company.md) |
+| 2 | One real job from start to finish | [part-2-job-flow.md](part-2-job-flow.md) |

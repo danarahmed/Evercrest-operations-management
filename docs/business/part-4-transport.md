@@ -44,7 +44,7 @@ Explained with an example (driver moves from transporter Masoud to Rekan; truck 
 → **Key rule:** the transporter known at loading is **not** necessarily the one paid. On the way back, drivers hand their documents (manifest etc.) to whichever transporter pays them fastest; **that transporter brings the documents to us and claims the trip**. So the payee of a trip is decided only when the documents are presented in a claim (مطالەبە), not at loading. The owner cannot tell, from the loading data, which transporter will bring back a trip and therefore who carries its debt (advance, fines).
 → Old trips keep their old truck/driver (last part agreed).
 
-### Proposed model (to confirm)
+### Model — confirmed by the owner ("yes that matches")
 - A trip records **the transporter at loading** (information only) and later **the claimant** — the transporter (or the independent driver himself) who presents the manifest in a claim. **Money follows the documents:** the trip's net amount goes to the claimant's account.
 - The **advance and fines stay attached to the trip**, not to a transporter: the claimant receives the trip's net (freight ± fines − fees − advance already paid). The claimant who pays the driver early has bought the trip *as it is*, advance already deducted.
 - A trip can be claimed **once**; a second claim for the same manifest is refused (stops double payment).

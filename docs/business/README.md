@@ -18,3 +18,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | 9 | Approvals and control | [part-9-approvals-control.md](part-9-approvals-control.md) |
 | 10 | Documents | [part-10-documents.md](part-10-documents.md) |
 | 11 | Your team | [part-11-team.md](part-11-team.md) |
+| 12 | Problems today | [part-12-problems.md](part-12-problems.md) |

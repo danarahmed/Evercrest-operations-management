@@ -15,3 +15,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 | 6 | Product supply | [part-6-product-supply.md](part-6-product-supply.md) |
 | 7 | Suppliers, subcontractors and other costs | [part-7-suppliers-costs.md](part-7-suppliers-costs.md) |
 | 8 | Money handling | [part-8-money.md](part-8-money.md) |
+| 9 | Approvals and control | [part-9-approvals-control.md](part-9-approvals-control.md) |

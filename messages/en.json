@@ -1187,7 +1187,8 @@
     "expenseAccount": "Expense account",
     "noFees": "No fees on this job.",
     "deductedShort": "from carrier",
-    "billedShort": "to customer"
+    "billedShort": "to customer",
+    "allowanceBasis": "Allowance basis"
   },
   "Trips": {
     "title": "Trips",

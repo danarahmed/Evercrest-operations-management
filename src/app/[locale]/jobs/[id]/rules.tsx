@@ -69,7 +69,7 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
                   <label>{t("basis")}<select name="customerPriceBasis" defaultValue="per_unit"><option value="per_unit">{t("perUnit")}</option><option value="per_trip">{t("perTrip")}</option></select></label>
                   <label>{t("billedOn")}<select name="customerQtyBasis" defaultValue="net"><option value="net">{t("netQty")}</option><option value="loaded">{t("loadedQty")}</option></select></label>
                   <label>{t("customerAllowance")}<input name="customerAllowance" inputMode="decimal" dir="ltr" /></label>
-                  <label>{t("basis")}<select name="customerAllowanceBasis" defaultValue="per_trip"><option value="per_trip">{t("perTrip")}</option><option value="per_unit">{t("perLoadedUnit")}</option></select></label>
+                  <label>{t("allowanceBasis")}<select name="customerAllowanceBasis" defaultValue="per_trip"><option value="per_trip">{t("perTrip")}</option><option value="per_unit">{t("perLoadedUnit")}</option></select></label>
                   <label>{t("customerFinePrice")}<input name="customerFinePrice" inputMode="decimal" dir="ltr" /></label>
                 </div>
               </fieldset>

@@ -1187,7 +1187,8 @@
     "expenseAccount": "هەژماری خەرجی",
     "noFees": "هیچ خەرجییەک لەسەر ئەم کارە نییە.",
     "deductedShort": "لە ناقل",
-    "billedShort": "لەسەر کڕیار"
+    "billedShort": "لەسەر کڕیار",
+    "allowanceBasis": "بنەمای سماح"
   },
   "Trips": {
     "title": "گەشتەکان",

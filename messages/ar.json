@@ -1187,7 +1187,8 @@
     "expenseAccount": "حساب المصروف",
     "noFees": "لا رسوم على هذا العمل.",
     "deductedShort": "من الناقل",
-    "billedShort": "على الزبون"
+    "billedShort": "على الزبون",
+    "allowanceBasis": "أساس السماح"
   },
   "Trips": {
     "title": "الرحلات",

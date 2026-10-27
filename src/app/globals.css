@@ -449,3 +449,26 @@ table[data-hide~="margin"] [data-col="margin"] { display: none; }
 table[data-hide~="state"] [data-col="state"] { display: none; }
 .colfilter-pop label.check { display: flex; flex-direction: row; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
 .colfilter-pop label.check input { flex: none; width: auto; min-width: 0; margin: 0; }
+
+/* Side menu: an icon rail by default, the full menu on hover or when pinned (desktop only) */
+@media (min-width: 1024px) {
+  .app-shell[data-nav="rail"] { --sidebar-w: 64px; }
+  .app-shell[data-nav="rail"] aside { overflow: visible; }
+  .app-shell[data-nav="rail"] .aside-panel { position: absolute; inset-block: 0; inset-inline-start: 0; width: 64px; overflow: hidden; transition: width .18s ease, box-shadow .18s ease; }
+  .app-shell[data-nav="rail"] aside:hover .aside-panel, .app-shell[data-nav="rail"] aside:focus-within .aside-panel { width: 268px; box-shadow: 12px 0 32px rgba(40, 30, 10, .12); }
+  [dir="rtl"] .app-shell[data-nav="rail"] aside:hover .aside-panel, [dir="rtl"] .app-shell[data-nav="rail"] aside:focus-within .aside-panel { box-shadow: -12px 0 32px rgba(40, 30, 10, .12); }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .nav-text,
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .nav-count { display: none; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .aside-panel > a:first-child { padding-inline: 12px; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) nav { padding-inline: 10px; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) nav a { justify-content: center; padding-inline: 0; position: relative; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) nav a:has(.nav-count)::after { content: ""; position: absolute; top: 6px; inset-inline-end: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-amber-500, #d97706); }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .aside-panel > div:nth-child(2) { padding-inline: 10px; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .aside-panel > div:nth-child(2) button { padding-inline: 0; font-size: 0; gap: 0; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .aside-panel > div:nth-child(2) button svg { font-size: 1rem; }
+  .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .aside-panel > div.m-4 { padding: 8px; justify-content: center; margin-inline: 10px; }
+}
+.nav-pin { position: absolute; bottom: 10px; inset-inline-end: 10px; opacity: .55; }
+.nav-pin:hover { opacity: 1; }
+@media (max-width: 1023px) { .nav-pin { display: none; } }
+@media (min-width: 1024px) { .app-shell[data-nav="rail"] aside:not(:hover):not(:focus-within) .nav-pin { display: none; } }

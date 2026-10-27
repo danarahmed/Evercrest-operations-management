@@ -54,6 +54,14 @@ BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e
 - New company: first-run page `/[locale]/welcome` (only while no company exists and `SETUP_TOKEN` is set) or `scripts/setup-production.ts`; both call `src/server/provision.ts` (bucket, company + admin under a lock, `src/server/starter.ts` starter configuration, invitation). The dev seed uses the same starter configuration.
 - Vercel: `vercel-build` (`scripts/vercel-build.mjs`) applies migrations on production deployments only, using `MIGRATION_DATABASE_URL`; `vercel.json` pins the function region next to the database (`fra1`, Frankfurt).
 
+**Design rules (owner's standing instructions, 2026-10):** the system must always look elegant and every screen must be user-friendly; this is checked on every change, not only on UI tasks.
+- **Hidden until needed.** Navigation, filters, settings and secondary panels stay out of the way until the person reaches for them (the side menu is an icon rail that opens on hover or when pinned). Never add a permanent panel that only some people use sometimes.
+- **Fit the screen.** No horizontal scrolling for normal work. Wide tables fit the window (compact density, units in headers, "Columns" with fit-to-screen), and are checked at 1366 px and 1920 px, in English and in an RTL language, before pushing.
+- **Fast data entry.** Entry screens are built around the keyboard and the order the paper is read: Tab/Enter move forward, sticky values repeat, the hands never have to travel across the screen or reach for the mouse. Propose entry designs to the owner (with pictures) before building a new one.
+- **Pop-ups and panels** must never be clipped by a scrolling container; they open where they fit, one at a time, close on Escape or a click outside.
+- **Test in the browser before pushing**: full `npm run e2e` on a fresh seed plus a look at the affected screens (screenshots), not only unit tests.
+- Keep the Sandstone design language (`src/app/globals.css`): calm colours, generous whitespace, one accent for the primary action, tabular numerals for money and quantities.
+
 ---
 
 

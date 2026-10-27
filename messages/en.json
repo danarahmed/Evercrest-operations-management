@@ -25,7 +25,9 @@
     "newDocument": "Record a document",
     "newJournal": "Journal entry",
     "search": "Search",
-    "searchPlaceholder": "Search jobs, trips, invoices, partners, documents…"
+    "searchPlaceholder": "Search jobs, trips, invoices, partners, documents…",
+    "pinMenu": "Keep the menu open",
+    "unpinMenu": "Fold the menu"
   },
   "Login": {
     "title": "Sign in",

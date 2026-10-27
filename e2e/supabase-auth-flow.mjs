@@ -22,7 +22,7 @@ step("right password → home as the linked ERP user"); await p.fill("input[name
 await at(p, /\/en$/); await p.waitForSelector("main h1");
 assert.match(await p.textContent("main h1"), /Admin/);
 step("session carries to other pages"); await p.goto(`${base}/en/jobs`); assert.equal(new URL(p.url()).pathname, "/en/jobs");
-step("sign out"); await p.click("button[aria-label='Sign out']"); await at(p, /\/en\/login/);
+step("sign out"); await p.hover("aside"); await p.click("button[aria-label='Sign out']"); await at(p, /\/en\/login/);
 step("pages closed after sign-out"); await p.goto(`${base}/en/jobs`); await at(p, /\/en\/login/);
 step("valid Supabase account never added in the ERP → no access"); await p.waitForSelector("input[name=email]"); await p.fill("input[name=email]", "stranger@gmail.com"); await p.fill("input[name=password]", "correct-horse-1"); await p.click("button[type=submit]");
 await at(p, /error=no_access/); await p.waitForSelector(".form-msg.error");

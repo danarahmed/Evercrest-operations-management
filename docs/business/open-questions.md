@@ -100,3 +100,24 @@ Answer by number. Where a question has a **proposed default**, a short "ok" is e
 
 ### Decision recorded
 - **#30** Accounting method **D**: books hold only real events (cash, advances, claims, invoices, payments); live job profit and positions are calculated from the trips (confirmed vs estimated); one automatic month-end summary accrual for trips awaiting papers, auto-reversed next month. (Options A record-at-loading, B papers-only, C live-only were explained; A rejected because of 20–30k extra entries a month for the accountant.)
+
+## Owner's answers — round 4 (verbatim)
+
+> #20 it may be both sometimes we store it at the storage then sell it back and sometimes we sell it directly to our customers
+> #24 we have both in that case too, sometimes it is tied to one sale for example there is a truck of diesel we bought it and sell it directly to one of our customers, but if we store it then load it back it may be several customers
+> #26 yes they are they have their percentage from profit and loss
+> #28 no it does not, the place like the sarraf we lend money and maybe most of the time we are in debt we pay them a fixed fee per mt or trips we loaded according to the products so it goes like our expenses of the job
+> #41 separate list, and maybe some common ones
+> #42 our customers pay us and we pay the other part which our suppliers, lets say for nephtha we take 210 dollar per trip and we pay 190 dollar per trip to the supplier
+> #43 what do you mean by extra paper
+
+### Decisions recorded
+- **#20, #24 Product flow — two paths, both needed:**
+  1. **Direct (back-to-back):** bought and sold straight to one customer (e.g. a truck of diesel). Cost and sale tied together.
+  2. **Via storage:** bought into a storage, then loaded out over time to one or several customers. → Stock per product per storage, with average cost; each sale takes its cost from the stock.
+  Payment-in-product from a customer can go either way too (into storage, or sold on directly).
+- **#26 Partners:** the company has **partners (co-owners) with a percentage share of profit and loss.** → Owners' current accounts per partner and currency; at period end, profit/loss is shared by percentage; moving profit to a partner in another currency is an exchange onto their account.
+- **#28 Loans:** no interest. **Exchangers (sarraf) lend us money** — we are usually in debt to them — and charge a **fixed fee per MT or per trip loaded, by product.** That fee is a **job expense.** → Each sarraf financing a job: a fee rule on the job's rule card (per MT or per trip, by product), posted to the job as a cost, credited to the sarraf's account.
+- **#41 Future companies:** separate lists, with some shared partners. → Partners belong to a company; a partner can be shared with other companies.
+- **#42 Checkpoint passage agreements:** the **customer pays us per trip** and **we pay the supplier per trip** (e.g. naphtha: 210 USD/trip from customer, 190 USD/trip to supplier → 20 USD/trip margin). → A "checkpoint passage" kind of work: trips with a customer price and a supplier price per trip; no transport settlement.
+- **#43** Explained ("extra papers" for abroad jobs); answer pending.

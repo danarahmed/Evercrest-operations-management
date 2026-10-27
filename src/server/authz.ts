@@ -40,6 +40,10 @@ export const PERMISSIONS = [
   "exchanges.create",
   "approvals.decide",
   "jobs.view",
+  /** Set a job's rule card: routes, prices, allowances, demurrage, fees, advance limits. */
+  "job_terms.manage",
+  /** See profit, margins and the customer side of prices (owner and people he allows). */
+  "profit.view",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

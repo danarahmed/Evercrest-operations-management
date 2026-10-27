@@ -27,7 +27,9 @@ export async function SettlementSection({ locale, jobId, trips, canSettle, canBi
   const t = await getTranslations({ locale, namespace: "Settle" });
   const f = await getTranslations({ locale, namespace: "Forms" });
   const today = new Date().toISOString().slice(0, 10);
-  const relevant = trips.filter((x) => x.trip.status === "discharged");
+  // Discharged trips, unsettled first; large jobs show the first 25 cards (the live grid above has every trip).
+  const discharged = trips.filter((x) => x.trip.status === "discharged");
+  const relevant = [...discharged].sort((a, b) => Number(!!a.settlement) - Number(!!b.settlement)).slice(0, 25);
   if (!relevant.length) return null;
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const party = (title: string, p: PartySettlement) => (
@@ -77,6 +79,7 @@ export async function SettlementSection({ locale, jobId, trips, canSettle, canBi
       )}
     >
       <div className="stack" style={{ gap: 14 }}>
+        {discharged.length > relevant.length && <p className="muted small">{t("showingSome", { shown: relevant.length, total: discharged.length })}</p>}
         {relevant.map((x) => (
           <div key={x.trip.id} className="card" style={{ margin: 0, boxShadow: "none" }} data-trip={x.trip.tripNo}>
             <div className="card-head">

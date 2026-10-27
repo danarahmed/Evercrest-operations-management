@@ -14,6 +14,9 @@ import { applicableFields } from "@/domain/jobs/custom-fields";
 import { listWorkOrders } from "@/domain/field/work-orders";
 import { listDeliveries } from "@/domain/supply/deliveries";
 import { quantityDifference } from "@/domain/transport/trips";
+import { loadRuleCard } from "@/domain/transport/terms";
+import { getTripImport, type ImportRow, planImport } from "@/domain/transport/trip-import";
+import { jobTripLines, type TripLine } from "@/domain/transport/trip-view";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
@@ -97,8 +100,9 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     trips: tripsView,
     documents: await documentChecklist(db, job),
     // Financial figures only for people allowed to see them.
-    profitability: can(actor, "reports.financial.view") ? await jobProfitability(db, job.id) : null,
-    breakdown: can(actor, "reports.financial.view") ? await jobBreakdown(db, job.id) : null,
+    // Profit and margins are for the owner and the people he allows (owner's rule: staff never see profit).
+    profitability: can(actor, "profit.view") ? await jobProfitability(db, job.id) : null,
+    breakdown: can(actor, "profit.view") ? await jobBreakdown(db, job.id) : null,
     transactions: can(actor, "reports.financial.view") ? await jobTransactions(db, job.id) : null,
   };
 }
@@ -566,4 +570,35 @@ export async function globalSearch(db: Db, actor: Actor, q: string) {
       : [],
   ]);
   return { jobs: jobRows, trips: tripRows, invoices: invoiceRows, statements: statementRows, partners: partnerRows, documents: documentRows, partnerLink: has("reports.financial.view") };
+}
+
+/** The job's rule card: routes, dated terms and fees, and the fee types to choose from. Customer prices only with profit.view. */
+export async function jobRuleCard(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  const card = await loadRuleCard(db, actor.companyId, jobId);
+  const showProfit = can(actor, "profit.view");
+  const terms = showProfit ? card.terms : card.terms.map((t) => ({ ...t, customerPrice: null, customerAllowance: null, customerFinePrice: null, customerDemurrageRate: "0" }));
+  return { ...card, terms, showProfit, canManage: can(actor, "job_terms.manage") };
+}
+
+/** The live trip view of a job. The customer side and margins are removed for people without profit.view. */
+export async function jobTripsLive(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  const view = await jobTripLines(db, actor.companyId, jobId);
+  const showProfit = can(actor, "profit.view");
+  if (showProfit) return { ...view, showProfit };
+  const hide = (l: TripLine): TripLine => (l.calc ? { ...l, calc: { ...l.calc, customer: { ...l.calc.customer, price: null, revenue: null, total: null }, margin: null } } : l);
+  return { lines: view.lines.map(hide), totals: view.totals.map((t) => ({ ...t, customerTotal: "0", margin: "0", priceTbd: 0 })), withoutRules: view.withoutRules, showProfit };
+}
+
+/** A staged sheet with what applying it would do. */
+export async function tripImportPreview(db: Db, actor: Actor, importId: string) {
+  requirePermission(actor, "trips.manage");
+  const imp = await getTripImport(db, actor.companyId, importId);
+  const job = await getJob(db, actor.companyId, imp.jobId);
+  const card = await loadRuleCard(db, actor.companyId, imp.jobId);
+  const plan = imp.status === "staged" ? await planImport(db, actor.companyId, imp.jobId, imp.rows as ImportRow[], card) : null;
+  // Advances in the sheet are in the job's currency (the rule card's), not the first cash box's.
+  const currency = card.terms.at(-1)?.currency ?? null;
+  return { imp, job, plan, rows: imp.rows as ImportRow[], currency };
 }

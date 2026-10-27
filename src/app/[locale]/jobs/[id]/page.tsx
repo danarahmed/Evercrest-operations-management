@@ -6,19 +6,21 @@ import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
 import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@/components/ui";
 import { summarize } from "@/domain/management/history";
-import { describe, formatMoney, formatQty, intlLocale } from "@/lib/format";
+import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
-import { formOptions, jobHistoryView, jobWorkspace } from "@/server/queries";
+import { formOptions, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
 import { ActivitiesSection } from "./activities";
 import { CostActions, DocumentAction, JobSettingsActions, TransportActions } from "./forms";
 import { DeliveriesSection, WorkOrdersSection } from "./operations";
+import { RuleCardSection } from "./rules";
 import { SettlementSection } from "./settlement";
+import { TripsSection } from "./trips";
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "steps" | "trips" | "work" | "deliveries" | "money" | "documents" | "history";
+type TabKey = "overview" | "rules" | "steps" | "trips" | "work" | "deliveries" | "money" | "documents" | "history";
 
 /**
  * The job workspace (CLAUDE.md §29): one place for everything about a job.
@@ -33,7 +35,6 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const w = await jobWorkspace(db, actor, id);
   const t = await getTranslations({ locale, namespace: "Job" });
   const st = await getTranslations({ locale, namespace: "JobStatus" });
-  const ts = await getTranslations({ locale, namespace: "TripStatus" });
   const ds = await getTranslations({ locale, namespace: "DocState" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const cap = await getTranslations({ locale, namespace: "Setup" });
@@ -46,11 +47,15 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const open = !["financially_closed", "cancelled"].includes(w.job.status);
   const manage = open && can(actor, "jobs.manage");
   const showMoney = !!w.profitability;
+  const transport = caps.includes("transportation");
+  const live = transport || w.trips.length > 0 ? await jobTripsLive(db, actor, id) : null;
+  const card = transport ? await jobRuleCard(db, actor, id) : null;
 
   const tabs: { key: TabKey; label: string; show: boolean; count?: number }[] = [
     { key: "overview", label: t("tabOverview"), show: true },
     { key: "steps", label: t("tabSteps"), show: w.activities.length > 0 || manage, count: w.activities.filter((a) => a.a.status === "open").length },
-    { key: "trips", label: t("tabTrips"), show: caps.includes("transportation") || w.trips.length > 0, count: w.trips.length },
+    { key: "trips", label: t("tabTrips"), show: !!live, count: w.trips.length },
+    { key: "rules", label: t("tabRules"), show: !!card, count: card?.terms.length ? undefined : 0 },
     { key: "work", label: t("tabWork"), show: caps.includes("field_work"), count: w.workOrders.length },
     { key: "deliveries", label: t("tabDeliveries"), show: caps.includes("products"), count: w.deliveries.length },
     { key: "money", label: t("tabMoney"), show: showMoney },
@@ -152,34 +157,17 @@ export default async function JobPage({ params, searchParams }: { params: Promis
 
       {tab === "steps" && <ActivitiesSection locale={locale} jobId={w.job.id} activities={w.activities} users={options.users} editable={manage} />}
 
-      {tab === "trips" && (
+      {tab === "rules" && card && <RuleCardSection locale={locale} jobId={w.job.id} card={card} units={options.units} expenseAccounts={options.expenseAccounts} />}
+
+      {tab === "trips" && live && (
         <>
-          <Card
-            title={t("trips")}
-            icon="truck"
-            flush
+          <TripsSection
+            locale={locale}
+            jobId={w.job.id}
+            view={live}
+            canImport={open && can(actor, "trips.manage")}
             actions={open && can(actor, "trips.manage") && <TransportActions locale={locale} jobId={w.job.id} jobNo={w.job.jobNo} capabilities={caps} tripList={w.trips.map((x) => x.trip)} options={options} />}
-          >
-            {w.trips.length === 0 ? <EmptyState icon="truck" title={t("noTrips")} /> : (
-              <div className="table-wrap"><table>
-                <thead><tr><th>{t("trip")}</th><th>{t("driver")}</th><th>{t("truck")}</th><th className="num">{t("loaded")}</th><th className="num">{t("discharged")}</th><th className="num">{t("difference")}</th><th className="num">{t("advances")}</th><th>{t("state")}</th></tr></thead>
-                <tbody>
-                  {w.trips.map(({ trip, driver, plate, difference, advances }) => (
-                    <tr key={trip.id}>
-                      <td className="ltr"><strong>{trip.tripNo}</strong></td>
-                      <td>{driver}</td>
-                      <td className="ltr">{plate}</td>
-                      <td className="num">{trip.loadedQty ? formatQty(trip.loadedQty, trip.loadedUnit!, locale) : <span className="muted">—</span>}</td>
-                      <td className="num">{trip.dischargedQty ? formatQty(trip.dischargedQty, trip.dischargedUnit!, locale) : <span className="muted">—</span>}</td>
-                      <td className="num">{difference.status === "known" ? formatQty(difference.difference, difference.unit, locale) : difference.status === "incomparable" ? t("notComparable") : <span className="muted">—</span>}</td>
-                      <td className="num">{Object.entries(advances).map(([cur, amt]) => <div key={cur}>{m(amt, cur)}</div>)}</td>
-                      <td><StatusBadge status={trip.status} label={ts(trip.status)} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div>
-            )}
-          </Card>
+          />
           <SettlementSection locale={locale} jobId={w.job.id} trips={w.trips} canSettle={can(actor, "settlements.create")} canBill={can(actor, "billing.create") && caps.includes("billing")} />
         </>
       )}

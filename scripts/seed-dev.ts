@@ -3,7 +3,9 @@
  * jobs so the screens can be tried. Never run against a production database.
  *   DATABASE_URL=... npx tsx scripts/seed-dev.ts
  */
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
+import { feeTypes } from "@/db/schema";
 import "@/domain/register";
 import { postJournalEntry } from "@/domain/accounting/ledger";
 import { recordDocument } from "@/domain/documents/documents";
@@ -14,6 +16,7 @@ import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jo
 import { createPartner } from "@/domain/masterdata/partners";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { defineRate } from "@/domain/transport/rates";
+import { setJobFee, setTerms } from "@/domain/transport/terms";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { createWorkOrder } from "@/domain/field/work-orders";
 import { recordDelivery } from "@/domain/supply/deliveries";
@@ -25,7 +28,7 @@ import { setSetting } from "@/server/settings";
 import { applyStarterConfiguration } from "@/server/starter";
 
 const db = getDb();
-const { adminUserId } = await setupCompany(db, { companyName: "Evercrest (dev)", adminEmail: "admin@evercrest.local", adminName: "Admin" });
+const { adminUserId, companyId } = await setupCompany(db, { companyName: "Evercrest (dev)", adminEmail: "admin@evercrest.local", adminName: "Admin" });
 const admin = await loadActor(db, adminUserId);
 const run = <T = { id: string }>(cmd: unknown, input: unknown) => runCommand(db, admin, cmd as never, input) as Promise<T>;
 
@@ -65,6 +68,12 @@ await run(recordDelivery, { jobId: genJob, productId: generator, quantity: "6", 
 const fieldJob = (await run(createJob, { customerId: northOil, jobTypeId: fld, name: "Pump maintenance, Field Y", startDate: d(3), responsibleUserId: adminUserId })).id;
 await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 7", description: "Replace pump seals and test", contractorId: zagrosMaint, plannedDate: d(-2) });
 await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 9", description: "Inspect valves", plannedDate: d(-4) });
+// The job's rule card (owner's diesel terms): customer 120 USD/MT, driver 70 USD/MT, allowance 0.15 t, fine 1,200 USD/t, border fees, customs 30 USD per loaded ton.
+await run(setTerms, { jobId: job.id, effectiveFrom: "2026-01-01", currency: "USD", unit: "MT", customerPrice: "120", carrierPrice: "70", carrierAllowance: "0.15", carrierFinePrice: "1200", advanceNormal: "900", advanceMax: "900" });
+for (const [name, amount, basis] of [["Visa", "50", "per_trip"], ["Insurance", "75", "per_trip"], ["Customs", "30", "per_loaded_unit"]] as const) {
+  const ft = (await db.select().from(feeTypes).where(and(eq(feeTypes.companyId, companyId), eq(feeTypes.name, name))))[0];
+  if (ft) await run(setJobFee, { jobId: job.id, feeTypeId: ft.id, effectiveFrom: "2026-01-01", amount, currency: "USD", basis });
+}
 const t1 = await run<{ id: string }>(createTrip, { jobId: job.id, newDriverName: "Ahmed Karim", truckPlate: "12 B 34567", transporterId: zagros, productId: diesel });
 await run(recordLoading, { tripId: t1.id, loadingDate: d(9), loadedQty: "30", loadedUnit: "MT" });
 await run(recordDischarge, { tripId: t1.id, dischargeDate: d(7), dischargedQty: "29750", dischargedUnit: "KG" });

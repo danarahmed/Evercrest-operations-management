@@ -24,3 +24,7 @@ Each part has the owner's answer, then open questions noted while reading (not y
 
 - [design-proposal.md](design-proposal.md) — the proposed design (v1), for the owner's approval
 - [open-questions.md](open-questions.md) — the 43 questions still open, consolidated
+
+## Build log
+
+- **Step 1 (rule card, trips, import)** — built 2026-10-27: `job_terms` / `job_routes` / `fee_types` / `job_fees` / `trip_fees` / `trip_imports`, live trip grid, Excel import with preview. Verified against the real DIESEL sheet: 197 rows imported, all 112 discharged trips equal the Excel formulas (with the two agreed corrections).

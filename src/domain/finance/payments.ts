@@ -12,6 +12,7 @@ import { postingAccount } from "../accounting/posting";
 import { amountString, currencyCode } from "../currency";
 import { type Capability, type Job, registerCapabilityModule } from "../jobs/capabilities";
 import { getJob } from "../jobs/commands";
+import { loadRuleCard, termsOn } from "../transport/terms";
 import { getTrip, isSettled } from "../transport/trips";
 import { D, dec, toStr } from "../money";
 import { nextNumber } from "../sequences";
@@ -141,7 +142,10 @@ export const recordPayment = defineCommand({
       if (!partnerId) throw new ValidationError("An advance needs a payee");
     }
 
-    if (input.direction === "out" && !ctx.approval) await assertWithinLimit(tx, actor.companyId, input.currency, input.amount, partnerId, input.paymentDate);
+    // Owner's rule: staff may pay anything the job's rule card allows without asking. An advance on a
+    // trip within the card's advance limit needs no approval; everything else follows the payment limits.
+    const withinRules = input.purpose === "advance" && input.tripId ? await advanceWithinRules(tx, actor.companyId, input.tripId, input.amount, input.currency, input.paymentDate) : false;
+    if (input.direction === "out" && !ctx.approval && !withinRules) await assertWithinLimit(tx, actor.companyId, input.currency, input.amount, partnerId, input.paymentDate);
 
     const paymentNo = await nextNumber(tx, actor.companyId, input.direction === "out" ? "PAY" : "RCV", Number(input.paymentDate.slice(0, 4)));
     const cashSide = { accountId: money.ledgerAccountId, currency: input.currency, jobId };
@@ -216,6 +220,16 @@ async function statementPayment(
  * payee on the same day are added together, so a large payment cannot slip
  * through as several small ones.
  */
+/** True when the trip's job rule card (version on the loading date) sets an advance limit and this advance is within it. */
+export async function advanceWithinRules(tx: Db, companyId: string, tripId: string, amount: string, currency: string, date: string): Promise<boolean> {
+  const trip = await getTrip(tx, companyId, tripId);
+  const card = await loadRuleCard(tx, companyId, trip.jobId);
+  const terms = termsOn(card, trip.routeId, trip.loadingDate ?? date);
+  if (!terms || terms.advanceMax === null || terms.currency !== currency) return false;
+  const already = dec((await tripAdvances(tx, companyId, tripId))[currency] ?? "0");
+  return already.plus(dec(amount)).lte(dec(terms.advanceMax));
+}
+
 async function assertWithinLimit(tx: Db, companyId: string, currency: string, amount: string, partnerId: string | null, date: string) {
   const limits = (await getSetting(tx, companyId, "approvals.payment_out_limits")) ?? {};
   const limit = limits[currency];

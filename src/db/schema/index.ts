@@ -2,6 +2,7 @@ export * from "./core";
 export * from "./accounting";
 export * from "./masterdata";
 export * from "./jobs";
+export * from "./terms";
 export * from "./transport";
 export * from "./finance";
 export * from "./documents";

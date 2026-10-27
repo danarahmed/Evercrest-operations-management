@@ -26,6 +26,8 @@ import { defineRate, endRate } from "@/domain/transport/rates";
 import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
 import { cancelPayStatement, collectStatementDebt, createPayStatement, payStatement, writeOffStatementDebt } from "@/domain/transport/statements";
 import { recordArrival } from "@/domain/transport/trips";
+import { defineFeeType, defineRoute, setJobFee, setTerms } from "@/domain/transport/terms";
+import { applyTripImport, discardTripImport } from "@/domain/transport/trip-import";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
 import type { Command } from "./command";
@@ -95,6 +97,13 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "trips.record_loading": { command: recordLoading },
   "trips.record_discharge": { command: recordDischarge },
   "trips.cancel": { command: cancelTrip },
+  // The job's rule card. Checkboxes arrive as "on"; absent means false.
+  "job_routes.define": { command: defineRoute },
+  "job_terms.set": { command: setTerms },
+  "fee_types.define": { command: defineFeeType, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on", active: i.active !== "off" }) },
+  "job_fees.set": { command: setJobFee, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on" }) },
+  "trip_imports.apply": { command: applyTripImport },
+  "trip_imports.discard": { command: discardTripImport },
   "payments.record": { command: recordPayment, prepare: currencyFromMoneyAccount },
   "documents.record": { command: recordDocument, file: true },
   "documents.attach_file": { command: attachDocumentFile, file: true },

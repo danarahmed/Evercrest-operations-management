@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 /** Permission groups, so the role editor reads like the business, not like code. */
 const GROUPS: [string, string[]][] = [
   ["operations", ["jobs.view", "jobs.create", "jobs.manage", "trips.manage", "documents.record", "documents.verify"]],
+  ["rules", ["job_terms.manage", "profit.view"]],
   ["money", ["settlements.create", "settlements.reverse", "billing.create", "invoices.create", "invoices.cancel", "payments.create", "payments.reverse", "exchanges.create", "approvals.decide", "jobs.financial_close"]],
   ["books", ["reports.financial.view", "journal.post", "journal.reverse", "periods.manage", "accounts.manage", "money_accounts.manage"]],
   ["setup", ["partners.manage", "catalog.manage", "contracts.manage", "projects.manage", "job_types.manage", "rates.manage", "documents.configure", "settings.manage", "exchange_rates.manage"]],

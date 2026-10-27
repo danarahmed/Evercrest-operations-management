@@ -2,6 +2,7 @@ import { createAccount } from "@/domain/accounting/ledger";
 import { defineDocumentType, setDocumentRequirement } from "@/domain/documents/documents";
 import { createMoneyAccount } from "@/domain/finance/payments";
 import { defineJobType } from "@/domain/jobs/commands";
+import { defineFeeType } from "@/domain/transport/terms";
 import { defineRole } from "@/domain/org/commands";
 import type { Db } from "@/db/client";
 import type { Actor } from "./authz";
@@ -30,6 +31,17 @@ export const STARTER_POSTING_ACCOUNTS = {
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
   demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300",
 };
+
+/** Fees the company meets on its jobs (from the diesel-to-Syria sheet); more are added in Setup. */
+export const STARTER_FEE_TYPES = [
+  ["Guarantee (kafala)", "per_trip"],
+  ["Insurance", "per_trip"],
+  ["Visa", "per_trip"],
+  ["Entry slip", "per_trip"],
+  ["Declaration fee", "per_trip"],
+  ["Border commission", "per_trip"],
+  ["Customs", "per_loaded_unit"],
+] as const;
 
 /** Suggested roles; the owner adjusts them in Users & roles. */
 export const STARTER_ROLES = [
@@ -61,6 +73,7 @@ export async function applyStarterConfiguration(db: Db, admin: Actor, reason = "
   await run(setSetting, { key: "accounting.posting_accounts", value: STARTER_POSTING_ACCOUNTS, reason });
   await run(setSetting, { key: "rounding.final_increment", value: { IQD: "250" }, reason });
   await run(setSetting, { key: "alerts.trip_transit_days", value: 3, reason });
+  for (const [name, defaultBasis] of STARTER_FEE_TYPES) await run(defineFeeType, { name, defaultBasis, expenseAccountId: accounts["5300"] });
 
   const moneyAccounts = {
     usd: (await run(createMoneyAccount, { name: "Main safe USD", kind: "cash", currency: "USD", ledgerAccountId: accounts["1011"] })).id,

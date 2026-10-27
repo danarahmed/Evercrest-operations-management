@@ -35,7 +35,7 @@ async function partnerHasRole(tx: Db, companyId: string, partnerId: string, role
   if (!row.role) throw new ValidationError(`Partner is not marked as a ${role}`, { partnerId });
 }
 
-async function findOrCreateTruck(tx: Db, companyId: string, plate: string) {
+export async function findOrCreateTruck(tx: Db, companyId: string, plate: string) {
   const key = plateKey(plate);
   if (!key) throw new ValidationError("Truck plate is required");
   const [existing] = await tx.select().from(trucks).where(and(eq(trucks.companyId, companyId), eq(trucks.plateKey, key)));

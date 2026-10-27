@@ -148,6 +148,27 @@
       "when": 1792717145398,
       "tag": "0020_lockdown_data_api",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793089202858,
+      "tag": "0021_rule_card",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793089335270,
+      "tag": "0022_rule_card_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793089429071,
+      "tag": "0023_trip_imports",
+      "breakpoints": true
     }
   ]
 }

@@ -383,3 +383,9 @@ td.num, .amount-line > :last-child { unicode-bidi: plaintext; }
   thead th { position: static; }
   table { font-size: 11px; }
 }
+
+/* Import preview and live trip grid */
+.warn { color: var(--color-amber-700); }
+tr.row-danger td { background: color-mix(in oklab, var(--color-rose-500) 7%, transparent); }
+/* A grid of fields inside a fieldset takes the full width (fieldsets lay their items out as a wrapping row). */
+fieldset > .grid2 { flex: 1 1 100%; }

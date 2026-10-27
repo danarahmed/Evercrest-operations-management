@@ -34,24 +34,31 @@ export function ColumnPicker({ tableId, storageKey, columns, autoHideOrder, labe
   const keys = columns.map((c) => c.key);
   const apply = useCallback((list: string[]) => {
     const valid = list.filter((k) => keys.includes(k));
-    document.getElementById(tableId)?.setAttribute("data-hide", valid.join(" "));
     setHidden(valid);
     return valid;
-  }, [tableId, keys.join(" ")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [keys.join(" ")]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Hide columns, least important first, until the table no longer overflows its box. */
+  /**
+   * Hide columns, least important first, until the table no longer overflows
+   * its box. Measured with inline styles (synchronous), then handed to the
+   * <style> element below so rows added later by a refresh follow the same rule.
+   */
   const fit = useCallback(() => {
     const table = document.getElementById(tableId);
     const wrap = table?.parentElement;
-    if (!table || !wrap) return;
+    // Not in the page or not laid out yet (e.g. mid-refresh): measuring now would read zero and hide nothing.
+    if (!table || !wrap || !table.isConnected || wrap.clientWidth === 0) return;
     const order = autoHideOrder.filter((k) => keys.includes(k));
-    let list: string[] = [];
-    apply(list);
+    const cells = (k: string) => table.querySelectorAll<HTMLElement>(`[data-col="${k}"]`);
+    for (const k of keys) cells(k).forEach((el) => (el.style.display = ""));
+    const list: string[] = [];
     for (const k of order) {
       if (table.scrollWidth <= wrap.clientWidth) break;
-      list = [...list, k];
-      apply(list);
+      list.push(k);
+      cells(k).forEach((el) => (el.style.display = "none"));
     }
+    for (const k of list) cells(k).forEach((el) => (el.style.display = ""));
+    apply(list);
   }, [tableId, autoHideOrder, apply]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -68,13 +75,19 @@ export function ColumnPicker({ tableId, storageKey, columns, autoHideOrder, labe
     if (!loaded.current) return;
     if (saved.mode === "manual") { apply(saved.hidden); return; }
     fit();
+    // Measure again on the next frame (the page may still be settling after a refresh) and once web fonts are in.
+    const raf = requestAnimationFrame(fit);
+    document.fonts?.ready.then(fit);
     const table = document.getElementById(tableId);
     const wrap = table?.parentElement;
-    if (!wrap || typeof ResizeObserver === "undefined") return;
+    if (!table || !wrap || typeof ResizeObserver === "undefined") return () => cancelAnimationFrame(raf);
     let last = wrap.clientWidth;
-    const ro = new ResizeObserver(() => { if (wrap.clientWidth !== last) { last = wrap.clientWidth; fit(); } });
+    const ro = new ResizeObserver(() => {
+      if (wrap.clientWidth !== last || table.scrollWidth > wrap.clientWidth) { last = wrap.clientWidth; fit(); }
+    });
     ro.observe(wrap);
-    return () => ro.disconnect();
+    ro.observe(table);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, [saved, apply, fit, tableId]);
 
   const store = (s: Saved) => {
@@ -84,7 +97,9 @@ export function ColumnPicker({ tableId, storageKey, columns, autoHideOrder, labe
   const toggle = (key: string, show: boolean) => store({ mode: "manual", hidden: show ? hidden.filter((k) => k !== key) : [...hidden, key] });
   const n = hidden.length;
 
-  return (
+  const css = hidden.map((k) => `#${tableId} [data-col="${k.replace(/[^\w-]/g, "")}"]{display:none}`).join("");
+  return (<>
+    <style>{css}</style>
     <details className="colfilter colpicker pop-host" ref={ref}>
       <summary className={`btn ghost sm${n ? " on" : ""}`}><Icon name="sliders" size={14} />{label}{n > 0 && <b>{n}</b>}</summary>
       <div className="colfilter-pop pop">
@@ -101,5 +116,5 @@ export function ColumnPicker({ tableId, storageKey, columns, autoHideOrder, labe
         </div>
       </div>
     </details>
-  );
+  </>);
 }

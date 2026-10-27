@@ -1296,7 +1296,18 @@
     "col_dischargedQty": "كمية مفرغة",
     "columns": "الأعمدة",
     "fitToScreen": "ملاءمة الشاشة",
-    "hiddenColumns": "{count} مخفية"
+    "hiddenColumns": "{count} مخفية",
+    "entryTitle": "شاحنة جديدة",
+    "entryRepeats": "يتكرر لكل شاحنة:",
+    "entryChange": "تغيير",
+    "entryNoAdvance": "بلا سلفة",
+    "entryPrice": "السعر لكل وحدة",
+    "entryFromRules": "من بطاقة القواعد",
+    "entryAdvanceFrom": "السلفة تُدفع من",
+    "entryTransporterHint": "اتركه فارغاً إذا كان السائق يعمل معنا مباشرة",
+    "entrySave": "حفظ",
+    "entrySaved": "حُفظ في هذه الجلسة ({count})",
+    "enterManyRows": "إدخال صفوف كثيرة دفعة واحدة"
   },
   "Import": {
     "title": "استيراد ملف الرحلات",

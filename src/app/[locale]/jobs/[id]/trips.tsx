@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { ColumnHeader } from "@/components/trips/ColumnFilter";
 import { ColumnPicker } from "@/components/trips/ColumnPicker";
+import { EntryLine } from "@/components/trips/EntryLine";
 import { TripGrid } from "@/components/trips/TripGrid";
 import { Badge, Card, EmptyState, Stat } from "@/components/ui";
 import { TRIP_CHIPS, type TripFilters, type TripSort } from "@/domain/transport/trip-view";
@@ -42,7 +43,8 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
   const m = (a: string | null, c: string) => (a === null ? <span className="muted">—</span> : formatMoney(a, c, locale));
   const money = (a: string | null, c: string, sign = false) =>
     a === null ? <span className="muted">—</span> : <span className={sign && a.startsWith("-") ? "neg" : undefined}>{formatMoney(a, c, locale)}</span>;
-  const { lines, totals, showProfit, options, total, page, pageSize } = view;
+  const { lines, totals, feeTypes, showProfit, options, total, page, pageSize } = view;
+  const feeKey = (id: string) => `fee-${id.replace(/[^\w-]/g, "")}`;
   const unit = lines.find((l) => l.calc)?.calc?.unit ?? "MT";
   const q = (x: string | null) => (x === null ? <span className="muted">—</span> : formatNumber(x, locale));
   const tableId = showJob ? "trips-all" : "trips-job";
@@ -50,7 +52,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
     ...(showJob ? [{ key: "job", label: t("job") }] : []),
     { key: "date", label: t("date") }, { key: "route", label: t("route") }, { key: "driver", label: t("driver") }, { key: "transporter", label: t("transporter") }, { key: "plate", label: t("plate") },
     { key: "loaded", label: t("loaded") }, { key: "discharged", label: t("discharged") }, { key: "net", label: t("net") }, { key: "fine", label: t("fine") }, { key: "carrierPay", label: t("carrierPay") },
-    { key: "advance", label: t("advance") }, { key: "toPay", label: t("toPay") }, { key: "fees", label: t("fees") }, { key: "cost", label: t("cost") },
+    { key: "advance", label: t("advance") }, { key: "toPay", label: t("toPay") }, ...feeTypes.map((ft) => ({ key: feeKey(ft.id), label: ft.name })), { key: "cost", label: t("cost") },
     ...(showProfit ? [{ key: "billed", label: t("billed") }, { key: "margin", label: t("margin") }] : []), { key: "state", label: t("state") },
   ];
   const href = (over: Partial<TripFilters>, extra: Record<string, string | undefined> = {}) => `${basePath}?${filterParams({ ...filters, page: 1, ...over }, { ...baseParams, ...extra })}`;
@@ -90,6 +92,10 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
         )}
         {actions}
       </>}>
+        {view.canEdit && jobId && (
+          <EntryLine locale={locale} jobId={jobId} lists={{ routes: options.routes.map((r) => r.name), transporters: options.transporters.map((r) => r.name), drivers: options.drivers.map((d) => ({ name: d.name, plate: d.plate })) }}
+            moneyAccounts={moneyAccounts} advancesEnabled={advancesEnabled} defaults={{ loadingDate: gridDefaults.loadingDate, route: gridDefaults.route, transporter: gridDefaults.transporter }} />
+        )}
         <form method="get" className="trip-filter-form">
           {Object.entries(baseParams).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
           {filters.sort && <input type="hidden" name="sort" value={filters.sort} />}
@@ -107,7 +113,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
             </div>
             <button type="submit"><Icon name="search" size={16} />{t("show")}</button>
             {active > 0 && <Link href={`${basePath}?${new URLSearchParams(baseParams)}`} className="btn ghost">{t("clearAll", { count: active })}</Link>}
-            <ColumnPicker tableId={tableId} storageKey={`${tableId}.columns`} columns={pickable} autoHideOrder={["cost", "fees", "billed", "fine", "discharged", "plate", "route", "date", "advance", "state", "margin", "transporter"]} label={t("columns")} fitLabel={t("fitToScreen")} hiddenLabel={t("hiddenColumns", { count: "{count}" })} />
+            <ColumnPicker tableId={tableId} storageKey={`${tableId}.columns`} columns={pickable} autoHideOrder={["cost", "billed", "discharged", "plate", "route", ...feeTypes.map((ft) => feeKey(ft.id)), "fine", "date", "advance", "state", "margin", "transporter"]} label={t("columns")} fitLabel={t("fitToScreen")} hiddenLabel={t("hiddenColumns", { count: "{count}" })} />
           </div>
           {lines.length === 0 ? <EmptyState icon="truck" title={active ? t("noMatch") : t("noTrips")} hint={!active && canImport ? t("noTripsHint") : undefined} /> : (
             <div className="table-wrap"><table className="dense trips" id={tableId}>
@@ -126,7 +132,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                 <ColumnHeader label={t("carrierPay")} col="carrierPay" align="num" {...hdr("carrierPay")} />
                 <ColumnHeader label={t("advance")} col="advance" align="num" {...hdr("advance")} />
                 <ColumnHeader label={t("toPay")} col="toPay" align="num" {...hdr("toPay")} />
-                <ColumnHeader label={t("fees")} col="fees" align="num" {...hdr("fees")} />
+                {feeTypes.map((ft) => <ColumnHeader key={ft.id} label={ft.name} col={feeKey(ft.id)} align="num" applyLabel={t("apply")} clearLabel={t("clear")} searchLabel={t("filterBy")} />)}
                 <ColumnHeader label={t("cost")} col="cost" align="num" {...hdr("cost")} />
                 {showProfit && <><ColumnHeader label={t("billed")} col="billed" align="num" {...hdr("billed")} /><ColumnHeader label={t("margin")} col="margin" align="num" {...hdr("margin")} /></>}
                 <ColumnHeader label={t("state")} col="state" {...hdr("state")} filter={{ name: "st", options: stateOpts, selected: filters.states ?? [] }} />
@@ -150,7 +156,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                     <td className="num" data-col="carrierPay">{c ? m(c.carrier.total, c.currency) : <span className="muted">—</span>}</td>
                     <td className="num" data-col="advance">{Object.keys(l.advances).length ? Object.entries(l.advances).map(([cur, amt]) => <div key={cur}>{formatMoney(amt, cur, locale)}</div>) : <span className="muted">—</span>}</td>
                     <td className="num" data-col="toPay"><strong>{c ? money(c.carrier.toPay, c.currency, true) : <span className="muted">—</span>}</strong></td>
-                    <td className="num" data-col="fees">{c ? m(c.feesTotal === "0" ? null : c.feesTotal, c.currency) : <span className="muted">—</span>}</td>
+                    {feeTypes.map((ft) => { const fee = c?.fees.find((x) => x.feeTypeId === ft.id); return <td key={ft.id} className="num" data-col={feeKey(ft.id)}>{fee && fee.amount !== "0" ? formatMoney(fee.amount, fee.currency, locale) : <span className="muted">—</span>}</td>; })}
                     <td className="num" data-col="cost">{c ? m(c.cost, c.currency) : <span className="muted">—</span>}</td>
                     {showProfit && <><td className="num" data-col="billed">{c ? m(c.customer.total, c.currency) : <span className="muted">—</span>}</td><td className="num" data-col="margin">{c ? money(c.margin, c.currency, true) : <span className="muted">—</span>}</td></>}
                     <td data-col="state">
@@ -169,7 +175,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                   <td className="num" data-col="carrierPay"><strong>{formatMoney(s.carrierTotal, s.currency, locale)}</strong></td>
                   <td className="num" data-col="advance"><strong>{formatMoney(s.advances, s.currency, locale)}</strong></td>
                   <td className="num" data-col="toPay"><strong>{formatMoney(s.carrierToPay, s.currency, locale)}</strong></td>
-                  <td className="num" data-col="fees"><strong>{formatMoney(s.fees, s.currency, locale)}</strong></td>
+                  {feeTypes.map((ft) => <td key={ft.id} className="num" data-col={feeKey(ft.id)}><strong>{formatMoney(s.feeByType[ft.id] ?? "0", s.currency, locale)}</strong></td>)}
                   <td className="num" data-col="cost"><strong>{formatMoney(s.cost, s.currency, locale)}</strong></td>
                   {showProfit && <><td className="num" data-col="billed"><strong>{formatMoney(s.customerTotal, s.currency, locale)}</strong></td><td className="num" data-col="margin"><strong>{formatMoney(s.margin, s.currency, locale)}</strong></td></>}
                   <td data-col="state"></td>
@@ -190,8 +196,8 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
       </Card>
 
       {view.canEdit && jobId && (
-        <details className="card" open={lines.length === 0}>
-          <summary className="card-head" style={{ cursor: "pointer" }}><div className="card-title"><Icon name="plus" />{t("enterTrips")}<span className="muted small" style={{ fontWeight: 500 }}> · {t("enterTripsHelp")}</span></div></summary>
+        <details className="card">
+          <summary className="card-head" style={{ cursor: "pointer" }}><div className="card-title"><Icon name="plus" />{t("enterManyRows")}<span className="muted small" style={{ fontWeight: 500 }}> · {t("enterTripsHelp")}</span></div></summary>
           <div className="card-body">
             <ActionForm command="trips.save_many" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("saveRows")} redirectTo={`${basePath}?${new URLSearchParams(baseParams)}`}>
               <input type="hidden" name="jobId" value={jobId} />

@@ -1296,7 +1296,18 @@
     "col_dischargedQty": "بڕی بەتاڵکراو",
     "columns": "ستوونەکان",
     "fitToScreen": "گونجاندن لەگەڵ شاشە",
-    "hiddenColumns": "{count} شاراوە"
+    "hiddenColumns": "{count} شاراوە",
+    "entryTitle": "بارهەڵگری نوێ",
+    "entryRepeats": "بۆ هەموو بارهەڵگرێک دووبارە دەبێتەوە:",
+    "entryChange": "گۆڕین",
+    "entryNoAdvance": "بێ پێشەکی",
+    "entryPrice": "نرخ بۆ هەر یەکە",
+    "entryFromRules": "لە کارتی ڕێساکان",
+    "entryAdvanceFrom": "پێشەکی لە",
+    "entryTransporterHint": "بەتاڵی بهێڵەوە ئەگەر شۆفێر ڕاستەوخۆ لەگەڵمان کار دەکات",
+    "entrySave": "پاشەکەوت",
+    "entrySaved": "لەم دانیشتنە پاشەکەوت کرا ({count})",
+    "enterManyRows": "چەند ڕیزێک بە یەکجار"
   },
   "Import": {
     "title": "هاوردەکردنی فایلی گەشت",

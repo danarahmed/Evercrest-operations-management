@@ -58,6 +58,8 @@ export interface JobTripTotals {
   advances: string;
   carrierToPay: string;
   fees: string;
+  /** Fees by fee type id (job currency only), so a grid can show one column per fee. */
+  feeByType: Record<string, string>;
   cost: string;
   customerTotal: string;
   /** Trips whose customer price is still to be decided (excluded from customerTotal and margin). */
@@ -96,7 +98,7 @@ export interface TripFilters {
 export interface TripFilterOptions {
   routes: { id: string; name: string }[];
   transporters: { id: string; name: string }[];
-  drivers: { id: string; name: string }[];
+  drivers: { id: string; name: string; plate: string | null }[];
   jobs: { id: string; no: string; name: string }[];
 }
 
@@ -142,7 +144,7 @@ function matchesChips(l: TripLine, chips: TripChip[]): boolean {
   });
 }
 
-export async function tripLines(db: Db, companyId: string, f: TripFilters): Promise<{ lines: TripLine[]; totals: JobTripTotals[]; withoutRules: number; total: number; page: number; pageSize: number; options: TripFilterOptions }> {
+export async function tripLines(db: Db, companyId: string, f: TripFilters): Promise<{ lines: TripLine[]; totals: JobTripTotals[]; feeTypes: { id: string; name: string }[]; withoutRules: number; total: number; page: number; pageSize: number; options: TripFilterOptions }> {
   const where: SQL[] = [eq(trips.companyId, companyId)];
   if (f.jobId) where.push(eq(trips.jobId, f.jobId));
   else if (f.jobIds?.length) where.push(inArray(trips.jobId, f.jobIds));
@@ -242,12 +244,15 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
     };
   });
 
+  // The plate a driver came with last time (pre-filled when the driver is typed again).
+  const lastPlate = new Map<string, string>();
+  for (const l of [...lines].sort((a, b) => (b.loadingDate ?? "").localeCompare(a.loadingDate ?? ""))) if (l.plate && !lastPlate.has(l.driverId)) lastPlate.set(l.driverId, l.plate);
   // Filter choices come from the unfiltered set of this job (or company), so a filter can always be widened again.
   const uniq = <T extends { id: string; name: string }>(xs: (T | null)[]) => [...new Map(xs.filter((x): x is T => !!x).map((x) => [x.id, x])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const options: TripFilterOptions = {
     routes: f.jobId ? cards.get(f.jobId)?.routes.map((r) => ({ id: r.id, name: r.name })) ?? [] : uniq(lines.map((l) => (l.routeId && l.route ? { id: l.routeId, name: l.route } : null))),
     transporters: uniq(lines.map((l) => (l.transporterId && l.transporter ? { id: l.transporterId, name: l.transporter } : null))),
-    drivers: uniq(lines.map((l) => ({ id: l.driverId, name: l.driver }))),
+    drivers: uniq(lines.map((l) => ({ id: l.driverId, name: l.driver }))).map((d) => ({ ...d, plate: lastPlate.get(d.id) ?? null })),
     jobs: [...new Map(lines.map((l) => [l.jobId, { id: l.jobId, no: l.jobNo, name: l.jobName }])).values()].sort((a, b) => b.no.localeCompare(a.no)),
   };
 
@@ -266,6 +271,8 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
     return dir === "asc" ? r : -r;
   });
 
+  // Every fee type that appears on a shown trip gets its own column.
+  const feeTypes = [...new Map(lines.flatMap((l) => l.calc?.fees ?? []).map((x) => [x.feeTypeId, { id: x.feeTypeId, name: x.name }])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const byCurrency = new Map<string, TripLine[]>();
   for (const l of lines) if (l.calc) byCurrency.set(l.calc.currency, [...(byCurrency.get(l.calc.currency) ?? []), l]);
   const totals: JobTripTotals[] = [...byCurrency].map(([currency, ls]) => {
@@ -282,6 +289,7 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
       advances: sum((c) => c.carrier.advance),
       carrierToPay: sum((c) => c.carrier.toPay),
       fees: sum((c) => c.feesTotal),
+      feeByType: Object.fromEntries(feeTypes.map((ft) => [ft.id, toStr(ls.reduce((a, l) => a.plus(l.calc!.fees.filter((x) => x.feeTypeId === ft.id && x.currency === currency).reduce((b, x) => b.plus(dec(x.amount)), new D(0))), new D(0)))])),
       cost: sum((c) => c.cost),
       customerTotal: toStr(priced.reduce((a, l) => a.plus(dec(l.calc!.customer.total!)), new D(0))),
       priceTbd: ls.length - priced.length,
@@ -293,7 +301,7 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
   const pageSize = Math.min(Math.max(f.pageSize ?? 100, 10), 500);
   const total = lines.length;
   const page = Math.min(Math.max(f.page ?? 1, 1), Math.max(Math.ceil(total / pageSize), 1));
-  return { lines: lines.slice((page - 1) * pageSize, page * pageSize), totals, withoutRules, total, page, pageSize, options };
+  return { lines: lines.slice((page - 1) * pageSize, page * pageSize), totals, feeTypes, withoutRules, total, page, pageSize, options };
 }
 
 /** Kept for callers that want one job without filters. */

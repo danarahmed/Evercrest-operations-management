@@ -1296,7 +1296,18 @@
     "col_dischargedQty": "Discharged qty",
     "columns": "Columns",
     "fitToScreen": "Fit to screen",
-    "hiddenColumns": "{count} hidden"
+    "hiddenColumns": "{count} hidden",
+    "entryTitle": "New truck",
+    "entryRepeats": "Repeats for every truck:",
+    "entryChange": "Change",
+    "entryNoAdvance": "no advance",
+    "entryPrice": "Price per unit",
+    "entryFromRules": "from the rule card",
+    "entryAdvanceFrom": "Advance paid from",
+    "entryTransporterHint": "leave empty when the driver works directly with us",
+    "entrySave": "Save",
+    "entrySaved": "Saved this session ({count})",
+    "enterManyRows": "Enter many rows at once"
   },
   "Import": {
     "title": "Import trip sheet",

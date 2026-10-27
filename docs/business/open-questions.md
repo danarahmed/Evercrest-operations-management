@@ -93,3 +93,10 @@ Answer by number. Where a question has a **proposed default**, a short "ok" is e
 ### Decisions recorded
 - **#15** Remote settlements are made by **our own site employee**, who sends back an **Excel sheet and scanned documents**. → Import their Excel, attach the scans, compare line by line with the system's calculation; differences are on that employee's cash box.
 - **#30** Option A (record at loading, estimate then correct) explained in detail; answer pending.
+
+## Owner's answers — round 3 (verbatim)
+
+> yes go with D
+
+### Decision recorded
+- **#30** Accounting method **D**: books hold only real events (cash, advances, claims, invoices, payments); live job profit and positions are calculated from the trips (confirmed vs estimated); one automatic month-end summary accrual for trips awaiting papers, auto-reversed next month. (Options A record-at-loading, B papers-only, C live-only were explained; A rejected because of 20–30k extra entries a month for the accountant.)

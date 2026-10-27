@@ -102,7 +102,10 @@ Each job has a **rule card**. Every rule has a **start date**; a change creates 
 
 ## 9. Accounting done by the system
 
-- Every action posts its own journal entry immediately, to the right accounts, in its currency: trip loaded (cost and receivable accruals as the owner chooses — see Q), advance paid, fee paid, fine, claim accepted, carrier payment, customer invoice, customer payment, exchange, hawala fee, cash transfer, cash count difference, overhead share, salary.
+- **Method D (owner-approved):** the books record **only real events**; live figures come from the trips.
+  - Every real action posts its own journal entry immediately, to the right accounts, in its currency: advance paid, fee paid, claim accepted (trip cost to the claimant's account, fines and deductions), carrier payment, customer invoice, customer payment, exchange, hawala fee, cash transfer, cash count difference, overhead share, salary.
+  - **No estimate entries per trip.** Job profit, owed/owing and money on the road are calculated live from the trips and shown as **confirmed** vs **estimated** (estimated = loaded tons × rule-card prices until discharge/claim).
+  - **Month end:** one automatic summary accrual per job and currency for trips still waiting for papers (earned not invoiced; owed for trips not claimed), **reversed automatically on the first day of the next month**. Statements are complete; the accountant reviews one entry a month instead of thousands.
 - **The accountant's review queue:** entries arrive grouped by day and job; the accountant checks and **accepts**; anything unusual is flagged (round amounts, back-dated, outside rules, large). Mistakes are corrected by a reversal from the source document, never by editing.
 - **Month end:** accept the month's entries, run overhead sharing, lock the month. Job closing is continuous, so month end is a check, not a project.
 - **Statements:** income statement, balance sheet, cash flow, changes in equity — per company and consolidated, per currency.

@@ -28,3 +28,4 @@ Each part has the owner's answer, then open questions noted while reading (not y
 ## Build log
 
 - **Step 1 (rule card, trips, import)** — built 2026-10-27: `job_terms` / `job_routes` / `fee_types` / `job_fees` / `trip_fees` / `trip_imports`, live trip grid, Excel import with preview. Verified against the real DIESEL sheet: 197 rows imported, all 112 discharged trips equal the Excel formulas (with the two agreed corrections).
+- **Step 1f (one-screen trip, grid, filters)** — built 2026-10-27: trip dialog with full form and change history, spreadsheet-style entry grid, column filters/sort/search/date ranges/chips, company-wide Trips page. Owner decided: dialog + grid (no separate page); staff may edit saved trips, with who/what/from/to recorded; saved filter groups to be decided at the end.

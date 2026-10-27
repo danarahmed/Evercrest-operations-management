@@ -16,7 +16,8 @@ import { listDeliveries } from "@/domain/supply/deliveries";
 import { quantityDifference } from "@/domain/transport/trips";
 import { loadRuleCard } from "@/domain/transport/terms";
 import { getTripImport, type ImportRow, planImport } from "@/domain/transport/trip-import";
-import { jobTripLines, type TripLine } from "@/domain/transport/trip-view";
+import { type TripFilters, type TripLine, tripLines } from "@/domain/transport/trip-view";
+import { tripHistory } from "@/domain/transport/trip-edit";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
@@ -581,14 +582,26 @@ export async function jobRuleCard(db: Db, actor: Actor, jobId: string) {
   return { ...card, terms, showProfit, canManage: can(actor, "job_terms.manage") };
 }
 
-/** The live trip view of a job. The customer side and margins are removed for people without profit.view. */
-export async function jobTripsLive(db: Db, actor: Actor, jobId: string) {
+/** The live trip view (one job, or every job). The customer side and margins are removed for people without profit.view. */
+export async function jobTripsLive(db: Db, actor: Actor, filters: TripFilters) {
   requirePermission(actor, "jobs.view");
-  const view = await jobTripLines(db, actor.companyId, jobId);
+  const view = await tripLines(db, actor.companyId, filters);
   const showProfit = can(actor, "profit.view");
-  if (showProfit) return { ...view, showProfit };
+  if (showProfit) return { ...view, showProfit, canEdit: can(actor, "trips.manage") };
   const hide = (l: TripLine): TripLine => (l.calc ? { ...l, calc: { ...l.calc, customer: { ...l.calc.customer, price: null, revenue: null, total: null }, margin: null } } : l);
-  return { lines: view.lines.map(hide), totals: view.totals.map((t) => ({ ...t, customerTotal: "0", margin: "0", priceTbd: 0 })), withoutRules: view.withoutRules, showProfit };
+  return { ...view, lines: view.lines.map(hide), totals: view.totals.map((t) => ({ ...t, customerTotal: "0", margin: "0", priceTbd: 0 })), showProfit, canEdit: can(actor, "trips.manage") };
+}
+
+/** One trip with everything about it: the line, its fees, advances and the change history (who changed what, from what to what). */
+export async function tripDetail(db: Db, actor: Actor, tripId: string) {
+  requirePermission(actor, "jobs.view");
+  const [trip] = await db.select().from(trips).where(and(eq(trips.id, tripId), eq(trips.companyId, actor.companyId)));
+  if (!trip) return null;
+  const view = await jobTripsLive(db, actor, { jobId: trip.jobId, pageSize: 500 });
+  const line = view.lines.find((l) => l.id === tripId) ?? null;
+  const history = await tripHistory(db, actor.companyId, tripId);
+  const [transporter] = trip.transporterId ? await db.select({ name: businessPartners.name }).from(businessPartners).where(eq(businessPartners.id, trip.transporterId)) : [];
+  return { trip, line, history, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit };
 }
 
 /** A staged sheet with what applying it would do. */

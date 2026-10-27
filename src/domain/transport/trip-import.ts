@@ -2,7 +2,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
 import { businessPartners, moneyAccounts, partnerRoles, payments, tripFees, tripImports, trips } from "@/db/schema";
-import { defineCommand } from "@/server/command";
+import { type CommandContext, defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
 import { recordPayment } from "../finance/payments";
@@ -251,11 +251,47 @@ export const applyTripImport = defineCommand({
   permission: "trips.manage",
   input: z.object({ importId: uuid, moneyAccountId: uuid.nullish() }),
   async handler(ctx, { importId, moneyAccountId }) {
-    const { tx, actor, audit } = ctx;
+    const { tx, actor } = ctx;
     // Row lock: one batch is applied once, even with a double click.
     const [imp] = await tx.select().from(tripImports).where(and(eq(tripImports.id, importId), eq(tripImports.companyId, actor.companyId))).for("update");
     if (!imp) throw new NotFound("trip_import", importId);
     if (imp.status !== "staged") throw new Conflict(`This sheet was already ${imp.status}`);
+    return applyImportRows(ctx, imp, moneyAccountId ?? null);
+  },
+});
+
+/**
+ * Rows typed into the trips grid: the same checks and the same creation as a
+ * sheet import, in one step. Any row with an error stops the whole batch, so a
+ * typed batch is saved completely or not at all.
+ */
+export const saveTripRows = defineCommand({
+  name: "trips.save_many",
+  permission: "trips.manage",
+  input: z.object({ jobId: uuid, moneyAccountId: uuid.nullish(), rows: z.array(rowSchema).min(1).max(500) }),
+  async handler(ctx, { jobId, moneyAccountId, rows }) {
+    const { tx, actor, audit } = ctx;
+    await getJob(tx, actor.companyId, jobId);
+    const plan = await planImport(tx, actor.companyId, jobId, rows);
+    const errors = plan.rows.filter((r) => r.status === "error");
+    if (errors.length)
+      throw new ValidationError(`${errors.length} row(s) cannot be saved`, {
+        missing: errors.map((r) => `Row ${r.rowNo}${r.manifest ? ` (${r.manifest})` : ""}: ${r.notes.filter((n) => n.level === "error").map((n) => n.code).join(", ")}`),
+      });
+    const [imp] = await tx
+      .insert(tripImports)
+      .values({ companyId: actor.companyId, jobId, fileName: "grid", rows, columns: [], createdBy: actor.userId })
+      .returning();
+    await audit({ action: "trip_imports.stage", entityType: "trip_import", entityId: imp.id, after: { jobId, fileName: "grid", rows: rows.length } });
+    const result = await applyImportRows(ctx, imp, moneyAccountId ?? null);
+    return { ...result, id: jobId };
+  },
+});
+
+/** Create and update trips from a staged batch (import or grid). Advances are paid from `moneyAccountId`. */
+export async function applyImportRows(ctx: CommandContext, imp: typeof tripImports.$inferSelect, moneyAccountId: string | null) {
+  {
+    const { tx, actor, audit } = ctx;
     const job = await getJob(tx, actor.companyId, imp.jobId);
     if (!["open", "in_progress", "pending"].includes(job.status)) throw new Conflict(`Job is ${job.status}`);
     const rows = imp.rows as ImportRow[];
@@ -384,8 +420,8 @@ export const applyTripImport = defineCommand({
     await audit({ action: "trip_imports.apply", entityType: "trip_import", entityId: imp.id, after: result });
     // id: the form redirects to the job's trips after a successful apply.
     return { id: imp.id, ...result };
-  },
-});
+  }
+}
 
 export const discardTripImport = defineCommand({
   name: "trip_imports.discard",

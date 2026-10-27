@@ -27,7 +27,8 @@ import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
 import { cancelPayStatement, collectStatementDebt, createPayStatement, payStatement, writeOffStatementDebt } from "@/domain/transport/statements";
 import { recordArrival } from "@/domain/transport/trips";
 import { defineFeeType, defineRoute, setJobFee, setTerms } from "@/domain/transport/terms";
-import { applyTripImport, discardTripImport } from "@/domain/transport/trip-import";
+import { applyTripImport, discardTripImport, saveTripRows } from "@/domain/transport/trip-import";
+import { saveTrip } from "@/domain/transport/trip-edit";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
 import type { Command } from "./command";
@@ -103,6 +104,26 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "fee_types.define": { command: defineFeeType, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on", active: i.active !== "off" }) },
   "job_fees.set": { command: setJobFee, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on" }) },
   "trip_imports.apply": { command: applyTripImport },
+  // One screen per trip; an empty transporter field means "direct with the driver".
+  "trips.save": { command: saveTrip, prepare: async (_d, _a, i) => ({ ...i, ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) }) },
+  // Grid rows arrive as parallel arrays (r_manifest[], r_driver[], …); empty rows are dropped; fee columns as f_<key>[].
+  "trips.save_many": {
+    command: saveTripRows,
+    prepare: async (_d, _a, input) => {
+      const col = (k: string) => (input[k] as string[] | undefined) ?? [];
+      const n = Math.max(...Object.keys(input).filter((k) => k.startsWith("r_")).map((k) => col(k).length), 0);
+      const fields = ["manifest", "loadingDate", "route", "carrierPrice", "reward", "advance", "transporter", "driver", "plate", "loadedQty", "dischargeDate", "dischargedQty", "transporterCut", "carrierDeduction"];
+      const rows = [];
+      for (let i = 0; i < n; i++) {
+        const values: Record<string, string> = {};
+        for (const f of fields) if (col(`r_${f}`)[i]) values[f] = col(`r_${f}`)[i];
+        if (!values.manifest && !values.driver && !values.loadedQty) continue;
+        rows.push({ rowNo: i + 1, values, fees: {} });
+      }
+      const rest = Object.fromEntries(Object.entries(input).filter(([k]) => !k.startsWith("r_")));
+      return { ...rest, rows };
+    },
+  },
   "trip_imports.discard": { command: discardTripImport },
   "payments.record": { command: recordPayment, prepare: currencyFromMoneyAccount },
   "documents.record": { command: recordDocument, file: true },

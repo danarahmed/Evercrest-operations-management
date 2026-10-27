@@ -8,15 +8,17 @@ import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@
 import { summarize } from "@/domain/management/history";
 import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
-import { formOptions, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace } from "@/server/queries";
+import { formOptions, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace, tripDetail } from "@/server/queries";
+import { parseTripFilters } from "@/lib/trip-filters";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
 import { ActivitiesSection } from "./activities";
-import { CostActions, DocumentAction, JobSettingsActions, TransportActions } from "./forms";
+import { CostActions, DocumentAction, JobSettingsActions } from "./forms";
 import { DeliveriesSection, WorkOrdersSection } from "./operations";
 import { RuleCardSection } from "./rules";
 import { SettlementSection } from "./settlement";
 import { TripsSection } from "./trips";
+import { TripDialog } from "./trip-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ type TabKey = "overview" | "rules" | "steps" | "trips" | "work" | "deliveries" |
  * The job workspace (CLAUDE.md §29): one place for everything about a job.
  * It aggregates the underlying records; only tabs relevant to the job are shown.
  */
-export default async function JobPage({ params, searchParams }: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function JobPage({ params, searchParams }: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
   const actor = await currentActor(locale);
@@ -48,8 +50,12 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const manage = open && can(actor, "jobs.manage");
   const showMoney = !!w.profitability;
   const transport = caps.includes("transportation");
-  const live = transport || w.trips.length > 0 ? await jobTripsLive(db, actor, id) : null;
+  const sp = await searchParams;
+  const filters = parseTripFilters(sp, id);
+  const live = transport || w.trips.length > 0 ? await jobTripsLive(db, actor, filters) : null;
   const card = transport ? await jobRuleCard(db, actor, id) : null;
+  const tripParam = typeof sp.trip === "string" ? sp.trip : null;
+  const detail = tripParam && tripParam !== "new" ? await tripDetail(db, actor, tripParam) : null;
 
   const tabs: { key: TabKey; label: string; show: boolean; count?: number }[] = [
     { key: "overview", label: t("tabOverview"), show: true },
@@ -63,7 +69,6 @@ export default async function JobPage({ params, searchParams }: { params: Promis
     { key: "history", label: t("tabHistory"), show: true },
   ];
   const shown = tabs.filter((x) => x.show);
-  const sp = await searchParams;
   const tab = (shown.find((x) => x.key === sp.tab)?.key ?? "overview") as TabKey;
   const base = `/${locale}/jobs/${id}`;
   const nextText = w.nextAction ? describe(codes, w.nextAction.code, w.nextAction.params, w.nextAction.text, locale) : null;
@@ -163,11 +168,20 @@ export default async function JobPage({ params, searchParams }: { params: Promis
         <>
           <TripsSection
             locale={locale}
-            jobId={w.job.id}
+            basePath={base}
+            baseParams={{ tab: "trips" }}
             view={live}
+            filters={filters}
+            jobId={w.job.id}
+            showJob={false}
+            moneyAccounts={options.moneyAccounts}
+            advancesEnabled={caps.includes("advances")}
             canImport={open && can(actor, "trips.manage")}
-            actions={open && can(actor, "trips.manage") && <TransportActions locale={locale} jobId={w.job.id} jobNo={w.job.jobNo} capabilities={caps} tripList={w.trips.map((x) => x.trip)} options={options} />}
+            actions={open && can(actor, "trips.manage") && <Link href={`${base}?tab=trips&trip=new`} className="btn primary"><Icon name="plus" size={16} />{t("newTrip")}</Link>}
           />
+          {(tripParam === "new" || detail) && (
+            <TripDialog locale={locale} jobId={w.job.id} detail={detail} closeHref={`${base}?tab=trips`} options={options} routes={card?.routes ?? []} advancesEnabled={caps.includes("advances")} canEdit={open && can(actor, "trips.manage")} />
+          )}
           <SettlementSection locale={locale} jobId={w.job.id} trips={w.trips} canSettle={can(actor, "settlements.create")} canBill={can(actor, "billing.create") && caps.includes("billing")} />
         </>
       )}

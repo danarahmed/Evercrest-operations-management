@@ -414,3 +414,38 @@ table.entry td { padding: 3px 4px; }
 .history-diff { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12.5px; }
 .history-diff .old { text-decoration: line-through; color: var(--color-slate-400); }
 .pager { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-size: 13px; color: var(--color-slate-500); }
+
+/* Trip grid: fits the page — compact cells, units in the headers, long names clipped, columns hideable */
+table.trips th, table.trips td { padding: 4px 7px; font-size: 12px; }
+table.trips td.num { font-size: 12.5px; }
+table.trips thead th { white-space: normal; line-height: 1.15; vertical-align: bottom; }
+table.trips thead th .th-wrap { align-items: flex-end; }
+table.trips td.clip { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+table.trips td .cell-sub { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+table.trips td[data-col="state"] { white-space: normal; min-width: 90px; }
+table.trips td[data-col="state"] .small { line-height: 1.2; }
+.colfilter-pop { box-sizing: border-box; overflow: auto; z-index: 60; }
+details.colpicker > summary { color: inherit; padding: 6px 10px; }
+details.colpicker > summary.on { color: var(--color-primary-700); }
+details.colpicker > summary b { font-size: 10px; margin-inline-start: 2px; }
+.colpicker-fit { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--color-slate-100); font-size: 13px; font-weight: 700; }
+table[data-hide~="job"] [data-col="job"] { display: none; }
+table[data-hide~="date"] [data-col="date"] { display: none; }
+table[data-hide~="route"] [data-col="route"] { display: none; }
+table[data-hide~="driver"] [data-col="driver"] { display: none; }
+table[data-hide~="transporter"] [data-col="transporter"] { display: none; }
+table[data-hide~="plate"] [data-col="plate"] { display: none; }
+table[data-hide~="loaded"] [data-col="loaded"] { display: none; }
+table[data-hide~="discharged"] [data-col="discharged"] { display: none; }
+table[data-hide~="net"] [data-col="net"] { display: none; }
+table[data-hide~="fine"] [data-col="fine"] { display: none; }
+table[data-hide~="carrierPay"] [data-col="carrierPay"] { display: none; }
+table[data-hide~="advance"] [data-col="advance"] { display: none; }
+table[data-hide~="toPay"] [data-col="toPay"] { display: none; }
+table[data-hide~="fees"] [data-col="fees"] { display: none; }
+table[data-hide~="cost"] [data-col="cost"] { display: none; }
+table[data-hide~="billed"] [data-col="billed"] { display: none; }
+table[data-hide~="margin"] [data-col="margin"] { display: none; }
+table[data-hide~="state"] [data-col="state"] { display: none; }
+.colfilter-pop label.check { display: flex; flex-direction: row; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+.colfilter-pop label.check input { flex: none; width: auto; min-width: 0; margin: 0; }

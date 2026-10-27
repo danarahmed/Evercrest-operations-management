@@ -1213,7 +1213,7 @@
     "noTrips": "No trips yet.",
     "noTripsHint": "Import the loading sheet (.xlsx) or start a trip by hand.",
     "manifest": "Manifest",
-    "date": "Loaded",
+    "date": "Load date",
     "route": "Route",
     "driver": "Driver",
     "transporter": "Transporter",
@@ -1291,7 +1291,10 @@
     "col_manifest": "Manifest",
     "col_loadedQty": "Loaded qty",
     "col_dischargeDate": "Discharged",
-    "col_dischargedQty": "Discharged qty"
+    "col_dischargedQty": "Discharged qty",
+    "columns": "Columns",
+    "fitToScreen": "Fit to screen",
+    "hiddenColumns": "{count} hidden"
   },
   "Import": {
     "title": "Import trip sheet",

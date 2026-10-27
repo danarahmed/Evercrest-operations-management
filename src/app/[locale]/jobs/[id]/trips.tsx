@@ -6,10 +6,11 @@ import { ExportButton } from "@/components/ExportButton";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { ColumnHeader } from "@/components/trips/ColumnFilter";
+import { ColumnPicker } from "@/components/trips/ColumnPicker";
 import { TripGrid } from "@/components/trips/TripGrid";
 import { Badge, Card, EmptyState, Stat } from "@/components/ui";
 import { TRIP_CHIPS, type TripFilters, type TripSort } from "@/domain/transport/trip-view";
-import { formatMoney, formatQty } from "@/lib/format";
+import { formatMoney, formatNumber, formatQty } from "@/lib/format";
 import { activeFilterCount, filterParams } from "@/lib/trip-filters";
 import type { jobTripsLive } from "@/server/queries";
 import { ImportUpload } from "./import/ImportUpload";
@@ -43,7 +44,15 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
     a === null ? <span className="muted">—</span> : <span className={sign && a.startsWith("-") ? "neg" : undefined}>{formatMoney(a, c, locale)}</span>;
   const { lines, totals, showProfit, options, total, page, pageSize } = view;
   const unit = lines.find((l) => l.calc)?.calc?.unit ?? "MT";
-  const q = (x: string | null) => (x === null ? <span className="muted">—</span> : formatQty(x, unit, locale));
+  const q = (x: string | null) => (x === null ? <span className="muted">—</span> : formatNumber(x, locale));
+  const tableId = showJob ? "trips-all" : "trips-job";
+  const pickable = [
+    ...(showJob ? [{ key: "job", label: t("job") }] : []),
+    { key: "date", label: t("date") }, { key: "route", label: t("route") }, { key: "driver", label: t("driver") }, { key: "transporter", label: t("transporter") }, { key: "plate", label: t("plate") },
+    { key: "loaded", label: t("loaded") }, { key: "discharged", label: t("discharged") }, { key: "net", label: t("net") }, { key: "fine", label: t("fine") }, { key: "carrierPay", label: t("carrierPay") },
+    { key: "advance", label: t("advance") }, { key: "toPay", label: t("toPay") }, { key: "fees", label: t("fees") }, { key: "cost", label: t("cost") },
+    ...(showProfit ? [{ key: "billed", label: t("billed") }, { key: "margin", label: t("margin") }] : []), { key: "state", label: t("state") },
+  ];
   const href = (over: Partial<TripFilters>, extra: Record<string, string | undefined> = {}) => `${basePath}?${filterParams({ ...filters, page: 1, ...over }, { ...baseParams, ...extra })}`;
   const active = activeFilterCount(filters);
   const current = filters.sort ?? "loadingDate";
@@ -98,52 +107,53 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
             </div>
             <button type="submit"><Icon name="search" size={16} />{t("show")}</button>
             {active > 0 && <Link href={`${basePath}?${new URLSearchParams(baseParams)}`} className="btn ghost">{t("clearAll", { count: active })}</Link>}
+            <ColumnPicker tableId={tableId} storageKey={`${tableId}.columns`} columns={pickable} autoHideOrder={["cost", "fees", "billed", "fine", "discharged", "plate", "route", "date", "advance", "state", "margin", "transporter"]} label={t("columns")} fitLabel={t("fitToScreen")} hiddenLabel={t("hiddenColumns", { count: "{count}" })} />
           </div>
           {lines.length === 0 ? <EmptyState icon="truck" title={active ? t("noMatch") : t("noTrips")} hint={!active && canImport ? t("noTripsHint") : undefined} /> : (
-            <div className="table-wrap"><table className="dense">
+            <div className="table-wrap"><table className="dense trips" id={tableId}>
               <thead><tr>
-                {showJob && <ColumnHeader label={t("job")} {...hdr("job")} filter={{ name: "job", options: options.jobs.map((j) => ({ value: j.id, label: `${j.no} · ${j.name}` })), selected: filters.jobIds ?? [] }} />}
+                {showJob && <ColumnHeader label={t("job")} col="job" {...hdr("job")} filter={{ name: "job", options: options.jobs.map((j) => ({ value: j.id, label: `${j.no} · ${j.name}` })), selected: filters.jobIds ?? [] }} />}
                 <ColumnHeader label={t("manifest")} {...hdr("manifest")} />
-                <ColumnHeader label={t("date")} {...hdr("loadingDate")} />
-                <ColumnHeader label={t("route")} {...hdr("route")} filter={{ name: "route", options: options.routes.map((r) => ({ value: r.id, label: r.name })), selected: filters.routeIds ?? [] }} />
-                <ColumnHeader label={t("driver")} {...hdr("driver")} filter={{ name: "dr", options: options.drivers.map((r) => ({ value: r.id, label: r.name })), selected: filters.driverIds ?? [] }} />
-                <ColumnHeader label={t("transporter")} {...hdr("transporter")} filter={{ name: "tr", options: [{ value: "direct", label: t("direct") }, ...options.transporters.map((r) => ({ value: r.id, label: r.name }))], selected: [...(filters.transporterIds ?? []), ...(filters.direct ? ["direct"] : [])] }} />
-                <ColumnHeader label={t("plate")} {...hdr("plate")} />
-                <ColumnHeader label={t("loaded")} align="num" {...hdr("loaded")} />
-                <ColumnHeader label={t("discharged")} align="num" {...hdr("discharged")} />
-                <ColumnHeader label={t("net")} align="num" {...hdr("net")} />
-                <ColumnHeader label={t("fine")} align="num" {...hdr("fine")} />
-                <ColumnHeader label={t("carrierPay")} align="num" {...hdr("carrierPay")} />
-                <ColumnHeader label={t("advance")} align="num" {...hdr("advance")} />
-                <ColumnHeader label={t("toPay")} align="num" {...hdr("toPay")} />
-                <ColumnHeader label={t("fees")} align="num" {...hdr("fees")} />
-                <ColumnHeader label={t("cost")} align="num" {...hdr("cost")} />
-                {showProfit && <><ColumnHeader label={t("billed")} align="num" {...hdr("billed")} /><ColumnHeader label={t("margin")} align="num" {...hdr("margin")} /></>}
-                <ColumnHeader label={t("state")} {...hdr("state")} filter={{ name: "st", options: stateOpts, selected: filters.states ?? [] }} />
+                <ColumnHeader label={t("date")} col="date" {...hdr("loadingDate")} />
+                <ColumnHeader label={t("route")} col="route" {...hdr("route")} filter={{ name: "route", options: options.routes.map((r) => ({ value: r.id, label: r.name })), selected: filters.routeIds ?? [] }} />
+                <ColumnHeader label={t("driver")} col="driver" {...hdr("driver")} filter={{ name: "dr", options: options.drivers.map((r) => ({ value: r.id, label: r.name })), selected: filters.driverIds ?? [] }} />
+                <ColumnHeader label={t("transporter")} col="transporter" {...hdr("transporter")} filter={{ name: "tr", options: [{ value: "direct", label: t("direct") }, ...options.transporters.map((r) => ({ value: r.id, label: r.name }))], selected: [...(filters.transporterIds ?? []), ...(filters.direct ? ["direct"] : [])] }} />
+                <ColumnHeader label={t("plate")} col="plate" {...hdr("plate")} />
+                <ColumnHeader label={`${t("loaded")} (${unit})`} col="loaded" align="num" {...hdr("loaded")} />
+                <ColumnHeader label={`${t("discharged")} (${unit})`} col="discharged" align="num" {...hdr("discharged")} />
+                <ColumnHeader label={`${t("net")} (${unit})`} col="net" align="num" {...hdr("net")} />
+                <ColumnHeader label={t("fine")} col="fine" align="num" {...hdr("fine")} />
+                <ColumnHeader label={t("carrierPay")} col="carrierPay" align="num" {...hdr("carrierPay")} />
+                <ColumnHeader label={t("advance")} col="advance" align="num" {...hdr("advance")} />
+                <ColumnHeader label={t("toPay")} col="toPay" align="num" {...hdr("toPay")} />
+                <ColumnHeader label={t("fees")} col="fees" align="num" {...hdr("fees")} />
+                <ColumnHeader label={t("cost")} col="cost" align="num" {...hdr("cost")} />
+                {showProfit && <><ColumnHeader label={t("billed")} col="billed" align="num" {...hdr("billed")} /><ColumnHeader label={t("margin")} col="margin" align="num" {...hdr("margin")} /></>}
+                <ColumnHeader label={t("state")} col="state" {...hdr("state")} filter={{ name: "st", options: stateOpts, selected: filters.states ?? [] }} />
               </tr></thead>
               <tbody>{lines.map((l) => {
                 const c = l.calc;
                 const open = href({}, { page: page > 1 ? String(page) : undefined, trip: l.id });
                 return (
                   <tr key={l.id} className={l.status === "cancelled" ? "muted" : undefined}>
-                    {showJob && <td className="wrap"><Link href={`/${locale}/jobs/${l.jobId}?tab=trips`}>{l.jobNo}</Link><div className="cell-sub">{l.jobName}</div></td>}
+                    {showJob && <td className="wrap" data-col="job"><Link href={`/${locale}/jobs/${l.jobId}?tab=trips`}>{l.jobNo}</Link><div className="cell-sub">{l.jobName}</div></td>}
                     <td className="ltr"><Link href={open} className="cell-title">{l.manifestNo ?? l.tripNo}</Link></td>
-                    <td className="ltr">{l.loadingDate ?? "—"}</td>
-                    <td>{l.route ?? "—"}</td>
-                    <td>{l.driver}</td>
-                    <td>{l.transporter ?? <span className="muted">{t("direct")}</span>}</td>
-                    <td className="ltr">{l.plate}</td>
-                    <td className="num">{c ? q(c.loaded) : l.loadedQty ? formatQty(l.loadedQty, l.loadedUnit!, locale) : <span className="muted">—</span>}</td>
-                    <td className="num">{c ? q(c.discharged) : l.dischargedQty ? formatQty(l.dischargedQty, l.dischargedUnit!, locale) : <span className="muted">—</span>}</td>
-                    <td className="num">{c ? q(c.net) : <span className="muted">—</span>}</td>
-                    <td className="num">{c ? money(c.carrier.fine === "0" ? null : c.carrier.fine, c.currency, true) : <span className="muted">—</span>}</td>
-                    <td className="num">{c ? m(c.carrier.total, c.currency) : <span className="muted">—</span>}</td>
-                    <td className="num">{Object.keys(l.advances).length ? Object.entries(l.advances).map(([cur, amt]) => <div key={cur}>{formatMoney(amt, cur, locale)}</div>) : <span className="muted">—</span>}</td>
-                    <td className="num"><strong>{c ? money(c.carrier.toPay, c.currency, true) : <span className="muted">—</span>}</strong></td>
-                    <td className="num">{c ? m(c.feesTotal === "0" ? null : c.feesTotal, c.currency) : <span className="muted">—</span>}</td>
-                    <td className="num">{c ? m(c.cost, c.currency) : <span className="muted">—</span>}</td>
-                    {showProfit && <><td className="num">{c ? m(c.customer.total, c.currency) : <span className="muted">—</span>}</td><td className="num">{c ? money(c.margin, c.currency, true) : <span className="muted">—</span>}</td></>}
-                    <td>
+                    <td className="ltr" data-col="date">{l.loadingDate ?? "—"}</td>
+                    <td className="clip" data-col="route" title={l.route ?? undefined}>{l.route ?? "—"}</td>
+                    <td className="clip" data-col="driver" title={l.driver}>{l.driver}</td>
+                    <td className="clip" data-col="transporter" title={l.transporter ?? undefined}>{l.transporter ?? <span className="muted">{t("direct")}</span>}</td>
+                    <td className="ltr clip" data-col="plate" title={l.plate}>{l.plate}</td>
+                    <td className="num" data-col="loaded">{c ? q(c.loaded) : l.loadedQty ? q(l.loadedQty) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="discharged">{c ? q(c.discharged) : l.dischargedQty ? q(l.dischargedQty) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="net">{c ? q(c.net) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="fine">{c ? money(c.carrier.fine === "0" ? null : c.carrier.fine, c.currency, true) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="carrierPay">{c ? m(c.carrier.total, c.currency) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="advance">{Object.keys(l.advances).length ? Object.entries(l.advances).map(([cur, amt]) => <div key={cur}>{formatMoney(amt, cur, locale)}</div>) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="toPay"><strong>{c ? money(c.carrier.toPay, c.currency, true) : <span className="muted">—</span>}</strong></td>
+                    <td className="num" data-col="fees">{c ? m(c.feesTotal === "0" ? null : c.feesTotal, c.currency) : <span className="muted">—</span>}</td>
+                    <td className="num" data-col="cost">{c ? m(c.cost, c.currency) : <span className="muted">—</span>}</td>
+                    {showProfit && <><td className="num" data-col="billed">{c ? m(c.customer.total, c.currency) : <span className="muted">—</span>}</td><td className="num" data-col="margin">{c ? money(c.margin, c.currency, true) : <span className="muted">—</span>}</td></>}
+                    <td data-col="state">
                       {l.state === "cancelled" ? <Badge>{t("cancelled")}</Badge> : l.state === "norule" ? <Badge tone="danger">{t("noRule")}</Badge> : l.state === "confirmed" ? <Badge tone="success">{t("confirmed")}</Badge> : <Badge tone="warning">{t("estimated")}</Badge>}
                       {c?.flags.filter((x) => x !== "customer_price_tbd").map((x) => <div key={x} className="small warn">{t(`flag_${x}`)}</div>)}
                     </td>
@@ -152,15 +162,17 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
               })}</tbody>
               {totals.map((s) => (
                 <tfoot key={s.currency}><tr className="net">
-                  <td colSpan={showJob ? 7 : 6}><strong>{t("total")} · {s.currency}{active ? ` · ${t("filteredRows", { count: s.trips })}` : ""}</strong></td>
-                  <td className="num"><strong>{formatQty(s.loaded, unit, locale)}</strong></td><td></td><td className="num"><strong>{formatQty(s.net, unit, locale)}</strong></td><td></td>
-                  <td className="num"><strong>{formatMoney(s.carrierTotal, s.currency, locale)}</strong></td>
-                  <td className="num"><strong>{formatMoney(s.advances, s.currency, locale)}</strong></td>
-                  <td className="num"><strong>{formatMoney(s.carrierToPay, s.currency, locale)}</strong></td>
-                  <td className="num"><strong>{formatMoney(s.fees, s.currency, locale)}</strong></td>
-                  <td className="num"><strong>{formatMoney(s.cost, s.currency, locale)}</strong></td>
-                  {showProfit && <><td className="num"><strong>{formatMoney(s.customerTotal, s.currency, locale)}</strong></td><td className="num"><strong>{formatMoney(s.margin, s.currency, locale)}</strong></td></>}
-                  <td></td>
+                  {showJob && <td data-col="job"></td>}
+                  <td><strong>{t("total")} · {s.currency}{active ? ` · ${t("filteredRows", { count: s.trips })}` : ""}</strong></td>
+                  <td data-col="date"></td><td data-col="route"></td><td data-col="driver"></td><td data-col="transporter"></td><td data-col="plate"></td>
+                  <td className="num" data-col="loaded"><strong>{q(s.loaded)}</strong></td><td data-col="discharged"></td><td className="num" data-col="net"><strong>{q(s.net)}</strong></td><td data-col="fine"></td>
+                  <td className="num" data-col="carrierPay"><strong>{formatMoney(s.carrierTotal, s.currency, locale)}</strong></td>
+                  <td className="num" data-col="advance"><strong>{formatMoney(s.advances, s.currency, locale)}</strong></td>
+                  <td className="num" data-col="toPay"><strong>{formatMoney(s.carrierToPay, s.currency, locale)}</strong></td>
+                  <td className="num" data-col="fees"><strong>{formatMoney(s.fees, s.currency, locale)}</strong></td>
+                  <td className="num" data-col="cost"><strong>{formatMoney(s.cost, s.currency, locale)}</strong></td>
+                  {showProfit && <><td className="num" data-col="billed"><strong>{formatMoney(s.customerTotal, s.currency, locale)}</strong></td><td className="num" data-col="margin"><strong>{formatMoney(s.margin, s.currency, locale)}</strong></td></>}
+                  <td data-col="state"></td>
                 </tr></tfoot>
               ))}
             </table></div>

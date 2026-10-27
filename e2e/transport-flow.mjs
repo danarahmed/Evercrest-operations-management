@@ -103,7 +103,7 @@ await page.waitForURL(`${base}/en`);
 await page.goto(trips);
 
 const row = await page.locator("table tbody tr:has-text('Hemin Aziz')").innerText();
-assert.match(row, /30\.5 MT/);
+assert.match(row, /30\.5/);
 assert.match(row, /150,000/);
 assert.match(row, /\$2,500/, "approved advance is posted");
 

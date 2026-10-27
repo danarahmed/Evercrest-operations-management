@@ -23,7 +23,7 @@ export default async function TripsPage({ params, searchParams }: { params: Prom
   const filters = parseTripFilters(sp, null);
   const [view, options] = await Promise.all([jobTripsLive(db, actor, filters), formOptions(db, actor)]);
   return (
-    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/trips">
+    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/trips" wide>
       <PageHeader title={t("allTitle")} subtitle={t("allSubtitle")} />
       <TripsSection locale={locale} basePath={`/${locale}/trips`} baseParams={{}} view={view} filters={filters} jobId={null} showJob canImport={false} moneyAccounts={options.moneyAccounts} advancesEnabled={false} />
     </Shell>

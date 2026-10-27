@@ -1213,7 +1213,7 @@
     "noTrips": "لا رحلات بعد.",
     "noTripsHint": "استورد ملف التحميل (.xlsx) أو ابدأ رحلة يدوياً.",
     "manifest": "المنفيست",
-    "date": "التحميل",
+    "date": "تاريخ التحميل",
     "route": "الطريق",
     "driver": "السائق",
     "transporter": "الناقل",
@@ -1291,7 +1291,10 @@
     "col_manifest": "المنفيست",
     "col_loadedQty": "كمية محملة",
     "col_dischargeDate": "التفريغ",
-    "col_dischargedQty": "كمية مفرغة"
+    "col_dischargedQty": "كمية مفرغة",
+    "columns": "الأعمدة",
+    "fitToScreen": "ملاءمة الشاشة",
+    "hiddenColumns": "{count} مخفية"
   },
   "Import": {
     "title": "استيراد ملف الرحلات",

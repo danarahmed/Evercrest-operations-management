@@ -26,6 +26,11 @@ export function formatMoney(amount: string, currency: string, locale: string): s
   }
 }
 
+/** A quantity without its unit (for tables that name the unit in the header). */
+export function formatNumber(qty: string, locale: string): string {
+  return isolate(new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 4 }).format(Number(qty)), locale);
+}
+
 export function formatQty(qty: string, unit: string, locale: string): string {
   return isolate(`${new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 4 }).format(Number(qty))} ${unit}`, locale);
 }

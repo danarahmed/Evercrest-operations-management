@@ -1213,7 +1213,7 @@
     "noTrips": "هێشتا گەشت نییە.",
     "noTripsHint": "فایلی بارکردن (.xlsx) هاوردە بکە یان گەشتێک بە دەست دەست پێبکە.",
     "manifest": "منفیست",
-    "date": "بارکردن",
+    "date": "بەرواری بارکردن",
     "route": "ڕێگا",
     "driver": "سایەق",
     "transporter": "ناقل",
@@ -1291,7 +1291,10 @@
     "col_manifest": "منفیست",
     "col_loadedQty": "بڕی بارکراو",
     "col_dischargeDate": "بەتاڵکردن",
-    "col_dischargedQty": "بڕی بەتاڵکراو"
+    "col_dischargedQty": "بڕی بەتاڵکراو",
+    "columns": "ستوونەکان",
+    "fitToScreen": "گونجاندن لەگەڵ شاشە",
+    "hiddenColumns": "{count} شاراوە"
   },
   "Import": {
     "title": "هاوردەکردنی فایلی گەشت",

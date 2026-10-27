@@ -92,7 +92,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   );
 
   return (
-    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/jobs/${id}`} crumb={w.job.jobNo}>
+    <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path={`/jobs/${id}`} crumb={w.job.jobNo} wide>
       <PageHeader
         back={{ href: `/${locale}/jobs`, label: t("backToJobs") }}
         eyebrow={<><span className="ltr">{w.job.jobNo}</span><span>·</span><span>{w.meta.type}</span><StatusBadge status={w.job.status} label={st(w.job.status)} /></>}

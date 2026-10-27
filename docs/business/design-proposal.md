@@ -176,6 +176,18 @@ One company now. The design keeps **separate books per company** and gives the o
 
 **New:** cash boxes per site with counts · daily rate · exchanger accounts with fees · paying in the other currency · remote settlement comparison · fine waiver flow · customer settings card · customer advances and payment in product · storage closing with loss · overhead sharing · staff/attendance/payroll · owner action board and phone view · consolidated multi-company view.
 
+## 16a. Decisions added after the questions (2026-10-27)
+
+- **Accounting method D** (section 9).
+- **Product moves two ways:** direct (bought and sold back-to-back to one customer) or via storage (stock per product per storage at average cost, sold to one or many customers). Payment in product can take either path.
+- **Partners (co-owners)** share profit and loss by percentage: owners' current accounts per partner and currency; period-end sharing.
+- **Exchanger financing:** sarrafs lend without interest and charge a fixed fee per MT or per trip, by product → a rule-card fee, posted as a job cost and credited to the sarraf.
+- **Checkpoint passage** is its own kind of work: per-trip customer price and per-trip supplier price (e.g. naphtha 210 in / 190 out); no carrier settlement.
+- **Countries:** Iraq (internal), Jordan, Syria. Documents and costs are configurable per route/job; nothing fixed per country.
+- **Payment permissions:** staff pay alone within the rules; outside the rules the owner gets a warning and approves; the accountant may pay anyone.
+- **Shared costs** spread over active jobs by tons moved. **Storage/route loss allowance** is the customer's.
+- **Remote settlements** come from our site employee as Excel + scanned documents.
+
 ## 17. Build order (proposal)
 
 1. **Rule card + trips + import** (with the diesel job as the first real test, reproducing the owner's Excel exactly — including fixing the inconsistencies found).

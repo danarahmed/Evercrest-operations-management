@@ -121,3 +121,13 @@ Answer by number. Where a question has a **proposed default**, a short "ok" is e
 - **#41 Future companies:** separate lists, with some shared partners. → Partners belong to a company; a partner can be shared with other companies.
 - **#42 Checkpoint passage agreements:** the **customer pays us per trip** and **we pay the supplier per trip** (e.g. naphtha: 210 USD/trip from customer, 190 USD/trip to supplier → 20 USD/trip margin). → A "checkpoint passage" kind of work: trips with a customer price and a supplier price per trip; no transport settlement.
 - **#43** Explained ("extra papers" for abroad jobs); answer pending.
+
+## Owner's answers — round 5 (verbatim)
+
+> ok to all and for #43  we work internal and jordan and syria so the system should be flexable if it need any other documents or becoming a cost on the job or not
+
+### Decisions recorded
+- **All remaining proposed answers accepted** (#1, #8, #10, #11, #17, #18, #19, #21, #25, #29, #37, #38 as proposed). Questions that are rule-card settings (#2, #3, #6, #7, #12, #13, #14) are set per job; #16, #23, #27, #32, #35, #39, #40 will be settled while building/with the users.
+- **#43** Work is **inside Iraq, Jordan and Syria**. Documents and costs per country/route must be configurable: any document type can be required for a route/job, and any cost can be a job cost or not — no fixed list.
+
+**Status: questionnaire closed (2026-10-27). Building starts with step 1 of the design proposal.**

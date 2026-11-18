@@ -1,7 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, catalogItems, partnerRoles, trips, tripSettlements, trucks } from "@/db/schema";
+import { businessPartners, catalogItems, claimItems, partnerRoles, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { type Capability, type Job, registerCapabilityModule } from "../jobs/capabilities";
@@ -118,9 +118,12 @@ export const createTrip = defineCommand({
 });
 
 /** A posted settlement freezes the trip's quantities and dates. */
+/** True when the trip's money has moved: a posted settlement, or a live claim. */
 export async function isSettled(tx: Db, tripId: string): Promise<boolean> {
   const [s] = await tx.select({ id: tripSettlements.id }).from(tripSettlements).where(and(eq(tripSettlements.tripId, tripId), eq(tripSettlements.status, "posted"))).limit(1);
-  return !!s;
+  if (s) return true;
+  const [c] = await tx.select({ id: claimItems.id }).from(claimItems).where(and(eq(claimItems.tripId, tripId), eq(claimItems.active, true))).limit(1);
+  return !!c;
 }
 
 export async function getTrip(tx: Db, companyId: string, tripId: string) {

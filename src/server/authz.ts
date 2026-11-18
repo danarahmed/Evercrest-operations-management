@@ -44,6 +44,12 @@ export const PERMISSIONS = [
   "job_terms.manage",
   /** See profit, margins and the customer side of prices (owner and people he allows). */
   "profit.view",
+  /** Open, post and cancel claims (manifests brought back by a transporter or driver). */
+  "claims.manage",
+  /** Waive part or all of a trip's shortage fine (always with approval). */
+  "fines.waive",
+  /** Approve a site's remote settlement after the comparison. */
+  "remote_settlements.approve",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

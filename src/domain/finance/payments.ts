@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, invoiceLines, invoices, journalLines, moneyAccounts, payments, payStatementItems, payStatements } from "@/db/schema";
+import { accounts, claims, invoiceLines, invoices, journalLines, moneyAccounts, partnerRoles, payments, payStatementItems, payStatements } from "@/db/schema";
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
@@ -66,6 +66,8 @@ export const recordPayment = defineCommand({
     invoiceId: uuid.nullish(),
     /** Pay statement whose payee this pays (purpose "settlement" only). */
     statementId: uuid.nullish(),
+    /** Claim this pays (or collects from) its claimant (purpose "settlement" only). */
+    claimId: uuid.nullish(),
     /** Expense account for a direct expense paid now. */
     counterAccountId: uuid.nullish(),
     reference: z.string().nullish(),
@@ -116,6 +118,9 @@ export const recordPayment = defineCommand({
       if (dec(input.amount).gt(outstanding))
         throw new ValidationError(`Payment exceeds the outstanding ${toStr(outstanding)} ${inv.currency} on ${inv.invoiceNo}`);
       [counter] = await tx.select().from(accounts).where(eq(accounts.id, inv.balanceAccountId));
+    } else if (input.claimId) {
+      counter = await claimPayment(tx, actor.companyId, input, partnerId);
+      jobId = null; // the claim's trips already carry their costs on the job
     } else if (input.purpose === "settlement" || input.statementId) {
       counter = await statementPayment(tx, actor.companyId, input, partnerId);
       jobId = null; // one payment can cover trips of several jobs; the costs already sit on each job
@@ -163,7 +168,7 @@ export const recordPayment = defineCommand({
     });
     const [row] = await tx
       .insert(payments)
-      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, invoiceId: input.invoiceId ?? null, statementId: input.statementId ?? null, counterAccountId: counter.id, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
+      .values({ ...input, partnerId, jobId, tripId: input.tripId ?? null, invoiceId: input.invoiceId ?? null, statementId: input.statementId ?? null, claimId: input.claimId ?? null, counterAccountId: counter.id, paymentNo, companyId: actor.companyId, journalEntryId: entry.id, createdBy: actor.userId })
       .returning();
     await audit({ action: "payments.record", entityType: "payment", entityId: row.id, after: { paymentNo, ...input, partnerId, jobId } });
     return { id: row.id, paymentNo, journalEntryId: entry.id };
@@ -213,6 +218,38 @@ async function statementPayment(
     .where(and(eq(payments.statementId, st.id), eq(payments.partnerId, partnerId), eq(payments.direction, "out"), eq(payments.status, "posted")));
   if (already) throw new Conflict(`Already paid on ${st.statementNo} (${already.no})`);
   return counter();
+}
+
+/**
+ * A claim is paid to its claimant, in its currency, never more than is still
+ * open (part payments are allowed: the owner pays part of a balance). A
+ * negative claim (the claimant owes) is collected the same way, money in.
+ */
+async function claimPayment(
+  tx: Db,
+  companyId: string,
+  input: { purpose: string; direction: string; claimId?: string | null; statementId?: string | null; amount: string; currency: string; tripId?: string | null; invoiceId?: string | null },
+  partnerId: string | null,
+) {
+  if (input.purpose !== "settlement" || !input.claimId) throw new ValidationError("A claim is paid as a settlement payment");
+  if (input.tripId || input.invoiceId || input.statementId) throw new ValidationError("A claim payment is not linked to a trip, invoice or statement");
+  const [claim] = await tx.select().from(claims).where(and(eq(claims.id, input.claimId), eq(claims.companyId, companyId)));
+  if (!claim) throw new NotFound("claim", input.claimId);
+  if (claim.status !== "posted") throw new Conflict(`${claim.claimNo} is ${claim.status}`);
+  if (partnerId && partnerId !== claim.claimantId) throw new ValidationError(`${claim.claimNo} is paid to its claimant`);
+  if (claim.currency !== input.currency) throw new ValidationError(`${claim.claimNo} is in ${claim.currency}; pay it in ${claim.currency}`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`claim:${claim.id}`}))`);
+  const [p] = await tx
+    .select({ paid: sql<string>`coalesce(sum(case when ${payments.direction} = 'out' then ${payments.amount} else -${payments.amount} end), 0)` })
+    .from(payments)
+    .where(and(eq(payments.claimId, claim.id), eq(payments.status, "posted")));
+  const open = dec(claim.totalFinal).minus(dec(p.paid));
+  if (open.gt(0) && input.direction !== "out") throw new ValidationError(`${claim.claimNo} owes the claimant ${toStr(open)} ${claim.currency}; this is a payment out`);
+  if (open.lt(0) && input.direction !== "in") throw new ValidationError(`The claimant owes ${toStr(open.abs())} ${claim.currency} on ${claim.claimNo}; this is money in`);
+  if (open.isZero()) throw new ValidationError(`Nothing is open on ${claim.claimNo}`);
+  if (dec(input.amount).gt(open.abs())) throw new ValidationError(`${claim.claimNo} has ${toStr(open.abs())} ${claim.currency} open; the amount cannot be more`);
+  const roles = await tx.select({ role: partnerRoles.role }).from(partnerRoles).where(eq(partnerRoles.partnerId, claim.claimantId));
+  return postingAccount(tx, companyId, roles.some((r) => r.role === "transporter") ? "payables_to_transporters" : "payables_to_drivers");
 }
 
 /**
@@ -312,6 +349,7 @@ export const reversePayment = defineCommand({
     await tx.update(payments).set({ status: "reversed", reversalEntryId: rev.id }).where(eq(payments.id, paymentId));
     // The payee is owed again, so the statement is open again.
     if (p.statementId && p.direction === "out") await tx.update(payStatements).set({ status: "open" }).where(and(eq(payStatements.id, p.statementId), eq(payStatements.status, "paid")));
+    if (p.claimId) await tx.update(claims).set({ status: "posted" }).where(and(eq(claims.id, p.claimId), eq(claims.status, "paid")));
     await audit({ action: "payments.reverse", entityType: "payment", entityId: paymentId, before: { status: "posted" }, after: { status: "reversed", reversalEntryId: rev.id }, reason });
     return { paymentId, reversalEntryId: rev.id };
   },

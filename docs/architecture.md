@@ -60,7 +60,7 @@ Each phase is built as vertical slices and tested before the next dependency.
 | Area | Code | Screens |
 |---|---|---|
 | Job engine | `domain/jobs` — jobs, capabilities registry, steps (`activities.ts`), custom fields + budget (`custom-fields.ts`), contracts, projects, job types with default capabilities and steps | Dashboard, Jobs (workspace), New job, Setup |
-| Transport | `domain/transport` — trips, rates, settlement, billing, pay statements, statement debts | Job workspace, Pay statements |
+| Transport | `domain/transport` — trips, rule card (terms), live calc, claims (money follows the papers), fine waivers, remote settlements, rates, settlement, billing, pay statements, statement debts | Job workspace (Trips, Rules, Claims), Trips, Claims, Pay statements |
 | Field service | `domain/field/work-orders.ts` — work orders gate job completion | Job workspace |
 | Product supply | `domain/supply/deliveries.ts` — deliveries invoiced at the product price rule | Job workspace |
 | Documents | `domain/documents` — types and rules by job type, customer or contract | Job workspace, Documents, Setup |
@@ -80,7 +80,7 @@ the `"core"` capability with `alwaysCheck`.
 | Scenario | Test |
 |---|---|
 | A Simple product supply | `tests/operations.test.ts` (deliveries, no trips) |
-| B Petroleum transport via transporter | `tests/settlement.test.ts`, `tests/statements.test.ts` |
+| B Petroleum transport via transporter | `tests/settlement.test.ts`, `tests/statements.test.ts`, `tests/claims.test.ts` (claimant ≠ transporter at loading), `tests/remote.test.ts` |
 | C Direct driver | `tests/settlement.test.ts` (trips without transporter) |
 | D Driver changes transporter | `tests/transport.test.ts` (transporter captured per trip) |
 | E Field service | `tests/operations.test.ts` (work orders, contractor bill) |

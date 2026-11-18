@@ -63,6 +63,8 @@ export function Badge({ tone = "neutral", children, plain }: { tone?: Tone; chil
 const TONES: Record<string, Tone> = {
   // jobs
   draft: "neutral", open: "info", in_progress: "accent", pending: "warning", completed: "success", financially_closed: "violet", cancelled: "neutral",
+  // claims and site settlements
+  staged: "warning", discarded: "neutral",
   // trips
   planned: "neutral", loaded: "accent", discharged: "success",
   // documents

@@ -6,6 +6,8 @@ import "./finance/payments";
 import "./documents/documents";
 import "./transport/billing";
 import "./transport/statements";
+import "./transport/claims";
+import "./transport/remote";
 import "./jobs/activities";
 import "./jobs/custom-fields";
 import "./field/work-orders";

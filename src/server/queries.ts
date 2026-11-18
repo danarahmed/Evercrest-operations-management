@@ -18,6 +18,8 @@ import { loadRuleCard } from "@/domain/transport/terms";
 import { getTripImport, type ImportRow, planImport } from "@/domain/transport/trip-import";
 import { type TripFilters, type TripLine, tripLines } from "@/domain/transport/trip-view";
 import { tripHistory } from "@/domain/transport/trip-edit";
+import { carrierClaims, claimDetail, listClaims, previewClaim, tripWaivers } from "@/domain/transport/claims";
+import { compareRemoteSettlement, getRemoteSettlement, listRemoteSettlements, type RemoteRow } from "@/domain/transport/remote";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
 import { getSetting } from "./settings";
@@ -378,7 +380,65 @@ export async function partnersFinance(db: Db, actor: Actor) {
 
 export async function partnerAccount(db: Db, actor: Actor, partnerId: string) {
   requirePermission(actor, "reports.financial.view");
-  return partnerLedger(db, actor.companyId, partnerId);
+  const ledger = await partnerLedger(db, actor.companyId, partnerId);
+  if (!ledger) return null;
+  // A carrier's claims (what each one owes or owed) sit next to the account history.
+  const claims = ledger.roles.some((r) => r === "driver" || r === "transporter") ? await carrierClaims(db, actor.companyId, partnerId) : [];
+  return { ...ledger, claims };
+}
+
+/** The job's Claims tab: claims made, site settlements imported, and what a new claim needs. */
+export async function jobClaims(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  const job = await getJob(db, actor.companyId, jobId);
+  const [claims, remote, tripPapers] = await Promise.all([
+    listClaims(db, actor.companyId, { jobId }),
+    can(actor, "claims.manage") ? listRemoteSettlements(db, actor.companyId, jobId) : [],
+    db
+      .selectDistinct({ id: documentTypes.id, name: documentTypes.name })
+      .from(documentRequirements)
+      .innerJoin(documentTypes, eq(documentTypes.id, documentRequirements.documentTypeId))
+      .where(and(eq(documentRequirements.companyId, actor.companyId), eq(documentRequirements.appliesTo, "trip"), or(
+        and(eq(documentRequirements.scope, "job_type"), eq(documentRequirements.scopeId, job.jobTypeId)),
+        and(eq(documentRequirements.scope, "customer"), eq(documentRequirements.scopeId, job.customerId)),
+        ...(job.contractId ? [and(eq(documentRequirements.scope, "contract"), eq(documentRequirements.scopeId, job.contractId))] : []),
+      ))),
+  ]);
+  return { job, claims, remote: remote.map((r) => ({ ...r.r, money: r.money })), tripPapers, canManage: can(actor, "claims.manage"), canApprove: can(actor, "remote_settlements.approve"), canPay: can(actor, "payments.create") };
+}
+
+/** The check before a claim: every manifest with its status and figures. */
+export async function claimCheck(db: Db, actor: Actor, input: { jobId: string; manifests: string[]; bringing: string[] }) {
+  requirePermission(actor, "claims.manage");
+  return previewClaim(db, actor.companyId, input);
+}
+
+export async function claimsOverview(db: Db, actor: Actor, f: { status?: string[]; claimantId?: string } = {}) {
+  requirePermission(actor, "jobs.view");
+  const list = await listClaims(db, actor.companyId, f);
+  return { list, canManage: can(actor, "claims.manage"), showProfit: can(actor, "profit.view") };
+}
+
+export async function claimView(db: Db, actor: Actor, claimId: string) {
+  requirePermission(actor, "jobs.view");
+  const detail = await claimDetail(db, actor.companyId, claimId);
+  const payFrom = can(actor, "payments.create")
+    ? await db
+        .select({ id: moneyAccounts.id, name: moneyAccounts.name, currency: moneyAccounts.currency })
+        .from(moneyAccounts)
+        .where(and(eq(moneyAccounts.companyId, actor.companyId), eq(moneyAccounts.active, true), eq(moneyAccounts.currency, detail.claim.currency)))
+    : [];
+  return { ...detail, payFrom, canManage: can(actor, "claims.manage"), canPay: can(actor, "payments.create") };
+}
+
+/** A staged site settlement compared with the system, line by line. */
+export async function remoteSettlementView(db: Db, actor: Actor, id: string) {
+  requirePermission(actor, "claims.manage");
+  const rs = await getRemoteSettlement(db, actor.companyId, id);
+  const job = await getJob(db, actor.companyId, rs.jobId);
+  const [money] = await db.select({ name: moneyAccounts.name, currency: moneyAccounts.currency }).from(moneyAccounts).where(eq(moneyAccounts.id, rs.moneyAccountId));
+  const comparison = rs.status === "staged" ? await compareRemoteSettlement(db, actor.companyId, rs.jobId, rs.rows as RemoteRow[]) : null;
+  return { rs, job, money, comparison, canApprove: can(actor, "remote_settlements.approve") };
 }
 
 /** Users, roles and branches for the admin page. */
@@ -601,7 +661,8 @@ export async function tripDetail(db: Db, actor: Actor, tripId: string) {
   const line = view.lines.find((l) => l.id === tripId) ?? null;
   const history = await tripHistory(db, actor.companyId, tripId);
   const [transporter] = trip.transporterId ? await db.select({ name: businessPartners.name }).from(businessPartners).where(eq(businessPartners.id, trip.transporterId)) : [];
-  return { trip, line, history, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit };
+  const waivers = await tripWaivers(db, tripId);
+  return { trip, line, history, waivers, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
 }
 
 /** A staged sheet with what applying it would do. */

@@ -9,4 +9,5 @@ export * from "./documents";
 export * from "./approvals";
 export * from "./rates";
 export * from "./statements";
+export * from "./claims";
 export * from "./operations";

@@ -1,11 +1,11 @@
 import { and, asc, eq, gte, ilike, inArray, isNull, lte, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db/client";
-import { businessPartners, jobRoutes, jobs, tripFees, trips, trucks } from "@/db/schema";
+import { businessPartners, jobRoutes, jobs, trips, trucks } from "@/db/schema";
 import { D, dec, toStr } from "../money";
-import { loadRuleCard, type RuleCard, termsOn } from "./terms";
-import { advancesByTrip } from "./trip-import";
-import { calculateTrip, type FeeForCalc, type TripCalc } from "./trip-calc";
+import { liveTrips } from "./live-calc";
+import { loadRuleCard, type RuleCard } from "./terms";
+import type { TripCalc } from "./trip-calc";
 
 /**
  * The live view of trips (accounting method D): every trip calculated from
@@ -41,6 +41,10 @@ export interface TripLine {
   notes: string | null;
   /** Advances paid on the trip, per currency (all currencies, unlike calc.carrier.advance). */
   advances: Record<string, string>;
+  /** Approved fine waivers (job currency). */
+  fineWaived: string;
+  /** The live claim the trip is on (its money has moved), if any. */
+  claim: { id: string; claimNo: string; status: string } | null;
   calc: TripCalc | null;
   /** estimated | confirmed | cancelled | norule */
   state: TripState;
@@ -180,39 +184,12 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
   const jobIds = [...new Set(rows.map((r) => r.trip.jobId))];
   const cards = new Map<string, RuleCard>();
   for (const id of jobIds) cards.set(id, await loadRuleCard(db, companyId, id));
-  const ids = rows.map((r) => r.trip.id);
-  const feeRows = ids.length ? await db.select().from(tripFees).where(inArray(tripFees.tripId, ids)) : [];
-  const feeName = new Map([...cards.values()].flatMap((c) => c.allFeeTypes.map((f) => [f.id, f.name] as const)));
-  const feesBy = new Map<string, FeeForCalc[]>();
-  for (const fee of feeRows) {
-    const list = feesBy.get(fee.tripId) ?? [];
-    list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: fee.billedToCustomer });
-    feesBy.set(fee.tripId, list);
-  }
-  const advances = await advancesByTrip(db, ids);
+  const live = await liveTrips(db, companyId, rows.map((r) => r.trip), cards);
 
   let withoutRules = 0;
   let lines: TripLine[] = rows.map(({ trip, driver, transporter, plate, route, jobNo, jobName }) => {
-    const card = cards.get(trip.jobId)!;
-    const terms = trip.loadingDate ? termsOn(card, trip.routeId, trip.loadingDate) : null;
-    const calc =
-      terms && trip.status !== "cancelled"
-        ? calculateTrip(
-            {
-              loadedQty: trip.loadedQty,
-              dischargedQty: trip.dischargedQty,
-              arrivalDate: trip.arrivalDate,
-              dischargeDate: trip.dischargeDate,
-              carrierPriceOverride: trip.carrierPriceOverride,
-              rewardOverride: trip.rewardOverride,
-              transporterCut: trip.transporterCut,
-              carrierDeduction: trip.carrierDeduction,
-              advances: advances.get(trip.id) ?? {},
-            },
-            terms,
-            feesBy.get(trip.id) ?? [],
-          )
-        : null;
+    const l = live.get(trip.id)!;
+    const calc = l.calc;
     if (!calc && trip.status !== "cancelled") withoutRules++;
     const state: TripState = trip.status === "cancelled" ? "cancelled" : !calc ? "norule" : calc.state;
     return {
@@ -238,7 +215,9 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
       dischargedQty: trip.dischargedQty,
       dischargedUnit: trip.dischargedUnit,
       notes: trip.notes,
-      advances: advances.get(trip.id) ?? {},
+      advances: l.advances,
+      fineWaived: l.fineWaived,
+      claim: l.claim,
       calc,
       state,
     };

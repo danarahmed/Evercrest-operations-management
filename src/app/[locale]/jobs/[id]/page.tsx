@@ -8,7 +8,7 @@ import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@
 import { summarize } from "@/domain/management/history";
 import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
-import { formOptions, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace, tripDetail } from "@/server/queries";
+import { claimCheck, formOptions, jobClaims, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace, tripDetail } from "@/server/queries";
 import { parseTripFilters } from "@/lib/trip-filters";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
@@ -19,10 +19,11 @@ import { RuleCardSection } from "./rules";
 import { SettlementSection } from "./settlement";
 import { TripsSection } from "./trips";
 import { TripDialog } from "./trip-dialog";
+import { ClaimsSection } from "./claims";
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "rules" | "steps" | "trips" | "work" | "deliveries" | "money" | "documents" | "history";
+type TabKey = "overview" | "rules" | "steps" | "trips" | "claims" | "work" | "deliveries" | "money" | "documents" | "history";
 
 /**
  * The job workspace (CLAUDE.md §29): one place for everything about a job.
@@ -54,6 +55,17 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const filters = parseTripFilters(sp, id);
   const live = transport || w.trips.length > 0 ? await jobTripsLive(db, actor, filters) : null;
   const card = transport ? await jobRuleCard(db, actor, id) : null;
+  const claimsData = transport && sp.tab === "claims" ? await jobClaims(db, actor, id) : null;
+  // The New claim step: the manifests typed are checked before anything is created.
+  const draftManifests = typeof sp.m === "string" ? sp.m : "";
+  const claimDraft = claimsData && typeof sp.claimant === "string" && draftManifests
+    ? (() => {
+        const name = sp.claimant.trim();
+        const known = [...options.transporters, ...options.drivers].find((x) => x.name === name);
+        return { claimantId: known?.id ?? "", claimantName: name, manifests: draftManifests, bringing: (Array.isArray(sp.bring) ? sp.bring : sp.bring ? [sp.bring] : []) as string[], claimDate: typeof sp.claimDate === "string" && sp.claimDate ? sp.claimDate : new Date().toISOString().slice(0, 10) };
+      })()
+    : null;
+  const check = claimDraft && claimsData ? await claimCheck(db, actor, { jobId: id, manifests: claimDraft.manifests.split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean), bringing: claimDraft.bringing }) : null;
   const tripParam = typeof sp.trip === "string" ? sp.trip : null;
   const detail = tripParam && tripParam !== "new" ? await tripDetail(db, actor, tripParam) : null;
 
@@ -62,6 +74,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
     { key: "steps", label: t("tabSteps"), show: w.activities.length > 0 || manage, count: w.activities.filter((a) => a.a.status === "open").length },
     { key: "trips", label: t("tabTrips"), show: !!live, count: w.trips.length },
     { key: "rules", label: t("tabRules"), show: !!card, count: card?.terms.length ? undefined : 0 },
+    { key: "claims", label: t("tabClaims"), show: transport && (can(actor, "claims.manage") || w.trips.length > 0) },
     { key: "work", label: t("tabWork"), show: caps.includes("field_work"), count: w.workOrders.length },
     { key: "deliveries", label: t("tabDeliveries"), show: caps.includes("products"), count: w.deliveries.length },
     { key: "money", label: t("tabMoney"), show: showMoney },
@@ -180,11 +193,13 @@ export default async function JobPage({ params, searchParams }: { params: Promis
             actions={open && can(actor, "trips.manage") && <Link href={`${base}?tab=trips&trip=new`} className="btn primary"><Icon name="plus" size={16} />{t("newTrip")}</Link>}
           />
           {(tripParam === "new" || detail) && (
-            <TripDialog locale={locale} jobId={w.job.id} detail={detail} closeHref={`${base}?tab=trips`} options={options} routes={card?.routes ?? []} advancesEnabled={caps.includes("advances")} canEdit={open && can(actor, "trips.manage")} />
+            <TripDialog locale={locale} jobId={w.job.id} detail={detail} closeHref={`${base}?tab=trips`} options={options} routes={card?.routes ?? []} advancesEnabled={caps.includes("advances")} canEdit={open && can(actor, "trips.manage") && !detail?.line?.claim} />
           )}
           <SettlementSection locale={locale} jobId={w.job.id} trips={w.trips} canSettle={can(actor, "settlements.create")} canBill={can(actor, "billing.create") && caps.includes("billing")} />
         </>
       )}
+
+      {tab === "claims" && claimsData && <ClaimsSection locale={locale} basePath={base} data={claimsData} options={options} check={check} draft={claimDraft} />}
 
       {tab === "work" && <WorkOrdersSection locale={locale} jobId={w.job.id} rows={w.workOrders} contractors={options.contractors} editable={manage} />}
 

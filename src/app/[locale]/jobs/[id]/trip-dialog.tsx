@@ -100,6 +100,11 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
         </div>
         {detail && (
           <div className="stack">
+            {line?.claim && (
+              <div className="banner success" style={{ margin: 0 }}><Badge tone="success" plain>{t("claimedTitle")}</Badge>
+                <div>{t("claimedOn")} <a href={`/${locale}/claims/${line.claim.id}`} className="ltr"><strong>{line.claim.claimNo}</strong></a> · {t("claimedLocked")}</div>
+              </div>
+            )}
             {c && (
               <div className="card" style={{ margin: 0, boxShadow: "none" }}>
                 <div className="card-head"><div className="card-title">{t("asCalculated")}</div>{c.state === "confirmed" ? <Badge tone="success">{tr("confirmed")}</Badge> : <Badge tone="warning">{tr("estimated")}</Badge>}</div>
@@ -107,6 +112,8 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   <div className="amount-line"><span>{tr("net")}</span><span className="num">{formatQty(c.net, c.unit, locale)}</span></div>
                   <div className="amount-line"><span>{t("freight")}</span><span className="num">{m(c.carrier.freight, c.currency)}</span></div>
                   {c.carrier.reward !== "0" && <div className="amount-line"><span>{t("reward")}</span><span className="num">{m(c.carrier.reward, c.currency)}</span></div>}
+                  {c.carrier.fineFull !== "0" && c.carrier.fineFull !== c.carrier.fine && <div className="amount-line muted"><span>{t("fineBeforeWaiver")}</span><span className="num">{m(c.carrier.fineFull, c.currency)}</span></div>}
+                  {c.carrier.fineWaived !== "0" && <div className="amount-line"><span>{t("fineWaived")}</span><span className="num">{m(c.carrier.fineWaived, c.currency)}</span></div>}
                   {c.carrier.fine !== "0" && <div className="amount-line"><span>{tr("fine")}</span><span className="num neg">{m(c.carrier.fine, c.currency)}</span></div>}
                   {c.carrier.feeDeductions !== "0" && <div className="amount-line"><span>{t("feeDeductions")}</span><span className="num">−{m(c.carrier.feeDeductions, c.currency)}</span></div>}
                   {c.carrier.transporterCut !== "0" && <div className="amount-line"><span>{t("transporterCut")}</span><span className="num">−{m(c.carrier.transporterCut, c.currency)}</span></div>}
@@ -118,6 +125,25 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   {c.fees.map((fee) => <div key={fee.feeTypeId} className="amount-line muted"><span>{fee.name}</span><span className="num">{formatMoney(fee.amount, fee.currency, locale)}</span></div>)}
                   <div className="amount-line total"><span>{tr("cost")}</span><span className="num">{m(c.cost, c.currency)}</span></div>
                   {detail.showProfit && <><div className="amount-line"><span>{tr("billed")}</span><span className="num">{m(c.customer.total, c.currency)}</span></div><div className="amount-line total"><span>{tr("margin")}</span><span className="num">{m(c.margin, c.currency)}</span></div></>}
+                </div>
+              </div>
+            )}
+            {c && (detail.canWaive || detail.waivers.length > 0) && (
+              <div className="card" style={{ margin: 0, boxShadow: "none" }}>
+                <div className="card-head"><div className="card-title">{t("waiverTitle")}</div></div>
+                <div className="card-body stack" style={{ gap: 10 }}>
+                  {detail.waivers.map((w) => <div key={w.id} className="small"><strong>{m(w.amount, w.currency)}</strong> · {w.waiverDate} — <em className="muted">{w.reason}</em></div>)}
+                  {detail.canWaive && (
+                    <ActionForm command="fines.waive" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("waiverSubmit")} summary={t("waiverSummary", { trip: trip?.manifestNo ?? trip?.tripNo ?? "" })} variant="secondary">
+                      <input type="hidden" name="tripId" value={trip!.id} />
+                      <input type="hidden" name="waiverDate" value={new Date().toISOString().slice(0, 10)} />
+                      <p className="muted small" style={{ margin: 0 }}>{t("waiverHelp", { fine: m(c.carrier.fine, c.currency) })}</p>
+                      <div className="grid2">
+                        <label>{t("waiverAmount")} <span className="hint">{t("waiverAmountHint")}</span><input name="amount" inputMode="decimal" dir="ltr" /></label>
+                        <label>{t("reason")}<input name="reason" required /></label>
+                      </div>
+                    </ActionForm>
+                  )}
                 </div>
               </div>
             )}

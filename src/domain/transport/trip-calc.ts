@@ -55,6 +55,8 @@ export interface TripForCalc {
   carrierDeduction: string;
   /** Advances already paid on this trip, per currency. */
   advances: Record<string, string>;
+  /** Approved fine waivers on this trip (job currency), if any. */
+  fineWaived?: string;
 }
 
 export interface FeeLine {
@@ -81,7 +83,11 @@ export interface TripCalc {
     reward: string;
     commission: string;
     fineQty: string;
+    /** Fine after approved waivers (≤ 0). */
     fine: string;
+    /** Fine before waivers (≤ 0). */
+    fineFull: string;
+    fineWaived: string;
     demurrageDays: number;
     demurrage: string;
     feeDeductions: string;
@@ -150,7 +156,11 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   if (trip.rewardOverride !== null && !dec(trip.rewardOverride).eq(dec(terms.rewardPerTrip))) flags.push("reward_differs");
   const commission = r2(net.times(dec(terms.transporterCommission)));
   const fineQty = beyondAllowance(shortage, dec(terms.carrierAllowance));
-  const fine = r2(fineQty.times(dec(terms.carrierFinePrice)));
+  const fineFull = r2(fineQty.times(dec(terms.carrierFinePrice)));
+  // An approved waiver forgives part or all of the fine (never more than the fine itself).
+  const fineWaived = D.min(dec(trip.fineWaived ?? "0"), fineFull.abs());
+  const fine = fineFull.plus(fineWaived);
+  if (fineWaived.gt(0)) flags.push("fine_waived");
   const days = demurrageDays(terms.demurrageMethod, trip.arrivalDate, trip.dischargeDate, terms.demurrageFreeDays);
   if (terms.demurrageMethod !== "none" && confirmed && !trip.arrivalDate) flags.push("arrival_missing");
   const carrierDemurrage = new D(days).times(dec(terms.carrierDemurrageRate));
@@ -200,6 +210,8 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
       commission: toStr(commission),
       fineQty: toStr(fineQty),
       fine: toStr(fine),
+      fineFull: toStr(fineFull),
+      fineWaived: toStr(fineWaived),
       demurrageDays: days,
       demurrage: toStr(carrierDemurrage),
       feeDeductions: toStr(feeDeductions),

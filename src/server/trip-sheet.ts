@@ -35,7 +35,7 @@ export type SheetField = (typeof SHEET_FIELDS)[number];
 export const SHEET_FEES = ["guarantee", "insurance", "visa", "entry_slip", "declaration_fee", "border_commission", "customs_rate"] as const;
 export type SheetFee = (typeof SHEET_FEES)[number];
 
-const headerKey = (s: string) => normalizeName(s).replace(/[.\-–—_:()،,/\\]/g, " ").replace(/\s+/g, " ").trim();
+export const headerKey = (s: string) => normalizeName(s).replace(/[.\-–—_:()،,/\\]/g, " ").replace(/\s+/g, " ").trim();
 
 const FIELD_ALIASES: Record<SheetField, string[]> = {
   loadingDate: ["بەرواری بارکردن", "تاريخ التحميل", "loading date"],
@@ -89,7 +89,7 @@ export interface ParsedSheet {
 const DIGITS = /[٠-٩۰-۹]/g;
 const latinDigits = (s: string) => s.replace(DIGITS, (d) => String((d.charCodeAt(0) & 0xf) % 10));
 
-function cellValue(v: ExcelJS.CellValue): unknown {
+export function cellValue(v: ExcelJS.CellValue): unknown {
   if (v && typeof v === "object") {
     if ("formula" in v || "sharedFormula" in v) return undefined; // calculated in the sheet: the system calculates it itself
     if ("richText" in v) return v.richText.map((t) => t.text).join("");
@@ -101,7 +101,7 @@ function cellValue(v: ExcelJS.CellValue): unknown {
 
 const iso = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
-function asDate(v: unknown): string | undefined {
+export function asDate(v: unknown): string | undefined {
   if (v instanceof Date) return iso(v);
   if (typeof v === "number" && v > 20000 && v < 80000) return iso(new Date(Date.UTC(1899, 11, 30) + v * 86400000)); // Excel serial date
   if (typeof v === "string") {
@@ -114,7 +114,7 @@ function asDate(v: unknown): string | undefined {
   return undefined;
 }
 
-function asNumber(v: unknown): string | undefined {
+export function asNumber(v: unknown): string | undefined {
   if (typeof v === "number" && Number.isFinite(v)) return String(Math.round(v * 1e6) / 1e6);
   if (typeof v === "string") {
     const s = latinDigits(v.trim()).replace(/[,\s]/g, "").replace("٫", ".");
@@ -123,7 +123,7 @@ function asNumber(v: unknown): string | undefined {
   return undefined;
 }
 
-function asText(v: unknown): string | undefined {
+export function asText(v: unknown): string | undefined {
   if (v === null || v === undefined) return undefined;
   const s = (v instanceof Date ? iso(v) : String(v)).replace(/\s+/g, " ").trim();
   return s || undefined;

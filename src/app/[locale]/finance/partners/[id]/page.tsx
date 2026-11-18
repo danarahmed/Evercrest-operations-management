@@ -9,7 +9,8 @@ import { formatMoney } from "@/lib/format";
 import { partnerAccount } from "@/server/queries";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../../shell";
-import { Card, Cur, EmptyState, PageHeader, RoleBadge, Stat } from "@/components/ui";
+import Link from "next/link";
+import { Card, Cur, EmptyState, PageHeader, RoleBadge, Stat, StatusBadge } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,19 @@ export default async function PartnerAccountPage({ params }: { params: Promise<{
           <Stat key={c} label={`${t("balance")} ${c}`} value={formatMoney(dec(a).abs().toString(), c, locale)} hint={dec(a).isZero() ? "" : dec(a).gt(0) ? t("owesUs") : t("weOwe")} icon="wallet" tone={dec(a).gt(0) ? "success" : dec(a).lt(0) ? "warning" : undefined} />
         ))}
       </div>
+      {v.claims.length > 0 && (
+        <Card flush title={t("claims")} icon="clipboard">
+          <div className="table-wrap"><table className="dense">
+            <thead><tr><th>{t("claimNo")}</th><th>{t("date")}</th><th>{t("job")}</th><th className="num">{t("trips")}</th><th className="num">{t("claimTotal")}</th><th className="num">{t("open")}</th><th>{t("status")}</th></tr></thead>
+            <tbody>{v.claims.map((c) => (
+              <tr key={c.id}>
+                <td className="ltr"><Link href={`/${locale}/claims/${c.id}`} className="cell-title">{c.claimNo}</Link></td><td className="ltr">{c.claimDate}</td><td className="ltr">{c.jobNo}</td><td className="num">{c.tripCount}</td>
+                <td className="num">{formatMoney(c.totalFinal, c.currency, locale)}</td><td className="num">{c.open !== "0" ? <strong>{formatMoney(c.open, c.currency, locale)}</strong> : "—"}</td><td><StatusBadge status={c.status} label={t(`claim_${c.status}`)} /></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </Card>
+      )}
       <Card flush title={t("history")} icon="history">
       {v.lines.length === 0 ? <EmptyState icon="history" title={t("noHistory")} /> : (
         <div className="table-wrap"><table>

@@ -54,7 +54,7 @@ export const STARTER_ROLES = [
     code: "finance",
     name: "Finance",
     permissions: [
-      "jobs.view", "documents.verify", "approvals.decide", "payments.create", "settlements.create", "billing.create",
+      "jobs.view", "documents.verify", "approvals.decide", "payments.create", "settlements.create", "claims.manage", "billing.create",
       "invoices.create", "exchanges.create", "reports.financial.view",
     ],
   },

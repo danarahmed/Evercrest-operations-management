@@ -437,17 +437,4 @@ export const discardTripImport = defineCommand({
 });
 
 /** Advances already paid on trips, per trip and currency (for the live calculation). */
-export async function advancesByTrip(db: Db, tripIds: string[]) {
-  const out = new Map<string, Record<string, string>>();
-  if (!tripIds.length) return out;
-  const rows = await db
-    .select({ tripId: payments.tripId, currency: payments.currency, amount: payments.amount, direction: payments.direction })
-    .from(payments)
-    .where(and(inArray(payments.tripId, tripIds), eq(payments.purpose, "advance"), eq(payments.status, "posted")));
-  for (const r of rows) {
-    const m = out.get(r.tripId!) ?? {};
-    m[r.currency] = dec(m[r.currency] ?? "0").plus(dec(r.amount)).toFixed();
-    out.set(r.tripId!, m);
-  }
-  return out;
-}
+export { advancesByTrip } from "./live-calc";

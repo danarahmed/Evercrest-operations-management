@@ -4,6 +4,7 @@ import { accounts, journalEntries } from "./accounting";
 import { branches, companies, currencies, users } from "./core";
 import { jobs } from "./jobs";
 import { businessPartners, catalogItems, units } from "./masterdata";
+import { claims } from "./claims";
 import { payStatements } from "./statements";
 import { deliveries } from "./operations";
 import { trips } from "./transport";
@@ -52,6 +53,8 @@ export const payments = pgTable(
     invoiceId: uuid("invoice_id").references((): AnyPgColumn => invoices.id),
     /** Pay statement this settlement payment belongs to (purpose "settlement"). */
     statementId: uuid("statement_id").references(() => payStatements.id),
+    /** Claim this payment pays (or collects from) its claimant (purpose "settlement"). */
+    claimId: uuid("claim_id").references((): AnyPgColumn => claims.id),
     /** Counter-account for direct expenses / other payments. */
     counterAccountId: uuid("counter_account_id").references(() => accounts.id),
     reference: text("reference"),

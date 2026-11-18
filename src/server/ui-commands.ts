@@ -29,6 +29,8 @@ import { recordArrival } from "@/domain/transport/trips";
 import { defineFeeType, defineRoute, setJobFee, setTerms } from "@/domain/transport/terms";
 import { applyTripImport, discardTripImport, saveTripRows } from "@/domain/transport/trip-import";
 import { saveTrip } from "@/domain/transport/trip-edit";
+import { cancelClaim, createClaim, payClaim, waiveFine } from "@/domain/transport/claims";
+import { approveRemoteSettlement, discardRemoteSettlement } from "@/domain/transport/remote";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
 import type { Command } from "./command";
@@ -125,6 +127,21 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
     },
   },
   "trip_imports.discard": { command: discardTripImport },
+  // Claims: manifests come as a textarea (one per line or comma-separated) or as a list; papers brought as bringing[].
+  "claims.create": {
+    command: createClaim,
+    prepare: async (_d, _a, i) => {
+      const raw = i.manifests;
+      const manifests = Array.isArray(raw) ? (raw as string[]) : String(raw ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean);
+      const bringing = Array.isArray(i.bringing) ? (i.bringing as string[]) : i.bringing ? [String(i.bringing)] : [];
+      return { ...i, manifests, bringing, post: i.post !== "0", claimantId: i.claimantId || undefined, claimantName: i.claimantName || undefined };
+    },
+  },
+  "claims.cancel": { command: cancelClaim },
+  "claims.pay": { command: payClaim, prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || undefined }) },
+  "fines.waive": { command: waiveFine, prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || undefined }) },
+  "remote_settlements.approve": { command: approveRemoteSettlement },
+  "remote_settlements.discard": { command: discardRemoteSettlement },
   "payments.record": { command: recordPayment, prepare: currencyFromMoneyAccount },
   "documents.record": { command: recordDocument, file: true },
   "documents.attach_file": { command: attachDocumentFile, file: true },

@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { auditEvents, businessPartners, moneyAccounts, partnerRoles, payments, trips, users } from "@/db/schema";
+import { auditEvents, businessPartners, moneyAccounts, partnerRoles, payments, tripFees, trips, users } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { registerApprovable } from "../approvals/approvals";
@@ -12,7 +12,7 @@ import { getJob } from "../jobs/commands";
 import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
-import { loadRuleCard, routeByName, termsOn } from "./terms";
+import { feesOn, loadRuleCard, type RuleCard, routeByName, termsOn } from "./terms";
 import { manifestKey } from "./trip-import";
 import { findOrCreateTruck, isSettled } from "./trips";
 
@@ -56,7 +56,18 @@ const tripInput = z.object({
 });
 export type TripInput = z.infer<typeof tripInput>;
 
-async function partnerByNameOrId(tx: Db, companyId: string, role: "driver" | "transporter", id: string | null | undefined, name: string | null | undefined, audit: (e: { action: string; entityType: string; entityId: string; after: unknown }) => Promise<void>) {
+/** Replace the trip's rule-card fee lines with the card's fees in force on its loading date (entered lines are kept). */
+async function syncRuleFees(tx: Db, companyId: string, tripId: string, card: RuleCard, routeId: string | null, loadingDate: string | null) {
+  await tx.delete(tripFees).where(and(eq(tripFees.tripId, tripId), eq(tripFees.source, "rule")));
+  if (!loadingDate) return;
+  const entered = new Set((await tx.select({ feeTypeId: tripFees.feeTypeId }).from(tripFees).where(eq(tripFees.tripId, tripId))).map((f) => f.feeTypeId));
+  const rows = feesOn(card, routeId, loadingDate)
+    .filter((f) => !entered.has(f.feeTypeId))
+    .map((f) => ({ companyId, tripId, feeTypeId: f.feeTypeId, rate: f.amount, basis: f.basis, currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: f.billedToCustomer, source: "rule" as const }));
+  if (rows.length) await tx.insert(tripFees).values(rows);
+}
+
+export async function partnerByNameOrId(tx: Db, companyId: string, role: "driver" | "transporter", id: string | null | undefined, name: string | null | undefined, audit: (e: { action: string; entityType: string; entityId: string; after: unknown }) => Promise<void>) {
   if (id) {
     const [row] = await tx
       .select({ id: businessPartners.id })
@@ -173,6 +184,7 @@ export const saveTrip = defineCommand({
     };
 
     let tripId: string;
+    let feesStale = !existing;
     if (existing) {
       const before: Partial<Record<Tracked, unknown>> = {};
       const after: Partial<Record<Tracked, unknown>> = {};
@@ -186,6 +198,7 @@ export const saveTrip = defineCommand({
           after[k] = b;
         }
       }
+      feesStale = "loadingDate" in after || "routeId" in after;
       if (Object.keys(after).length) {
         await tx.update(trips).set(values).where(eq(trips.id, existing.id));
         await audit({ action: "trips.save", entityType: "trip", entityId: existing.id, before, after, reason: input.reason ?? null });
@@ -200,6 +213,8 @@ export const saveTrip = defineCommand({
       tripId = row.id;
       await audit({ action: "trips.save", entityType: "trip", entityId: tripId, after: { tripNo, ...values } });
     }
+    // The rule card's fees follow the trip (a new trip, or a changed loading date / route); fees typed from the papers stay.
+    if (feesStale) await syncRuleFees(tx, actor.companyId, tripId, card, routeId, loadingDate);
 
     if (input.advanceAmount && dec(input.advanceAmount).gt(0)) {
       if (!caps.includes("advances")) throw new ValidationError("Advances are not enabled for this job");

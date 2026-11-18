@@ -60,6 +60,7 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
       label: nl("groupOperations"),
       items: [
         { key: "trips", href: "/trips", icon: "truck", show: has("jobs.view") },
+        { key: "claims", href: "/claims", icon: "clipboard", show: has("jobs.view") },
         { key: "statements", href: "/statements", icon: "users", show: has("settlements.create") },
       ],
     },

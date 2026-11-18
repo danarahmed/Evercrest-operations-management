@@ -2,13 +2,13 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, documentRequirements, moneyAccounts, remoteSettlements, trips, trucks } from "@/db/schema";
+import { businessPartners, documentRequirements, moneyAccounts, remoteSettlements, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getJob } from "../jobs/commands";
 import { D, type Dec, dec, toStr } from "../money";
 import { registerApprovable } from "../approvals/approvals";
-import { claimOpen, createClaim, payClaim } from "./claims";
+import { claimOpen, createClaim, payClaim, pendingWaivers } from "./claims";
 import { liveTrips } from "./live-calc";
 import { manifestKey } from "./trip-import";
 
@@ -41,7 +41,7 @@ export const remoteRow = z.object({
 });
 export type RemoteRow = z.infer<typeof remoteRow>;
 
-export type RemoteLineStatus = "match" | "amount_differs" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "duplicate" | "no_amount";
+export type RemoteLineStatus = "match" | "amount_differs" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "duplicate" | "no_amount";
 
 export interface RemoteLine {
   rowNo: number;
@@ -115,6 +115,12 @@ export async function compareRemoteSettlement(db: Db, companyId: string, jobId: 
         .where(and(eq(trips.jobId, jobId), inArray(trips.manifestKey, [...new Set(keys)])))
     : [];
   const live = await liveTrips(db, companyId, found.filter((r) => r.trip.status !== "cancelled").map((r) => r.trip));
+  const waiting = await pendingWaivers(db, companyId, found.map((r) => r.trip.id));
+  const settledOld = new Map(
+    found.length
+      ? (await db.select({ tripId: tripSettlements.tripId, no: tripSettlements.settlementNo }).from(tripSettlements).where(and(inArray(tripSettlements.tripId, found.map((r) => r.trip.id)), eq(tripSettlements.status, "posted")))).map((r) => [r.tripId, r.no] as const)
+      : [],
+  );
   const seen = new Set<string>();
   let currency: string | null = null;
   const lines: RemoteLine[] = rows.map((r, i) => {
@@ -130,6 +136,9 @@ export async function compareRemoteSettlement(db: Db, companyId: string, jobId: 
     if (t.status === "cancelled") return { ...base, ...info, status: "cancelled" };
     const l = live.get(t.id)!;
     if (l.claim) return { ...base, ...info, status: "already_claimed", claimNo: l.claim.claimNo };
+    const old = settledOld.get(t.id);
+    if (old) return { ...base, ...info, status: "settled_old_way", claimNo: old };
+    if (waiting.has(t.id)) return { ...base, ...info, status: "waiver_pending" };
     if (!l.calc) return { ...base, ...info, status: "no_rule" };
     if (l.calc.state !== "confirmed") return { ...base, ...info, status: "not_discharged" };
     if (paid === null) return { ...base, ...info, status: "no_amount", system: l.calc.carrier.toPay };
@@ -138,7 +147,7 @@ export async function compareRemoteSettlement(db: Db, companyId: string, jobId: 
     const difference = dec(paid).minus(system);
     return { ...base, ...info, status: difference.isZero() ? "match" : "amount_differs", system: toStr(system), difference: toStr(difference) };
   });
-  const counts = Object.fromEntries((["match", "amount_differs", "not_found", "cancelled", "not_discharged", "no_rule", "already_claimed", "duplicate", "no_amount"] as RemoteLineStatus[]).map((s) => [s, lines.filter((l) => l.status === s).length])) as Record<RemoteLineStatus, number>;
+  const counts = Object.fromEntries((["match", "amount_differs", "not_found", "cancelled", "not_discharged", "no_rule", "already_claimed", "settled_old_way", "waiver_pending", "duplicate", "no_amount"] as RemoteLineStatus[]).map((s) => [s, lines.filter((l) => l.status === s).length])) as Record<RemoteLineStatus, number>;
   const claimable = lines.filter((l) => l.status === "match" || l.status === "amount_differs");
   const byDriverMap = new Map<string, { driverId: string; driver: string; trips: number; system: Dec; paid: Dec }>();
   for (const l of claimable) {

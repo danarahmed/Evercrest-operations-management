@@ -189,6 +189,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
             showJob={false}
             moneyAccounts={options.moneyAccounts}
             advancesEnabled={caps.includes("advances")}
+            currency={card?.terms.at(-1)?.currency ?? null}
             canImport={open && can(actor, "trips.manage")}
             actions={open && can(actor, "trips.manage") && <Link href={`${base}?tab=trips&trip=new`} className="btn primary"><Icon name="plus" size={16} />{t("newTrip")}</Link>}
           />

@@ -1460,7 +1460,10 @@
     "waiverSummary": "تنازل عن غرامة {trip}",
     "waiverHelp": "عذر السائق الذي يقبله المالك: يُعفى من جزء من الغرامة ({fine}) أو كلها. يذهب للموافقة؛ ليس تعديلاً للغرامة.",
     "waiverAmount": "المبلغ المتنازل عنه",
-    "waiverAmountHint": "فارغ = كل الغرامة"
+    "waiverAmountHint": "فارغ = كل الغرامة",
+    "reverseAdvance": "عكس هذه السلفة",
+    "reverseSubmit": "عكس",
+    "reverseReason": "سبب العكس"
   },
   "Claims": {
     "title": "المطالبات",
@@ -1618,6 +1621,14 @@
     "paymentsTitle": "الدفعات",
     "noPaymentsYet": "لم تُدفع بعد.",
     "noPayments": "لا دفعات.",
-    "moneyIn": "مبلغ وارد"
+    "moneyIn": "مبلغ وارد",
+    "line_settled_old_way": "مدفوعة سابقاً بتسوية",
+    "remote_line_settled_old_way": "مدفوعة سابقاً بتسوية",
+    "line_waiver_pending": "تنازل بانتظار الموافقة",
+    "remote_line_waiver_pending": "تنازل بانتظار الموافقة",
+    "nothingOpen": "لا شيء مفتوح",
+    "reversePayment": "عكس",
+    "reverseHelp": "عكس {no}: يعود المبلغ إلى الصندوق وتُفتح المطالبة مجدداً بهذا المبلغ. تبقى الدفعة في الدفاتر مع عكسها.",
+    "reverseSubmit": "عكس الدفعة"
   }
 }

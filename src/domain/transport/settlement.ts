@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { currencies, invoiceLines, invoices, jobs, payments, payStatementItems, payStatements, trips, tripSettlements } from "@/db/schema";
+import { claimItems, claims, currencies, invoiceLines, invoices, jobs, payments, payStatementItems, payStatements, trips, tripSettlements } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -256,6 +256,9 @@ export const settleTrip = defineCommand({
     await tx.select({ id: trips.id }).from(trips).where(eq(trips.id, tripId)).for("update");
     const [existing] = await tx.select().from(tripSettlements).where(and(eq(tripSettlements.tripId, tripId), eq(tripSettlements.status, "posted")));
     if (existing) throw new Conflict(`${trip.tripNo} is already settled (${existing.settlementNo})`);
+    // A trip on a claim is paid through the claim (money follows the papers); never settled a second way.
+    const [claimed] = await tx.select({ no: claims.claimNo }).from(claimItems).innerJoin(claims, eq(claims.id, claimItems.claimId)).where(and(eq(claimItems.tripId, tripId), eq(claimItems.active, true))).limit(1);
+    if (claimed) throw new Conflict(`${trip.tripNo} is on claim ${claimed.no}; it is paid through the claim`);
     const result = await calculateSettlement(tx, actor.companyId, trip);
     if (!result.ok) throw new ValidationError(`${trip.tripNo} cannot be settled yet`, { missing: result.missing });
     const c = result.calc;

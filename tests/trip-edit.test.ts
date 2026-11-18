@@ -111,3 +111,14 @@ describe("grid entry and spreadsheet filters", () => {
     expect(limited.total).toBe(3);
   });
 });
+
+describe("advance limit on the rule card", () => {
+  it("an advance above the card's limit always needs approval, even below the general payment limit", async () => {
+    const { setSetting } = await import("@/server/settings");
+    await run(setSetting, { key: "approvals.payment_out_limits", value: { USD: "5000" }, reason: "policy" });
+    // the card allows 900 per trip
+    const r = await run(saveTrip, { jobId, manifestNo: "H-950", loadingDate: "2026-10-15", loadedQty: "30", driverName: "Limit Test", plate: "11 B 950", advanceAmount: "800", advanceMoneyAccountId: cashUsd });
+    await expect(run(saveTrip, { tripId: r.id, advanceAmount: "200", advanceMoneyAccountId: cashUsd })).rejects.toMatchObject({ code: "approval_required" });
+    await expect(run(saveTrip, { tripId: r.id, advanceAmount: "100", advanceMoneyAccountId: cashUsd })).resolves.toBeTruthy(); // 900 in total: within
+  });
+});

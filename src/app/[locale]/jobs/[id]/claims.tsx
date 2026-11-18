@@ -32,7 +32,7 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
   const today = new Date().toISOString().slice(0, 10);
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const claimants = [...options.transporters.map((x) => ({ ...x, role: "transporter" })), ...options.drivers.map((x) => ({ ...x, role: "driver" }))];
-  const statusTone: Record<string, "success" | "warning" | "danger" | "neutral"> = { ok: "success", not_discharged: "warning", papers_missing: "warning", already_claimed: "danger", not_found: "danger", duplicate: "danger", cancelled: "neutral", no_rule: "danger", other_currency: "danger" };
+  const statusTone: Record<string, "success" | "warning" | "danger" | "neutral"> = { ok: "success", not_discharged: "warning", papers_missing: "warning", already_claimed: "danger", settled_old_way: "danger", waiver_pending: "warning", not_found: "danger", duplicate: "danger", cancelled: "neutral", no_rule: "danger", other_currency: "danger" };
 
   const newClaimForm = (
     <form method="get" className="form" action={basePath}>

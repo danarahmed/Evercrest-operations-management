@@ -149,8 +149,11 @@ export const recordPayment = defineCommand({
 
     // Owner's rule: staff may pay anything the job's rule card allows without asking. An advance on a
     // trip within the card's advance limit needs no approval; everything else follows the payment limits.
-    const withinRules = input.purpose === "advance" && input.tripId ? await advanceWithinRules(tx, actor.companyId, input.tripId, input.amount, input.currency, input.paymentDate) : false;
-    if (input.direction === "out" && !ctx.approval && !withinRules) await assertWithinLimit(tx, actor.companyId, input.currency, input.amount, partnerId, input.paymentDate);
+    const rule = input.purpose === "advance" && input.tripId ? await advanceRuleCheck(tx, actor.companyId, input.tripId, input.amount, input.currency, input.paymentDate) : { verdict: "none" as const };
+    // Above the card's advance limit is outside the owner's rules: it always waits for approval.
+    if (rule.verdict === "above" && !ctx.approval)
+      throw new ApprovalRequired(`Advances on ${rule.tripNo} would total ${rule.total} ${input.currency}, above the job's advance limit of ${rule.limit}`, { total: rule.total, limit: rule.limit, currency: input.currency });
+    if (input.direction === "out" && !ctx.approval && rule.verdict !== "within") await assertWithinLimit(tx, actor.companyId, input.currency, input.amount, partnerId, input.paymentDate);
 
     const paymentNo = await nextNumber(tx, actor.companyId, input.direction === "out" ? "PAY" : "RCV", Number(input.paymentDate.slice(0, 4)));
     const cashSide = { accountId: money.ledgerAccountId, currency: input.currency, jobId };
@@ -259,12 +262,21 @@ async function claimPayment(
  */
 /** True when the trip's job rule card (version on the loading date) sets an advance limit and this advance is within it. */
 export async function advanceWithinRules(tx: Db, companyId: string, tripId: string, amount: string, currency: string, date: string): Promise<boolean> {
+  return (await advanceRuleCheck(tx, companyId, tripId, amount, currency, date)).verdict === "within";
+}
+
+/**
+ * The rule card's advance limit for a trip: "within" (pay alone), "above" (the owner decides: approval,
+ * whatever the general payment limit), or "none" (no card limit in this currency: payment limits apply).
+ */
+export async function advanceRuleCheck(tx: Db, companyId: string, tripId: string, amount: string, currency: string, date: string) {
   const trip = await getTrip(tx, companyId, tripId);
   const card = await loadRuleCard(tx, companyId, trip.jobId);
   const terms = termsOn(card, trip.routeId, trip.loadingDate ?? date);
-  if (!terms || terms.advanceMax === null || terms.currency !== currency) return false;
+  if (!terms || terms.advanceMax === null || terms.currency !== currency) return { verdict: "none" as const };
   const already = dec((await tripAdvances(tx, companyId, tripId))[currency] ?? "0");
-  return already.plus(dec(amount)).lte(dec(terms.advanceMax));
+  const total = already.plus(dec(amount));
+  return { verdict: total.lte(dec(terms.advanceMax)) ? ("within" as const) : ("above" as const), total: toStr(total), limit: toStr(dec(terms.advanceMax)), tripNo: trip.tripNo };
 }
 
 async function assertWithinLimit(tx: Db, companyId: string, currency: string, amount: string, partnerId: string | null, date: string) {

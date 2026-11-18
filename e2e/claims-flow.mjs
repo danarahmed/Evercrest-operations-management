@@ -114,6 +114,19 @@ await page.goto(claimUrl);
 await page.waitForSelector(".badge:has-text('Paid')");
 await page.goto(`${base}/en/claims`);
 assert.match(await page.locator("table").innerText(), /Zagros Transport[\s\S]*Paid/);
+
+// A payment from the wrong box is reversed from the claim page: the claim opens again for that amount
+await page.hover("aside"); await page.click("button[aria-label='Sign out']");
+await page.waitForURL(`${base}/en/login`);
+await page.click("button:has-text('Admin')");
+await page.waitForURL(`${base}/en`);
+await page.goto(claimUrl);
+await page.locator("tr:has-text('$700') button:has-text('Reverse')").first().click();
+const rev = page.locator("dialog[open] form:has(input[name=__command][value='payments.reverse'])");
+await rev.locator("input[name=reason]").fill("paid from the wrong safe");
+await rev.locator(submit).click();
+await page.waitForSelector(".stats:has-text('$700')");
+assert.match(await page.locator(".badge").first().innerText(), /Open/);
 assert.deepEqual(errors, []);
 console.log("e2e claims flow: OK");
 await browser.close();

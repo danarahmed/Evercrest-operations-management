@@ -25,7 +25,7 @@ type LiveView = Awaited<ReturnType<typeof jobTripsLive>>;
  * a manifest opens the trip's one-screen dialog. Below, staff enter many trips
  * at once in the entry grid.
  */
-export async function TripsSection({ locale, basePath, baseParams, view, filters, actions, canImport, showJob, jobId, moneyAccounts, advancesEnabled }: {
+export async function TripsSection({ locale, basePath, baseParams, view, filters, actions, canImport, showJob, jobId, moneyAccounts, advancesEnabled, currency }: {
   locale: string;
   basePath: string;
   baseParams: Record<string, string>;
@@ -37,6 +37,8 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
   jobId: string | null;
   moneyAccounts: { id: string; name: string; currency: string }[];
   advancesEnabled: boolean;
+  /** The job's currency from its rule card, when there is one. */
+  currency?: string | null;
 }) {
   const t = await getTranslations({ locale, namespace: "Trips" });
   const f = await getTranslations({ locale, namespace: "Forms" });
@@ -94,7 +96,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
       </>}>
         {view.canEdit && jobId && (
           <EntryLine locale={locale} jobId={jobId} lists={{ routes: options.routes.map((r) => r.name), transporters: options.transporters.map((r) => r.name), drivers: options.drivers.map((d) => ({ name: d.name, plate: d.plate })) }}
-            moneyAccounts={moneyAccounts} advancesEnabled={advancesEnabled} defaults={{ loadingDate: gridDefaults.loadingDate, route: gridDefaults.route, transporter: gridDefaults.transporter }} />
+            moneyAccounts={moneyAccounts} advancesEnabled={advancesEnabled} defaults={{ loadingDate: gridDefaults.loadingDate, route: gridDefaults.route, transporter: gridDefaults.transporter }} currency={currency} />
         )}
         <form method="get" className="trip-filter-form">
           {Object.entries(baseParams).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}

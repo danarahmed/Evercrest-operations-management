@@ -153,7 +153,10 @@ export async function parseTripSheet(data: ArrayBuffer): Promise<ParsedSheet> {
         if (hit) map.set(col, hit);
       });
       const fields = new Set([...map.values()].map((h) => h.field).filter(Boolean));
-      if (!(fields.has("manifest") || fields.has("driver")) || map.size < 4) continue;
+      // A loading sheet (manifest or driver plus at least three more known columns), or a storage's
+      // discharge list: manifest + discharged quantity (a re-import only fills missing discharge data).
+      const dischargeList = fields.has("manifest") && fields.has("dischargedQty");
+      if (!dischargeList && (!(fields.has("manifest") || fields.has("driver")) || map.size < 4)) continue;
 
       const rows: SheetRow[] = [];
       for (let i = r + 1; i <= ws.rowCount; i++) {

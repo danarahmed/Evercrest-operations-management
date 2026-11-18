@@ -662,7 +662,7 @@ export async function tripDetail(db: Db, actor: Actor, tripId: string) {
   const history = await tripHistory(db, actor.companyId, tripId);
   const [transporter] = trip.transporterId ? await db.select({ name: businessPartners.name }).from(businessPartners).where(eq(businessPartners.id, trip.transporterId)) : [];
   const waivers = await tripWaivers(db, tripId);
-  return { trip, line, history, waivers, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
+  return { trip, line, history, waivers, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canReverse: can(actor, "payments.reverse"), canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
 }
 
 /** A staged sheet with what applying it would do. */

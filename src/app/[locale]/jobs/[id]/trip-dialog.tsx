@@ -154,6 +154,16 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   <div key={p.id} className="small">
                     <div><strong>{t("advancePaid", { amount: formatMoney(p.amount, p.currency, locale) })}</strong> {p.status === "reversed" && <Badge tone="danger" plain>{t("reversed")}</Badge>}</div>
                     <div className="muted">{p.paymentDate} · {by ?? "—"} · <span className="ltr">{p.paymentNo}</span></div>
+                    {p.status !== "reversed" && detail.canReverse && !line?.claim && (
+                      <details className="inline-reverse">
+                        <summary>{t("reverseAdvance")}</summary>
+                        <ActionForm command="payments.reverse" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("reverseSubmit")} variant="danger">
+                          <input type="hidden" name="paymentId" value={p.id} />
+                          <input type="hidden" name="reversalDate" value={new Date().toISOString().slice(0, 10)} />
+                          <label>{t("reverseReason")}<input name="reason" required /></label>
+                        </ActionForm>
+                      </details>
+                    )}
                   </div>
                 ))}
                 {detail.history.changes.map(({ e, by }) => {

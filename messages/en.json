@@ -1460,7 +1460,10 @@
     "waiverSummary": "Fine waiver {trip}",
     "waiverHelp": "The driver's excuse the owner accepts: part or all of the fine ({fine}) is forgiven. Goes to approval; never an edit of the fine.",
     "waiverAmount": "Amount to waive",
-    "waiverAmountHint": "empty = the whole fine"
+    "waiverAmountHint": "empty = the whole fine",
+    "reverseAdvance": "Reverse this advance",
+    "reverseSubmit": "Reverse",
+    "reverseReason": "Why it is reversed"
   },
   "Claims": {
     "title": "Claims",
@@ -1618,6 +1621,14 @@
     "paymentsTitle": "Payments",
     "noPaymentsYet": "Not paid yet.",
     "noPayments": "No payments.",
-    "moneyIn": "money in"
+    "moneyIn": "money in",
+    "line_settled_old_way": "Already paid by settlement",
+    "remote_line_settled_old_way": "Already paid by settlement",
+    "line_waiver_pending": "Waiver waiting for approval",
+    "remote_line_waiver_pending": "Waiver waiting for approval",
+    "nothingOpen": "Nothing open",
+    "reversePayment": "Reverse",
+    "reverseHelp": "Reverse {no}: the money is back in the box and the claim opens again for this amount. The payment stays in the books with its reversal.",
+    "reverseSubmit": "Reverse the payment"
   }
 }

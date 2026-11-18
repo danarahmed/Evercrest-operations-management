@@ -7,7 +7,7 @@ import { billDeliveries, cancelDelivery, recordDelivery } from "@/domain/supply/
 import { decideApproval } from "@/domain/approvals/approvals";
 import { attachDocumentFile, defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
 import { createInvoice } from "@/domain/finance/invoices";
-import { recordPayment } from "@/domain/finance/payments";
+import { recordPayment, reversePayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
@@ -138,6 +138,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
     },
   },
   "claims.cancel": { command: cancelClaim },
+  // Reversing a payment (an advance, a claim payment): the money comes back to the box; the original stays in the books.
+  "payments.reverse": { command: reversePayment },
   "claims.pay": { command: payClaim, prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || undefined }) },
   "fines.waive": { command: waiveFine, prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || undefined }) },
   "remote_settlements.approve": { command: approveRemoteSettlement },

@@ -14,13 +14,15 @@ import { usePopover } from "./popover";
  * pills that repeat for every truck until changed. Each saved trip is listed
  * under the line and appears in the grid (the page refreshes after a save).
  */
-export function EntryLine({ locale, jobId, lists, moneyAccounts, advancesEnabled, defaults }: {
+export function EntryLine({ locale, jobId, lists, moneyAccounts, advancesEnabled, defaults, currency }: {
   locale: string;
   jobId: string;
   lists: { routes: string[]; transporters: string[]; drivers: { name: string; plate: string | null }[] };
   moneyAccounts: { id: string; name: string; currency: string }[];
   advancesEnabled: boolean;
   defaults: { loadingDate: string; route: string; transporter: string };
+  /** The job's currency (rule card): advances are offered from a cash box in that currency first. */
+  currency?: string | null;
 }) {
   const t = useTranslations("Trips");
   const f = useTranslations("Forms");
@@ -31,7 +33,7 @@ export function EntryLine({ locale, jobId, lists, moneyAccounts, advancesEnabled
   const driverRef = useRef<HTMLInputElement>(null);
 
   // Sticky values (repeat for every truck)
-  const [sticky, setSticky] = useState({ loadingDate: defaults.loadingDate, route: defaults.route, transporter: defaults.transporter, price: "", reward: "", advance: "", account: moneyAccounts[0]?.id ?? "" });
+  const [sticky, setSticky] = useState({ loadingDate: defaults.loadingDate, route: defaults.route, transporter: defaults.transporter, price: "", reward: "", advance: "", account: (moneyAccounts.find((a) => a.currency === currency) ?? moneyAccounts[0])?.id ?? "" });
   // Per-truck values (cleared after each save)
   const blank = { driver: "", plate: "", manifest: "", loaded: "" };
   const [truck, setTruck] = useState(blank);

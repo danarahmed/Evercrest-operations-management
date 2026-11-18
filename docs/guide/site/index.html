@@ -1,0 +1,305 @@
+<title>Evercrest Owner's Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Vazirmatn:wght@400;600;700&display=swap">
+<style>
+/* Layout: the ERP's Sandstone palette; a quiet contents rail beside one readable column of steps and pictures. */
+:root {
+  --bg: #f6f2ec; --panel: #fffdfa; --ink: #26231f; --muted: #776e62; --line: #e3dbcf;
+  --accent: #1f5e5b; --accent-ink: #133f3d; --accent-soft: #e6efed; --note: #fbf2e2; --note-line: #eed7ae;
+  --display: "Manrope", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --body: "Manrope", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1c1a17; --panel: #24211d; --ink: #f1ece4; --muted: #b3a998; --line: #3a352e;
+  --accent: #7cc4bc; --accent-ink: #a9ddd6; --accent-soft: #233532; --note: #2e2719; --note-line: #5a4a2c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1c1a17; --panel: #24211d; --ink: #f1ece4; --muted: #b3a998; --line: #3a352e;
+  --accent: #7cc4bc; --accent-ink: #a9ddd6; --accent-soft: #233532; --note: #2e2719; --note-line: #5a4a2c; color-scheme: dark }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.65 var(--body); }
+.wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto;
+  padding-block: 32px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow: auto; padding-top: 8px; }
+nav.toc .brand { font: 800 15px/1.2 var(--display); color: var(--accent-ink); letter-spacing: .01em; margin-bottom: 4px; }
+nav.toc .sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc li a { display: block; padding: 5px 10px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 13.5px; }
+nav.toc li.top a { font-weight: 800; color: var(--accent-ink); margin-top: 10px; }
+nav.toc li a:hover, nav.toc li a.on { background: var(--accent-soft); color: var(--accent-ink); }
+main { min-width: 0; max-width: 780px; }
+.chapter + .chapter { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--line); }
+h1 { font: 800 clamp(28px, 4vw, 40px)/1.15 var(--display); letter-spacing: -.01em; margin: 0 0 12px; text-wrap: balance; }
+h2 { font: 800 24px/1.25 var(--display); margin: 56px 0 12px; text-wrap: balance; }
+h3 { font: 700 18px/1.3 var(--display); margin: 32px 0 8px; color: var(--accent-ink); }
+p, li { max-width: 68ch; }
+p { margin: 0 0 14px; }
+ul, ol { margin: 0 0 16px; padding-inline-start: 22px; display: grid; gap: 6px; }
+strong { font-weight: 700; }
+a { color: var(--accent); text-underline-offset: 3px; }
+code { font-size: .9em; background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; }
+.table { overflow-x: auto; margin: 8px 0 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: start; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: color-mix(in oklab, var(--panel) 85%, var(--line)); }
+tr:last-child td { border-bottom: 0; }
+td { unicode-bidi: plaintext; }
+figure { margin: 14px 0 26px; }
+.shot { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); cursor: zoom-in; }
+.shot img { display: block; width: 100%; height: auto; }
+.shot:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.intro { background: var(--note); border: 1px solid var(--note-line); border-radius: 14px; padding: 14px 18px; margin: 0 0 28px; font-size: 15px; }
+dialog.zoom { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; }
+dialog.zoom::backdrop { background: rgb(20 18 15 / .78); }
+dialog.zoom img { display: block; max-width: 96vw; max-height: 92vh; border-radius: 10px; cursor: zoom-out; }
+@media (max-width: 960px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  nav.toc { position: static; max-height: none; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px; }
+  nav.toc ol { max-height: 260px; overflow: auto; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="brand">Evercrest Operations ERP</div>
+    <div class="sub">Owner's guide · Chapter 1: trips and claims</div>
+    <ol>
+<li class="top"><a href="#chapter-1-trips-and-claims">Chapter 1 — Trips and claims</a></li>
+<li class=""><a href="#1-in-one-minute">In one minute</a></li>
+<li class=""><a href="#2-which-of-your-problems-this-solves">Which of your problems this solves</a></li>
+<li class=""><a href="#3-who-does-what">Who does what</a></li>
+<li class=""><a href="#4-the-whole-flow-at-a-glance">The whole flow at a glance</a></li>
+<li class=""><a href="#5-once-before-any-job">Once, before any job</a></li>
+<li class=""><a href="#6-a-job-and-its-rule-card">A job and its rule card</a></li>
+<li class=""><a href="#7-trips-loading">Trips: loading</a></li>
+<li class=""><a href="#8-discharge-corrections-and-how-a-trip-is-calculated">Discharge, corrections and how a trip is calculated</a></li>
+<li class=""><a href="#9-finding-and-checking-trips">Finding and checking trips</a></li>
+<li class=""><a href="#10-papers">Papers</a></li>
+<li class=""><a href="#11-fine-waivers">Fine waivers</a></li>
+<li class=""><a href="#12-claims">Claims</a></li>
+<li class=""><a href="#13-site-settlements">Site settlements</a></li>
+<li class=""><a href="#14-approvals">Approvals</a></li>
+<li class=""><a href="#15-where-the-money-shows-in-the-books">Where the money shows in the books</a></li>
+<li class=""><a href="#16-where-to-find-everything">Where to find everything</a></li>
+<li class=""><a href="#17-what-can-go-wrong-and-how-to-fix-it">What can go wrong and how to fix it</a></li>
+<li class=""><a href="#18-a-daily-and-weekly-rhythm">A daily and weekly rhythm</a></li>
+<li class=""><a href="#19-try-it-checklist">Try it — checklist</a></li>
+<li class=""><a href="#20-not-built-yet">Not built yet</a></li>
+<li class="top"><a href="#glossary">Glossary</a></li>
+    </ol>
+  </nav>
+  <main>
+    <div class="intro">Read a section, try it on the live system at <a href="https://evercrest-erp.vercel.app">evercrest-erp.vercel.app</a>, then decide whether the next step starts. Click any picture to see it larger.</div>
+<section class="chapter"><h1 id="chapter-1-trips-and-claims">Chapter 1 — Trips and claims</h1>
+<p>Build steps 1 and 2. Status: ready for your review.</p>
+<h2 id="1-in-one-minute">1. In one minute</h2>
+<p>Before: the site keeps its loading sheet, the office copies it into its own file, someone sets the price and reward per trip by hand, discharge figures arrive late, settlements are calculated in Excel, the accountant types the journals, and sites that pay drivers with their own figures send back sheets that take days to check.</p>
+<p>Now:</p>
+<ul><li><strong>Each job has a rule card.</strong> Prices, reward, shortage allowance and fine, fees and the advance limit are set once per job. Every trip is calculated from it automatically.</li><li><strong>Trips go in once.</strong> Typed on one fast line, imported from the site's own sheet, or entered in full. The manifest number is the trip's identity and can never be entered twice in a job.</li><li><strong>Discharge fills in later.</strong> Until a trip is discharged its figures are marked "estimated". The storage's discharge list is imported as it is.</li><li><strong>Money follows the papers.</strong> Whoever brings a trip's manifest is paid for it, through a claim. A trip can be claimed once. The system calculates the claim exactly like your settlement form and books it to the claimant's account.</li><li><strong>Site settlements are compared, not re-checked by eye.</strong> The site's sheet is imported and compared line by line; only differences need attention.</li><li><strong>Two people for money above the limits.</strong> Large payments, advances above the card's limit, fine waivers and large site settlements wait for a second person.</li></ul>
+<h2 id="2-which-of-your-problems-this-solves">2. Which of your problems this solves</h2>
+<div class="table"><table><thead><tr><th>Your problem</th><th>Where you said it</th><th>What the system does now</th></tr></thead><tbody><tr><td>Site data is copied by hand into the office's own files</td><td>Part 2, Q4</td><td>The site's sheet is imported as it is, in Kurdish, Arabic or English headers. Or typed once on the entry line.</td></tr><tr><td>Price, reward and route are set trip by trip</td><td>Part 2, Q4</td><td>The rule card sets them once per job; a change is a new version from a date. Exceptions per trip are allowed and flagged.</td></tr><tr><td>Discharge data comes back late, sometimes only when the driver returns</td><td>Part 2, Q4</td><td>Trips stay "estimated" until discharge; the storage list fills them in; nothing is paid on estimates.</td></tr><tr><td>The transporter at loading is not the one who brings the papers</td><td>Part 4, D4</td><td>The claimant is chosen when the papers come back. The trip's advance and fines stay with the trip.</td></tr><tr><td>A fine larger than the pay</td><td>Part 4, D7 and D11</td><td>The trip's negative amount is offset inside the claim; a negative claim is collected from the claimant.</td></tr><tr><td>Fees paid for the carrier and taken back later</td><td>Part 4, D10</td><td>Fee types on the rule card say whether each fee is taken back from the carrier and whether the customer pays it.</td></tr><tr><td>Remote settlements with the site's own figures, wrong payments, delays</td><td>Part 2, Q5 and part 12</td><td>Import the site's sheet; see matches and differences per trip and per driver; approve once.</td></tr><tr><td>Settlement journals typed by hand and wrong</td><td>Part 9, Q4</td><td>Posting a claim and paying it create the journal entries; the accountant only reviews.</td></tr><tr><td>Not knowing who did what</td><td>Part 11, Q1</td><td>Every change records who, when, what it was before and after, and why.</td></tr><tr><td>Payments without control</td><td>Part 9</td><td>Payment limit, advance limit and fine waivers go through Approvals; nobody approves their own request.</td></tr></tbody></table></div>
+<h2 id="3-who-does-what">3. Who does what</h2>
+<p>Today's roles are the starter set; step 6 rebuilds them around your five office staff. Until then, give people these roles in Administration, Users &amp; roles.</p>
+<div class="table"><table><thead><tr><th>Work</th><th>Suggested person</th><th>Role today</th></tr></thead><tbody><tr><td>Set up cash boxes, limits, required papers</td><td>You or the administrator</td><td>Administrator</td></tr><tr><td>Create jobs and fill in the rule card</td><td>Operations lead, checked by you</td><td>Administrator, or Operations plus the "Job rules" permission</td></tr><tr><td>Enter or import loading, advances, discharge</td><td>Trip clerk (site or office)</td><td>Operations</td></tr><tr><td>Record papers, open claims</td><td>Documents and claims clerk</td><td>Finance (has the claims permission)</td></tr><tr><td>Pay claims from a cash box</td><td>Cashier</td><td>Finance</td></tr><tr><td>Approve large payments, waivers, site settlements</td><td>You</td><td>Administrator or anyone with "Approve" — never the person who asked</td></tr><tr><td>Review the books</td><td>Accountant</td><td>Accountant</td></tr></tbody></table></div>
+<p>Margins and the customer's price are visible only with the profit permission. Staff without it never see profit.</p>
+<h2 id="4-the-whole-flow-at-a-glance">4. The whole flow at a glance</h2>
+<ol><li>Once: cash boxes, limits, required papers, people.</li><li>Create the job.</li><li>Fill in its rule card: prices, rules, routes, fees.</li><li>Trucks load: enter or import the trips, with advances.</li><li>Trucks discharge: import the storage list or enter by hand.</li><li>Corrections, if any, with a reason.</li><li>A fine waiver, if you forgive a fine. Before the claim.</li><li>Papers come back: open a claim, check, post.</li><li>Pay the claim from a cash box, all or in parts.</li><li>Sites that paid drivers themselves: import their sheet, compare, approve.</li><li>You approve what waits in Approvals.</li><li>Everything shows in the carrier's account, the cash box and the journal.</li></ol>
+<h2 id="5-once-before-any-job">5. Once, before any job</h2>
+<h3 id="5-1-cash-boxes">5.1 Cash boxes</h3>
+<p>Setup → Accounting tab.</p>
+<figure><button class="shot" type="button" data-src="img/02-setup-cash-boxes.jpg" aria-label="Enlarge: Cash boxes"><img src="img/02-setup-cash-boxes.jpg" alt="Cash boxes" loading="lazy"></button><figcaption>Cash boxes</figcaption></figure>
+<p>Each safe, site box or bank account is a cash box with one currency. Advances, claim payments and site payments come out of a cash box, so its balance is always known.</p>
+<p>Benefit: you see what each box should hold. Step 3 adds counting and reconciling each box.</p>
+<h3 id="5-2-payment-limit-and-rounding">5.2 Payment limit and rounding</h3>
+<p>Setup → Settings tab.</p>
+<figure><button class="shot" type="button" data-src="img/03-setup-limits-rounding.jpg" aria-label="Enlarge: Limits and rounding"><img src="img/03-setup-limits-rounding.jpg" alt="Limits and rounding" loading="lazy"></button><figcaption>Limits and rounding</figcaption></figure>
+<ul><li><strong>Payment limit per currency.</strong> A payment out above it waits for a second person. Payments to the same person on the same day are added together, so a large payment cannot be split to get through.</li><li><strong>Rounding.</strong> Final amounts are rounded to this step, for example 250 IQD. Only the final amount of a claim is rounded, once; the difference is booked to its own account.</li></ul>
+<h3 id="5-3-required-papers">5.3 Required papers</h3>
+<p>Setup → Operations tab.</p>
+<figure><button class="shot" type="button" data-src="img/04-setup-papers.jpg" aria-label="Enlarge: Required papers"><img src="img/04-setup-papers.jpg" alt="Required papers" loading="lazy"></button><figcaption>Required papers</figcaption></figure>
+<p>Papers can be required per job type, per customer or per contract, and for the job or for every trip. Petroleum transportation already requires a <strong>Manifest on every trip</strong>. Add a discharge certificate or anything a customer asks for here, not in the code.</p>
+<p>A trip whose required papers are missing cannot be claimed. Papers that arrive together with a claim are ticked in the claim and recorded on each trip automatically.</p>
+<h3 id="5-4-people-and-permissions">5.4 People and permissions</h3>
+<p>Administration → Users &amp; roles.</p>
+<figure><button class="shot" type="button" data-src="img/05-users-roles.jpg" aria-label="Enlarge: Users and roles"><img src="img/05-users-roles.jpg" alt="Users and roles" loading="lazy"></button><figcaption>Users and roles</figcaption></figure>
+<p>The new permissions from step 2 are in the Money group: open and post claims, waive shortage fines, approve site settlements.</p>
+<h2 id="6-a-job-and-its-rule-card">6. A job and its rule card</h2>
+<h3 id="6-1-create-the-job">6.1 Create the job</h3>
+<p>Click the <strong>+</strong> at the top of the side menu → New job. Only five things are needed: customer, job type, name, start date, responsible person.</p>
+<figure><button class="shot" type="button" data-src="img/06-new-job.jpg" aria-label="Enlarge: New job"><img src="img/06-new-job.jpg" alt="New job" loading="lazy"></button><figcaption>New job</figcaption></figure>
+<p>The job opens on its Overview with the <strong>Next action</strong>: the one thing the job is waiting for.</p>
+<figure><button class="shot" type="button" data-src="img/07-job-overview.jpg" aria-label="Enlarge: Job overview"><img src="img/07-job-overview.jpg" alt="Job overview" loading="lazy"></button><figcaption>Job overview</figcaption></figure>
+<h3 id="6-2-the-rule-card">6.2 The rule card</h3>
+<p>Job → <strong>Rules</strong> tab → <strong>New version</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/09-rules-new-version.jpg" aria-label="Enlarge: New rule card version"><img src="img/09-rules-new-version.jpg" alt="New rule card version" loading="lazy"></button><figcaption>New rule card version</figcaption></figure>
+<div class="table"><table><thead><tr><th>Field</th><th>What it means</th></tr></thead><tbody><tr><td>From</td><td>The date this version starts. Trips loaded on or after it use it.</td></tr><tr><td>Route</td><td>Leave empty for the whole job, or pick a route to give that route its own prices.</td></tr><tr><td>Currency, unit</td><td>The job's currency and quantity unit, e.g. USD and MT.</td></tr><tr><td>Carrier price, per ton or per trip</td><td>What the carrier earns.</td></tr><tr><td>Reward per trip</td><td>Added to every trip's freight.</td></tr><tr><td>Transporter commission</td><td>An amount per ton the transporter earns on top, if agreed.</td></tr><tr><td>Allowance</td><td>Shortage per trip the carrier is not fined for, e.g. 0.15 MT.</td></tr><tr><td>Fine price</td><td>Price per ton beyond the allowance, e.g. 1,200 USD.</td></tr><tr><td>Customer price, allowance, fine</td><td>What the customer pays and the customer's own shortage rule. Visible only with the profit permission. Leave the price empty if it is not decided yet.</td></tr><tr><td>Demurrage</td><td>Method, free days, and the rate for the carrier and for the customer.</td></tr><tr><td>Normal advance, advance limit</td><td>The usual advance, and the most that can be paid on a trip without your approval.</td></tr></tbody></table></div>
+<p><strong>A price change is a new version from a date.</strong> Old trips keep the old price. Nothing already calculated changes behind your back.</p>
+<h3 id="6-3-routes-and-fees">6.3 Routes and fees</h3>
+<p>Same tab, below the versions.</p>
+<figure><button class="shot" type="button" data-src="img/10-rules-set-fee.jpg" aria-label="Enlarge: Setting a fee"><img src="img/10-rules-set-fee.jpg" alt="Setting a fee" loading="lazy"></button><figcaption>Setting a fee</figcaption></figure>
+<ul><li><strong>Routes</strong>: where trucks load and discharge. Also created automatically from imported sheets.</li><li><strong>Fees</strong>: visa, insurance, guarantee, entry slip, declaration, border commission, customs, and any new kind you add with "New kind of fee". Each fee has an amount from a date, per trip or per ton, and two switches: <strong>taken back from the carrier</strong>, and <strong>billed to the customer</strong>.</li></ul>
+<figure><button class="shot" type="button" data-src="img/11-rules-done.jpg" aria-label="Enlarge: The finished rule card"><img src="img/11-rules-done.jpg" alt="The finished rule card" loading="lazy"></button><figcaption>The finished rule card</figcaption></figure>
+<p>Tip from the owner's seat: fill in the rule card before the first truck loads. A trip loaded before any version exists shows "no rule" until one covers its date.</p>
+<h2 id="7-trips-loading">7. Trips: loading</h2>
+<p>Job → <strong>Trips</strong> tab.</p>
+<figure><button class="shot" type="button" data-src="img/12-trips-empty.jpg" aria-label="Enlarge: Empty trips tab"><img src="img/12-trips-empty.jpg" alt="Empty trips tab" loading="lazy"></button><figcaption>Empty trips tab</figcaption></figure>
+<p>There are four ways to enter trips. They all end in the same trips.</p>
+<h3 id="7-1-the-entry-line-one-truck-at-a-time">7.1 The entry line — one truck at a time</h3>
+<p>The line at the top of the trips. You type only what changes per truck:</p>
+<ol><li><strong>Driver.</strong> Names are suggested as you type. For a driver seen before, the plate fills in by itself.</li><li><strong>Plate.</strong></li><li><strong>Manifest.</strong></li><li><strong>Loaded quantity</strong>, then <strong>Enter</strong>.</li></ol>
+<p>The trip is saved, it appears in the grid, and the cursor goes back to Driver for the next truck.</p>
+<figure><button class="shot" type="button" data-src="img/14-entry-line-typed.jpg" aria-label="Enlarge: Entry line"><img src="img/14-entry-line-typed.jpg" alt="Entry line" loading="lazy"></button><figcaption>Entry line</figcaption></figure>
+<p>The grey pills above the line repeat for every truck: load date, route, transporter, price and reward if different from the card, and the advance with its cash box. Change them once with <strong>Change</strong>; they stay until changed again. An empty transporter means the driver works directly with you.</p>
+<figure><button class="shot" type="button" data-src="img/13-entry-line-change.jpg" aria-label="Enlarge: Changing the repeated values"><img src="img/13-entry-line-change.jpg" alt="Changing the repeated values" loading="lazy"></button><figcaption>Changing the repeated values</figcaption></figure>
+<figure><button class="shot" type="button" data-src="img/15-trips-after-entry.jpg" aria-label="Enlarge: After three trucks"><img src="img/15-trips-after-entry.jpg" alt="After three trucks" loading="lazy"></button><figcaption>After three trucks</figcaption></figure>
+<h3 id="7-2-the-full-form-one-trip-with-everything">7.2 The full form — one trip with everything</h3>
+<p><strong>New trip</strong> opens one screen with every field: manifest, route, dates, quantities, driver, transporter, plate, a price or reward for this trip only, the transporter's cut, other deductions, notes, and an advance.</p>
+<figure><button class="shot" type="button" data-src="img/16-trip-dialog-new.jpg" aria-label="Enlarge: Full trip form"><img src="img/16-trip-dialog-new.jpg" alt="Full trip form" loading="lazy"></button><figcaption>Full trip form</figcaption></figure>
+<h3 id="7-3-import-the-site-s-sheet">7.3 Import the site's sheet</h3>
+<p><strong>Import sheet</strong> → choose the .xlsx file → <strong>Preview</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/17-import-choose.jpg" aria-label="Enlarge: Choosing the sheet"><img src="img/17-import-choose.jpg" alt="Choosing the sheet" loading="lazy"></button><figcaption>Choosing the sheet</figcaption></figure>
+<p>The sheet is read as the site keeps it. Headers in Kurdish, Arabic or English are recognised: load date, route, transporter, driver, plate, manifest, loaded, advance, discharge date, discharged, fees and deductions. Columns with formulas are ignored, because the system calculates them itself.</p>
+<figure><button class="shot" type="button" data-src="img/18-import-preview.jpg" aria-label="Enlarge: Import preview"><img src="img/18-import-preview.jpg" alt="Import preview" loading="lazy"></button><figcaption>Import preview</figcaption></figure>
+<p>The preview shows what will happen before anything is saved: new trips, updates, unchanged rows, rows with errors and why, new names that will be created, and the advances in the sheet with the cash box they were paid from. Check the new names: a name spelled differently becomes a second person.</p>
+<p><strong>Create and update</strong> applies it once. Rows with errors are skipped; fix the sheet and import it again.</p>
+<figure><button class="shot" type="button" data-src="img/19-trips-after-import.jpg" aria-label="Enlarge: After the import"><img src="img/19-trips-after-import.jpg" alt="After the import" loading="lazy"></button><figcaption>After the import</figcaption></figure>
+<h3 id="7-4-many-rows-at-once">7.4 Many rows at once</h3>
+<p><strong>Enter many rows at once</strong>, under the grid, opens a spreadsheet-like table for a batch typed from paper. One Save checks all rows together.</p>
+<h3 id="7-5-advances">7.5 Advances</h3>
+<p>An advance paid when the trip is entered comes out of the chosen cash box straight away.</p>
+<ul><li>Within the rule card's advance limit: paid without asking.</li><li>Above the card's limit: always waits for your approval, whatever the payment limit.</li><li>No limit on the card: the general payment limit applies.</li><li>An advance in another currency than the job's is shown separately and never mixed into the job's currency.</li></ul>
+<p>A sheet import refuses advances above the card's limit; enter that one trip in the full form and send it for approval.</p>
+<h3 id="7-6-what-the-cards-above-the-grid-tell-you">7.6 What the cards above the grid tell you</h3>
+<p>Trips loaded, on the way (not discharged, figures estimated), discharged, still to pay carriers with the advances already paid, total cost with fees, and the margin (profit permission only).</p>
+<h2 id="8-discharge-corrections-and-how-a-trip-is-calculated">8. Discharge, corrections and how a trip is calculated</h2>
+<h3 id="8-1-import-the-storage-s-discharge-list">8.1 Import the storage's discharge list</h3>
+<p>The storage's list needs only three columns: manifest, discharge date and discharged quantity. Import it the same way.</p>
+<figure><button class="shot" type="button" data-src="img/20-import-discharge-preview.jpg" aria-label="Enlarge: Discharge list preview"><img src="img/20-import-discharge-preview.jpg" alt="Discharge list preview" loading="lazy"></button><figcaption>Discharge list preview</figcaption></figure>
+<p>Known manifests get their discharge data. A re-import never overwrites figures already recorded; a different figure is shown as a note instead.</p>
+<figure><button class="shot" type="button" data-src="img/21-trips-discharged.jpg" aria-label="Enlarge: Trips after discharge"><img src="img/21-trips-discharged.jpg" alt="Trips after discharge" loading="lazy"></button><figcaption>Trips after discharge</figcaption></figure>
+<h3 id="8-2-by-hand">8.2 By hand</h3>
+<p>Open the trip (click its manifest), fill in discharge date and quantity, save.</p>
+<h3 id="8-3-corrections">8.3 Corrections</h3>
+<p>Staff correct a trip directly; mistakes are frequent and waiting for permission delays the work. Write the reason in the form. The trip's <strong>History</strong> shows who changed what, from what to what, and when.</p>
+<figure><button class="shot" type="button" data-src="img/22-trip-dialog-history.jpg" aria-label="Enlarge: History of a corrected trip"><img src="img/22-trip-dialog-history.jpg" alt="History of a corrected trip" loading="lazy"></button><figcaption>History of a corrected trip</figcaption></figure>
+<p>Once a trip is on a claim it is locked: its money has moved. To correct it, cancel the claim first.</p>
+<h3 id="8-4-how-the-money-is-calculated-worked-example">8.4 How the money is calculated — worked example</h3>
+<p>Trip H-402, from the screenshots: loaded 30.45 MT, discharged 30.1 MT.</p>
+<div class="table"><table><thead><tr><th></th><th>Rule</th><th>Amount</th></tr></thead><tbody><tr><td>Net</td><td>the lower of loaded and discharged</td><td>30.1 MT</td></tr><tr><td>Shortage</td><td>30.45 − 30.1</td><td>0.35 MT</td></tr><tr><td>Fined quantity</td><td>shortage beyond the 0.15 allowance</td><td>0.2 MT</td></tr><tr><td>Freight</td><td>30.1 × 70</td><td>2,107</td></tr><tr><td>Reward</td><td>per trip</td><td>+ 10</td></tr><tr><td>Fine</td><td>0.2 × 1,200</td><td>− 240</td></tr><tr><td>Visa</td><td>taken back from the carrier</td><td>− 50</td></tr><tr><td><strong>Earned</strong></td><td></td><td><strong>1,827</strong></td></tr><tr><td>Advance</td><td>paid at loading</td><td>− 500</td></tr><tr><td><strong>To pay</strong></td><td></td><td><strong>1,327</strong></td></tr></tbody></table></div>
+<p>Until discharge the trip shows the same calculation with net = loaded and no shortage, marked <strong>estimated</strong>. After discharge it is <strong>confirmed</strong>.</p>
+<h2 id="9-finding-and-checking-trips">9. Finding and checking trips</h2>
+<p>The trips grid works like a spreadsheet.</p>
+<ul><li><strong>Search</strong>: manifest, driver, plate, transporter.</li><li><strong>Date ranges</strong>: loaded from/to, discharged from/to.</li><li><strong>Quick chips</strong>: no discharge data, no advance, has a fine, price differs from the rule, no manifest, no route, customer price to decide.</li><li><strong>Column funnels</strong>: tick the values to show, like Excel's filter.</li><li><strong>Sorting</strong>: click a column title.</li><li><strong>Columns</strong>: "Fit to screen" hides the least important columns on small screens; tick to choose your own.</li><li><strong>Export</strong>: the rows you see, to Excel.</li></ul>
+<figure><button class="shot" type="button" data-src="img/23-column-filter.jpg" aria-label="Enlarge: Column filter"><img src="img/23-column-filter.jpg" alt="Column filter" loading="lazy"></button><figcaption>Column filter</figcaption></figure>
+<figure><button class="shot" type="button" data-src="img/24-chip-has-fine.jpg" aria-label="Enlarge: Has a fine"><img src="img/24-chip-has-fine.jpg" alt="Has a fine" loading="lazy"></button><figcaption>Has a fine</figcaption></figure>
+<figure><button class="shot" type="button" data-src="img/25-columns-panel.jpg" aria-label="Enlarge: Columns panel"><img src="img/25-columns-panel.jpg" alt="Columns panel" loading="lazy"></button><figcaption>Columns panel</figcaption></figure>
+<p>The filters live in the page address: bookmark or send a filtered view to someone.</p>
+<p>The <strong>Trips</strong> page in the side menu shows all trips of all jobs with the same tools and a job filter.</p>
+<figure><button class="shot" type="button" data-src="img/45-trips-page.jpg" aria-label="Enlarge: All trips"><img src="img/45-trips-page.jpg" alt="All trips" loading="lazy"></button><figcaption>All trips</figcaption></figure>
+<h2 id="10-papers">10. Papers</h2>
+<p>Job → <strong>Documents</strong> tab shows every required paper per trip and its state: missing, received and waiting for verification, verified, rejected or expired.</p>
+<figure><button class="shot" type="button" data-src="img/27-documents-tab.jpg" aria-label="Enlarge: Documents tab"><img src="img/27-documents-tab.jpg" alt="Documents tab" loading="lazy"></button><figcaption>Documents tab</figcaption></figure>
+<p>You rarely need to record manifests here one by one: when a claim is opened, tick the papers that came with it and they are recorded on every trip of the claim. A received but not yet verified paper is a warning, not a block.</p>
+<h2 id="11-fine-waivers">11. Fine waivers</h2>
+<p>When you accept a driver's excuse for a shortage: open the trip → <strong>Fine waiver</strong> → amount (empty = the whole fine) and the reason → <strong>Request a waiver</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/26-waiver-request.jpg" aria-label="Enlarge: Requesting a waiver"><img src="img/26-waiver-request.jpg" alt="Requesting a waiver" loading="lazy"></button><figcaption>Requesting a waiver</figcaption></figure>
+<ul><li>It always goes to Approvals and a different person decides.</li><li>While it waits, the trip is held back from claims, so a claim never goes out with a fine that is about to change.</li></ul>
+<figure><button class="shot" type="button" data-src="img/26b-claim-waiver-pending.jpg" aria-label="Enlarge: Trip held back while the waiver waits"><img src="img/26b-claim-waiver-pending.jpg" alt="Trip held back while the waiver waits" loading="lazy"></button><figcaption>Trip held back while the waiver waits</figcaption></figure>
+<figure><button class="shot" type="button" data-src="img/26c-approvals-waiver.jpg" aria-label="Enlarge: The waiver in Approvals"><img src="img/26c-approvals-waiver.jpg" alt="The waiver in Approvals" loading="lazy"></button><figcaption>The waiver in Approvals</figcaption></figure>
+<p>After approval the fine is reduced in the trip's calculation and in its claim. The fine itself is never edited; the waiver is a separate record with its reason.</p>
+<figure><button class="shot" type="button" data-src="img/26d-trip-waived.jpg" aria-label="Enlarge: Trip after the waiver"><img src="img/26d-trip-waived.jpg" alt="Trip after the waiver" loading="lazy"></button><figcaption>Trip after the waiver</figcaption></figure>
+<p>A waiver is only possible before the trip is claimed.</p>
+<h2 id="12-claims">12. Claims</h2>
+<h3 id="12-1-open-a-claim">12.1 Open a claim</h3>
+<p>Job → <strong>Claims</strong> tab → <strong>New claim</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/28-claims-tab-empty.jpg" aria-label="Enlarge: Claims tab"><img src="img/28-claims-tab-empty.jpg" alt="Claims tab" loading="lazy"></button><figcaption>Claims tab</figcaption></figure>
+<ol><li><strong>Claimant</strong>: the transporter or the driver who brought the papers. A new name becomes a new transporter.</li><li><strong>Date.</strong></li><li><strong>Manifest numbers</strong>: one per line, or separated by commas. Type, paste or scan them.</li><li><strong>Papers that came with this claim</strong>: the Manifest is ticked; tick any other paper they brought.</li><li><strong>Check the manifests.</strong></li></ol>
+<figure><button class="shot" type="button" data-src="img/29-new-claim.jpg" aria-label="Enlarge: New claim"><img src="img/29-new-claim.jpg" alt="New claim" loading="lazy"></button><figcaption>New claim</figcaption></figure>
+<h3 id="12-2-the-check">12.2 The check</h3>
+<p>Every manifest gets a result before anything is created:</p>
+<div class="table"><table><thead><tr><th>Result</th><th>Meaning</th><th>What to do</th></tr></thead><tbody><tr><td>Ready</td><td>Can be claimed; amount shown</td><td>—</td></tr><tr><td>No such manifest in this job</td><td>Wrong number, or another job's trip</td><td>Check the paper</td></tr><tr><td>No discharge data yet</td><td>Not discharged</td><td>Import or enter discharge</td></tr><tr><td>Papers missing</td><td>A required paper is not there</td><td>Tick it if it came with the claim, or record it</td></tr><tr><td>Waiver waiting for approval</td><td>A fine waiver is undecided</td><td>Decide it in Approvals</td></tr><tr><td>Already claimed</td><td>On another claim (number shown)</td><td>Nothing: it cannot be paid twice</td></tr><tr><td>Already paid by settlement</td><td>Paid the old way, before claims existed</td><td>Nothing</td></tr><tr><td>Listed twice</td><td>The same number typed twice</td><td>—</td></tr><tr><td>No rule card for its date</td><td>No version covers its loading date</td><td>Add a version</td></tr></tbody></table></div>
+<figure><button class="shot" type="button" data-src="img/30-claim-check.jpg" aria-label="Enlarge: The check"><img src="img/30-claim-check.jpg" alt="The check" loading="lazy"></button><figcaption>The check</figcaption></figure>
+<p>If some lines are not ready, <strong>Claim only the ready trips</strong> keeps the good ones.</p>
+<figure><button class="shot" type="button" data-src="img/31-claim-ready.jpg" aria-label="Enlarge: Ready to post"><img src="img/31-claim-ready.jpg" alt="Ready to post" loading="lazy"></button><figcaption>Ready to post</figcaption></figure>
+<h3 id="12-3-post-the-claim">12.3 Post the claim</h3>
+<p><strong>Create and post the claim</strong> opens the claim page, laid out like your settlement form.</p>
+<figure><button class="shot" type="button" data-src="img/32-claim-page.jpg" aria-label="Enlarge: Claim page"><img src="img/32-claim-page.jpg" alt="Claim page" loading="lazy"></button><figcaption>Claim page</figcaption></figure>
+<p>At that moment:</p>
+<ul><li>the claimant's account shows what the company owes them;</li><li>the advances paid on those trips are cleared, from whoever received them;</li><li>the trips are locked and can never be claimed again by anyone;</li><li>the claim's total is rounded once.</li></ul>
+<p>Money follows the papers: in the example Zagros Transport brings four manifests, three of them loaded with Masoud Transport's trucks. Zagros is paid for all four. Masoud is owed nothing for them.</p>
+<p>A trip whose fine is bigger than its pay has a negative amount. It is offset inside the claim. If the whole claim is negative, the claimant owes the company and the button says <strong>Collect</strong>.</p>
+<h3 id="12-4-pay-the-claim">12.4 Pay the claim</h3>
+<p>Claim page → <strong>Pay</strong> → amount (empty = everything still open) → cash box → date → method.</p>
+<figure><button class="shot" type="button" data-src="img/33-claim-pay.jpg" aria-label="Enlarge: Paying part of a claim"><img src="img/33-claim-pay.jpg" alt="Paying part of a claim" loading="lazy"></button><figcaption>Paying part of a claim</figcaption></figure>
+<p>Pay all or part. Each payment shows on the claim and the claim's "Still to pay" goes down.</p>
+<figure><button class="shot" type="button" data-src="img/34-claim-part-paid.jpg" aria-label="Enlarge: Part paid"><img src="img/34-claim-part-paid.jpg" alt="Part paid" loading="lazy"></button><figcaption>Part paid</figcaption></figure>
+<p>A payment above the payment limit asks for approval. <strong>Send for approval</strong> puts it in Approvals.</p>
+<figure><button class="shot" type="button" data-src="img/35-pay-needs-approval.jpg" aria-label="Enlarge: Payment above the limit"><img src="img/35-pay-needs-approval.jpg" alt="Payment above the limit" loading="lazy"></button><figcaption>Payment above the limit</figcaption></figure>
+<p>When nothing is left open, the claim shows <strong>Paid</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/40-claim-paid.jpg" aria-label="Enlarge: Paid claim"><img src="img/40-claim-paid.jpg" alt="Paid claim" loading="lazy"></button><figcaption>Paid claim</figcaption></figure>
+<p>A claimed trip shows a green "Claimed" notice in its form and is locked.</p>
+<figure><button class="shot" type="button" data-src="img/42-trip-claimed-locked.jpg" aria-label="Enlarge: Claimed trip"><img src="img/42-trip-claimed-locked.jpg" alt="Claimed trip" loading="lazy"></button><figcaption>Claimed trip</figcaption></figure>
+<h3 id="12-5-cancel-a-claim">12.5 Cancel a claim</h3>
+<p><strong>Cancel this claim</strong> with a reason. The trips become claimable again and the booking is reversed. A claim with payments cannot be cancelled: reverse its payments first, with <strong>Reverse</strong> next to each payment on the claim page. Reversing needs the "reverse payments" permission.</p>
+<h2 id="13-site-settlements">13. Site settlements</h2>
+<p>When a site paid the drivers with its own figures and sends back a sheet.</p>
+<p>Job → Claims tab → <strong>Import a site settlement</strong> → the sheet, the date paid, the site's cash box → <strong>Compare</strong>.</p>
+<figure><button class="shot" type="button" data-src="img/36-site-upload.jpg" aria-label="Enlarge: Site settlement upload"><img src="img/36-site-upload.jpg" alt="Site settlement upload" loading="lazy"></button><figcaption>Site settlement upload</figcaption></figure>
+<p>The sheet needs a manifest column and an amount paid column; driver, plate, fine and advance columns are kept for reference. Headers in any of the three languages.</p>
+<figure><button class="shot" type="button" data-src="img/37-site-compare.jpg" aria-label="Enlarge: Comparison"><img src="img/37-site-compare.jpg" alt="Comparison" loading="lazy"></button><figcaption>Comparison</figcaption></figure>
+<p>The comparison shows:</p>
+<ul><li>how many lines match, how many differ, and how many cannot be claimed and why;</li><li>per driver: what the system says is owed, what the site paid, and the difference;</li><li>every line, with the result.</li></ul>
+<p><strong>Approve</strong> turns each driver's paid trips into that driver's claim and records the payment from the site's cash box for what the system says is owed. Lines that cannot be claimed are listed and left for later. If the payments are above the limit, the whole settlement waits for approval.</p>
+<figure><button class="shot" type="button" data-src="img/39-site-approved.jpg" aria-label="Enlarge: After approval"><img src="img/39-site-approved.jpg" alt="After approval" loading="lazy"></button><figcaption>After approval</figcaption></figure>
+<p>The difference is what the site paid too much (positive) or too little (negative). It stays visible here and, from step 3, appears in that cash box's count, so it is followed up with the site's employee.</p>
+<h2 id="14-approvals">14. Approvals</h2>
+<p>Side menu → <strong>Approvals</strong>. Everything waiting for a second person:</p>
+<ul><li>advances above a job's advance limit;</li><li>payments above the payment limit;</li><li>fine waivers;</li><li>site settlements above the limit;</li><li>write-offs.</li></ul>
+<figure><button class="shot" type="button" data-src="img/38-approvals.jpg" aria-label="Enlarge: Approvals"><img src="img/38-approvals.jpg" alt="Approvals" loading="lazy"></button><figcaption>Approvals</figcaption></figure>
+<p>Approve or reject with a note. Nobody can approve their own request. An approved request runs exactly as it was submitted.</p>
+<h2 id="15-where-the-money-shows-in-the-books">15. Where the money shows in the books</h2>
+<p>The books hold only real events. While trips are loading, the system calculates profit live from the trips; it does not book estimates.</p>
+<div class="table"><table><thead><tr><th>Event</th><th>What the books record</th></tr></thead><tbody><tr><td>Advance paid</td><td>Cash box down; advance owed by that driver or transporter</td></tr><tr><td>Claim posted</td><td>Trips' earnings as a job cost; fines and recovered fees against it; advances cleared; the claimant is owed the net</td></tr><tr><td>Claim payment</td><td>Cash box down; the claimant is owed less</td></tr><tr><td>Fine waiver</td><td>No entry of its own; the claim is smaller</td></tr><tr><td>Site settlement approved</td><td>A claim and a payment per driver, as above</td></tr><tr><td>Claim cancelled</td><td>The claim's entry reversed</td></tr></tbody></table></div>
+<p>Where to see it:</p>
+<ul><li><strong>Partner accounts</strong> → the carrier: balance, claims and every movement. On a claim page, click the claimant's name.</li></ul>
+<figure><button class="shot" type="button" data-src="img/47-carrier-account.jpg" aria-label="Enlarge: Carrier account"><img src="img/47-carrier-account.jpg" alt="Carrier account" loading="lazy"></button><figcaption>Carrier account</figcaption></figure>
+<ul><li><strong>Journal</strong>: every entry, each linked to its claim or payment number.</li></ul>
+<figure><button class="shot" type="button" data-src="img/48-journal.jpg" aria-label="Enlarge: Journal"><img src="img/48-journal.jpg" alt="Journal" loading="lazy"></button><figcaption>Journal</figcaption></figure>
+<ul><li><strong>Cash, bank &amp; books</strong>: each cash box's balance.</li></ul>
+<figure><button class="shot" type="button" data-src="img/49-cash-books.jpg" aria-label="Enlarge: Cash, bank and books"><img src="img/49-cash-books.jpg" alt="Cash, bank and books" loading="lazy"></button><figcaption>Cash, bank and books</figcaption></figure>
+<h2 id="16-where-to-find-everything">16. Where to find everything</h2>
+<div class="table"><table><thead><tr><th>What</th><th>Where</th></tr></thead><tbody><tr><td>A job's trips, rules, claims, papers</td><td>Jobs → the job → tabs Trips, Rules, Claims, Documents</td></tr><tr><td>All trips of all jobs</td><td>Side menu → Trips</td></tr><tr><td>All claims and their status</td><td>Side menu → Claims</td></tr><tr><td>What a carrier is owed</td><td>Partner accounts → the name, or click the claimant on a claim</td></tr><tr><td>What waits for you</td><td>Side menu → Approvals (a dot shows when something waits)</td></tr><tr><td>Cash box balances</td><td>Cash, bank &amp; books</td></tr><tr><td>Every booking</td><td>Journal</td></tr><tr><td>Cash boxes, limits, papers</td><td>Setup</td></tr><tr><td>People and permissions</td><td>Users &amp; roles</td></tr></tbody></table></div>
+<figure><button class="shot" type="button" data-src="img/44-claims-page.jpg" aria-label="Enlarge: Claims page"><img src="img/44-claims-page.jpg" alt="Claims page" loading="lazy"></button><figcaption>Claims page</figcaption></figure>
+<p>The side menu is a strip of icons; move the mouse onto it to open it, or pin it open with the arrow at its bottom.</p>
+<h2 id="17-what-can-go-wrong-and-how-to-fix-it">17. What can go wrong and how to fix it</h2>
+<div class="table"><table><thead><tr><th>Situation</th><th>What to do</th></tr></thead><tbody><tr><td>A quantity or date was typed wrong</td><td>Open the trip, correct it, write the reason. If the trip is claimed, cancel the claim first, correct, claim again.</td></tr><tr><td>The same manifest typed twice</td><td>The system refuses it. Check which trip is right.</td></tr><tr><td>A trip shows "no rule"</td><td>Add a rule card version whose date covers the trip's loading date.</td></tr><tr><td>A sheet is refused or columns are not read</td><td>The preview lists the columns it recognised. Rename the header to one of the recognised names, or ask for it to be added.</td></tr><tr><td>A name in a sheet was spelled differently</td><td>It becomes a new person. Correct the trip to the right driver; names will be merged in a later step.</td></tr><tr><td>An advance went out from the wrong cash box or in the wrong currency</td><td>Open the trip → History → "Reverse this advance" with the reason, then pay it again from the right box. Only before the trip is claimed.</td></tr><tr><td>The wrong claimant was chosen</td><td>Cancel the claim and open it again for the right person.</td></tr><tr><td>A claim was paid from the wrong box</td><td>Claim page → Payments → "Reverse" with the reason. The money is back in the box and the claim opens again for that amount.</td></tr><tr><td>The site's figures differ</td><td>The comparison shows each difference. Approve what the system owes; follow up the difference with the site's employee.</td></tr><tr><td>An approval was rejected</td><td>Nothing happened. Correct the request and send it again.</td></tr><tr><td>The old "Settle this trip" button in the Settlement and billing box</td><td>From the first draft. A claimed trip cannot be settled that way, and a trip settled that way cannot be claimed. Use claims for all jobs with a rule card.</td></tr></tbody></table></div>
+<h2 id="18-a-daily-and-weekly-rhythm">18. A daily and weekly rhythm</h2>
+<p>From the owner's seat, so normal work stays quiet and exceptions stand out:</p>
+<p><strong>Every day</strong></p>
+<ul><li>Trip clerk: enter or import the day's loading before closing. Advances only within the card's limit.</li><li>Documents and claims clerk: import discharge lists as they arrive; open claims as papers come in.</li><li>Cashier: pay open claims from the right box.</li><li>You: clear Approvals once a day.</li></ul>
+<p><strong>Every week</strong></p>
+<ul><li>Trips page, chip "No discharge data": trucks not discharged after the usual days — chase them.</li><li>Chip "Has a fine": shortages to discuss with carriers before claims.</li><li>Claims page, "Open": what is still owed to carriers.</li><li>Site settlements: compared within two days of the sheet arriving.</li></ul>
+<h2 id="19-try-it-checklist">19. Try it — checklist</h2>
+<ol><li>Create a job for a real customer and fill in the rule card with your real prices.</li><li>Add a route and two fees, one taken back from the carrier.</li><li>Enter three trucks on the entry line, with an advance.</li><li>Enter one trip in the full form, direct with the driver.</li><li>Import a real loading sheet from a site.</li><li>Import a discharge list with manifest, date and quantity.</li><li>Correct one trip and read its History.</li><li>Use the chips and the column funnels to find trips with fines.</li><li>Request a fine waiver; approve it as a second user; see the trip change.</li><li>Open a claim by a transporter who did not load those trucks; include one wrong number; claim only the ready trips.</li><li>Pay part of the claim, then the rest above the limit; approve as a second user.</li><li>Try to claim one of those manifests again.</li><li>Import a site settlement sheet with one difference; approve it.</li><li>Open the carrier's account and the journal and follow each entry back to its claim.</li><li>Switch the language to Kurdish and Arabic and repeat one claim.</li></ol>
+<h2 id="20-not-built-yet">20. Not built yet</h2>
+<div class="table"><table><thead><tr><th>What</th><th>When</th></tr></thead><tbody><tr><td>Counting cash boxes; site differences landing on the site's box; daily rate; exchangers; paying in the other currency</td><td>Step 3</td></tr><tr><td>The accountant's review queue; the month-end accrual for trips waiting for papers</td><td>Step 4</td></tr><tr><td>Customer invoicing from the rule card; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card</td><td>Step 5</td></tr><tr><td>Roles rebuilt around your staff; "my work" lists; your owner board and phone view</td><td>Step 6</td></tr><tr><td>Storage, shared overheads, staff and payroll, several companies</td><td>Step 7</td></tr><tr><td>Accident or contamination recovery charged to a carrier</td><td>To be scheduled</td></tr><tr><td>Paying part of a carrier's whole balance across several claims, oldest first</td><td>To be scheduled</td></tr><tr><td>Merging two spellings of the same driver</td><td>To be scheduled</td></tr><tr><td>Saved filter groups</td><td>Your decision pending</td></tr><tr><td>Extra papers and costs for jobs abroad (question #43)</td><td>Your answer pending</td></tr></tbody></table></div></section>
+<section class="chapter"><h1 id="glossary">Glossary</h1>
+<p>The words the system uses, in the three languages, exactly as they appear on the screens.</p>
+<div class="table"><table><thead><tr><th>English</th><th>العربية</th><th>کوردی</th><th>Meaning</th></tr></thead><tbody><tr><td>Job</td><td>العمل</td><td>کار</td><td>One piece of work for one customer, e.g. "Diesel to Latakia, November". Everything else hangs on a job.</td></tr><tr><td>Rule card</td><td>بطاقة القواعد</td><td>کارتی ڕێسا</td><td>The job's prices and rules: carrier price, reward, shortage allowance and fine, customer price, demurrage, advance limit, fees. Shown on the job's Rules tab.</td></tr><tr><td>Version</td><td>نسخة</td><td>وەشان</td><td>A rule card change from a date. Trips use the version in force on their loading date.</td></tr><tr><td>Route</td><td>الطريق</td><td>ڕێگا</td><td>Where trucks load and discharge. A route can have its own prices and fees.</td></tr><tr><td>Fee</td><td>الرسوم</td><td>خەرجی</td><td>Visa, insurance, guarantee, customs and similar. Each fee says whether it is taken back from the carrier and whether the customer pays it.</td></tr><tr><td>Trip</td><td>الرحلة</td><td>گەشت</td><td>One truck carrying one load under a job.</td></tr><tr><td>Manifest</td><td>المنفيست</td><td>منفیست</td><td>The trip's paper and its identity. One manifest number is used once per job and is paid once.</td></tr><tr><td>Loaded</td><td>محمل</td><td>بارکراو</td><td>Quantity loaded, from the loading sheet.</td></tr><tr><td>Discharged</td><td>مفرغ</td><td>بەتاڵکراو</td><td>Quantity delivered, from the storage's list or the driver's papers.</td></tr><tr><td>Net</td><td>صافي</td><td>صافی</td><td>The lower of loaded and discharged. The carrier is paid on net.</td></tr><tr><td>Shortage</td><td>النقص</td><td>نقص</td><td>Loaded minus discharged, when the truck delivered less.</td></tr><tr><td>Allowance</td><td>السماح</td><td>ڕێگەپێدان</td><td>The shortage the carrier is not fined for, set on the rule card.</td></tr><tr><td>Fine</td><td>غرامة</td><td>غرامە</td><td>Shortage beyond the allowance × the fine price. Comes off the carrier's pay.</td></tr><tr><td>Fine waiver</td><td>التنازل عن الغرامة</td><td>لێخۆشبوونی غرامە</td><td>Part or all of a fine forgiven, after approval. Never an edit of the fine.</td></tr><tr><td>Reward</td><td>المكافأة</td><td>پاداشت</td><td>An amount per trip on top of the freight.</td></tr><tr><td>Advance</td><td>سلفة</td><td>سلف</td><td>Money paid to the driver or transporter at loading. Deducted when the trip is claimed.</td></tr><tr><td>Advance limit</td><td>حد السلفة</td><td>سنووری سلف</td><td>Advances up to this need no approval. Above it they go to Approvals.</td></tr><tr><td>Carrier</td><td>الناقل / السائق</td><td>ناقل / سایەق</td><td>Whoever drives or arranges the truck: a transporter, or a driver working directly with the company.</td></tr><tr><td>Transporter</td><td>الناقل</td><td>ناقل</td><td>A company or person who provides trucks and drivers.</td></tr><tr><td>Direct</td><td>مباشر</td><td>ڕاستەوخۆ</td><td>A driver working with the company with no transporter.</td></tr><tr><td>Estimated</td><td>تقديرية</td><td>خەمڵێنراو</td><td>A trip not yet discharged: its figures assume no shortage.</td></tr><tr><td>Confirmed</td><td>مؤكدة</td><td>دڵنیاکراو</td><td>A discharged trip: its figures are final.</td></tr><tr><td>Claim</td><td>مطالبة</td><td>مطالەبە</td><td>The list of trips a carrier brings papers for, and the money owed for them.</td></tr><tr><td>Claimant</td><td>صاحب المطالبة</td><td>داواکار</td><td>Whoever brought the papers. The trips' money goes to the claimant, whoever the transporter at loading was.</td></tr><tr><td>Site settlement</td><td>تسوية موقع</td><td>حیسابی شوێن</td><td>Drivers paid at a site with the site's own figures, sent back as a sheet and compared with the system.</td></tr><tr><td>Cash box</td><td>الصندوق</td><td>سندوق</td><td>A safe or bank account money is paid from. Each one holds one currency.</td></tr><tr><td>Approvals</td><td>الموافقات</td><td>پەسەندکردنەکان</td><td>The list of money actions waiting for a second person.</td></tr><tr><td>Payment limit</td><td>حدود الموافقة على المدفوعات</td><td>سنووری پەسەندکردن بۆ پارەدان</td><td>Payments above this amount need approval.</td></tr><tr><td>Partner account</td><td>حسابات الأطراف</td><td>هەژماری لایەنەکان</td><td>A customer's, transporter's or driver's running balance and its history.</td></tr><tr><td>Journal</td><td>اليومية</td><td>ڕۆژنامە</td><td>Every booking in the accounts. Nothing in it is ever edited.</td></tr><tr><td>Margin</td><td>الهامش</td><td>پەراوێز</td><td>What the customer pays minus what the trip costs. Only people with the profit permission see it.</td></tr></tbody></table></div></section>
+  </main>
+</div>
+<dialog class="zoom" id="zoom" aria-label="Picture"><img id="zoom-img" alt=""></dialog>
+<script>
+(() => {
+  const dlg = document.getElementById("zoom"), img = document.getElementById("zoom-img");
+  document.querySelectorAll(".shot").forEach((b) => b.addEventListener("click", () => { img.src = b.dataset.src; img.alt = b.querySelector("img").alt; dlg.showModal(); }));
+  dlg.addEventListener("click", () => dlg.close());
+  // Highlight the section being read in the contents.
+  const links = [...document.querySelectorAll("nav.toc a")];
+  const byId = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+  const obs = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { links.forEach((a) => a.classList.remove("on")); byId.get(e.target.id)?.classList.add("on"); } }), { rootMargin: "0px 0px -70% 0px" });
+  document.querySelectorAll("main h1[id], main h2[id]").forEach((h) => obs.observe(h));
+})();
+</script>

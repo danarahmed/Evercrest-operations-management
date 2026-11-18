@@ -7,6 +7,8 @@ import { recordPayment, reversePayment } from "@/domain/finance/payments";
 import { createJob, defineJobType } from "@/domain/jobs/commands";
 import { createPartner } from "@/domain/masterdata/partners";
 import { assignRole, createUser, defineRole } from "@/domain/org/commands";
+import { defineRate } from "@/domain/transport/rates";
+import { settleTrip } from "@/domain/transport/settlement";
 import { cancelClaim, carrierClaims, claimDetail, createClaim, payClaim, previewClaim, waiveFine } from "@/domain/transport/claims";
 import { defineFeeType, setJobFee, setTerms } from "@/domain/transport/terms";
 import { saveTrip } from "@/domain/transport/trip-edit";
@@ -187,3 +189,32 @@ async function partnerIdOf(name: string) {
   const [p] = await env.db.select({ id: businessPartners.id }).from(businessPartners).where(and(eq(businessPartners.companyId, env.companyId), eq(businessPartners.name, name)));
   return p.id;
 }
+
+describe("never paid two ways", () => {
+  it("a trip paid by an old per-trip settlement cannot be claimed, and a claimed trip cannot be settled the old way", async () => {
+    await run(defineRate, { rateType: "driver_pay", basis: "actual_qty", amount: "70", currency: "USD", unit: "MT", effectiveFrom: "2026-01-01", reason: "old price list" });
+    const old = await trip({ driver: "Shwan", transporter: null, discharged: "30" });
+    await run(settleTrip, { tripId: old.id, settlementDate: "2026-10-28" });
+    const p = await previewClaim(env.db, env.companyId, { jobId: ids.job, manifests: [old.manifest], bringing: [ids.manifestType] });
+    expect(p.lines[0]).toMatchObject({ status: "settled_old_way", claimNo: expect.stringMatching(/^STL-/) });
+
+    const fresh = await trip({ driver: "Shwan", transporter: null, discharged: "30" });
+    await run(recordDocument, { documentTypeId: ids.docType, entityType: "trip", entityId: fresh.id });
+    await run(createClaim, claim({ jobId: ids.job, claimantId: await partnerIdOf("Shwan"), claimDate: "2026-10-28", manifests: [fresh.manifest] }));
+    await expect(run(settleTrip, { tripId: fresh.id, settlementDate: "2026-10-28" })).rejects.toThrow(/is on claim CLM-/);
+  });
+});
+
+describe("a waiver waiting for approval", () => {
+  it("holds the trip back from claims until it is decided", async () => {
+    const x = await trip({ driver: "Ari", transporter: "Masoud", discharged: "29.5" });
+    await run(recordDocument, { documentTypeId: ids.docType, entityType: "trip", entityId: x.id });
+    const req = await run(submitForApproval, { command: "fines.waive", input: { tripId: x.id, amount: "100", reason: "weather", waiverDate: "2026-10-29" }, summary: `${x.manifest} waiver` });
+    const p1 = await previewClaim(env.db, env.companyId, { jobId: ids.job, manifests: [x.manifest], bringing: [ids.manifestType] });
+    expect(p1.lines[0].status).toBe("waiver_pending");
+    await run(decideApproval, { requestId: req.id, decision: "approve" }, await loadActor(env.db, ids.approver));
+    const p2 = await previewClaim(env.db, env.companyId, { jobId: ids.job, manifests: [x.manifest], bringing: [ids.manifestType] });
+    expect(p2.lines[0]).toMatchObject({ status: "ok" });
+    expect(p2.lines[0].calc!.carrier.fineWaived).toBe("100");
+  });
+});

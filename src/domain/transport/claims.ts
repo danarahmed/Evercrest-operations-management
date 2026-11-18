@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, claimItems, claims, fineWaivers, jobs, partnerRoles, payments, trips, trucks } from "@/db/schema";
+import { approvalRequests, businessPartners, claimItems, claims, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand, type CommandContext } from "@/server/command";
 import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -35,7 +35,7 @@ type Trip = typeof trips.$inferSelect;
  * first entry of the trip's money in the books (method D).
  */
 
-export type ClaimLineStatus = "ok" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "papers_missing" | "duplicate" | "other_currency";
+export type ClaimLineStatus = "ok" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "papers_missing" | "duplicate" | "other_currency";
 
 export interface ClaimPreviewLine {
   manifest: string;
@@ -95,6 +95,12 @@ export async function previewClaim(db: Db, companyId: string, input: { jobId: st
     : [];
   const live = await liveTrips(db, companyId, rows.filter((r) => r.trip.status !== "cancelled").map((r) => r.trip));
   const papers = (await documentChecklist(db, job)).filter((c) => c.target.type === "trip");
+  const settledOld = new Map(
+    rows.length
+      ? (await db.select({ tripId: tripSettlements.tripId, no: tripSettlements.settlementNo }).from(tripSettlements).where(and(inArray(tripSettlements.tripId, rows.map((r) => r.trip.id)), eq(tripSettlements.status, "posted")))).map((r) => [r.tripId, r.no] as const)
+      : [],
+  );
+  const waiting = await pendingWaivers(db, companyId, rows.map((r) => r.trip.id));
   // Papers that arrive with the claim itself (the manifest, usually) count as present.
   const bringing = new Set(input.bringing ?? []);
   const seen = new Set<string>();
@@ -112,6 +118,11 @@ export async function previewClaim(db: Db, companyId: string, input: { jobId: st
     if (t.status === "cancelled") return { ...base, status: "cancelled" };
     const l = live.get(t.id)!;
     if (l.claim) return { ...base, status: "already_claimed", claimNo: l.claim.claimNo };
+    // Paid through the older per-trip settlement: its money has already moved, it can never be claimed too.
+    const old = settledOld.get(t.id);
+    if (old) return { ...base, status: "settled_old_way", claimNo: old };
+    // A fine waiver waiting for the owner's decision changes this trip's money: claim it after the decision.
+    if (waiting.has(t.id)) return { ...base, status: "waiver_pending", calc: l.calc ?? undefined };
     if (!l.calc) return { ...base, status: "no_rule" };
     if (l.calc.state !== "confirmed") return { ...base, status: "not_discharged", calc: l.calc };
     const mine = papers.filter((p) => p.target.id === t.id);
@@ -130,6 +141,16 @@ export async function previewClaim(db: Db, companyId: string, input: { jobId: st
   return { currency, lines, ok, total: toStr(total), totalFinal: toStr(final), rounding: toStr(rounding) };
 }
 
+/** Trips with a fine waiver request still waiting in Approvals. */
+export async function pendingWaivers(db: Db, companyId: string, tripIds: string[]): Promise<Set<string>> {
+  if (!tripIds.length) return new Set();
+  const rows = await db
+    .select({ tripId: sql<string>`${approvalRequests.input}->>'tripId'` })
+    .from(approvalRequests)
+    .where(and(eq(approvalRequests.companyId, companyId), eq(approvalRequests.command, "fines.waive"), eq(approvalRequests.status, "pending"), inArray(sql`${approvalRequests.input}->>'tripId'`, tripIds)));
+  return new Set(rows.map((r) => r.tripId));
+}
+
 /** Plain-language reasons for the lines that cannot be claimed (for errors). */
 export function claimProblems(p: ClaimPreview): string[] {
   const why: Record<Exclude<ClaimLineStatus, "ok">, (l: ClaimPreviewLine) => string> = {
@@ -138,6 +159,8 @@ export function claimProblems(p: ClaimPreview): string[] {
     not_discharged: (l) => `${l.manifest}: discharge data is missing`,
     no_rule: (l) => `${l.manifest}: no rule card version covers its loading date`,
     already_claimed: (l) => `${l.manifest}: already claimed on ${l.claimNo}`,
+    settled_old_way: (l) => `${l.manifest}: already paid by settlement ${l.claimNo}`,
+    waiver_pending: (l) => `${l.manifest}: a fine waiver is waiting for approval`,
     papers_missing: (l) => `${l.manifest}: waiting for ${l.missingPapers!.join(", ")}`,
     duplicate: (l) => `${l.manifest}: listed twice`,
     other_currency: (l) => `${l.manifest}: its rule card is in ${l.calc!.currency}; claim it separately`,

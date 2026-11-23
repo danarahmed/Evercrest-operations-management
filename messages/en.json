@@ -537,7 +537,8 @@
     "editAccount": "Edit",
     "editAccountHelp": "Only the name changes. The number, type and currency stay, so postings already made keep their meaning.",
     "deleteAccount": "Delete",
-    "deleteAccountConfirm": "Delete the account {account}? Nothing uses it yet."
+    "deleteAccountConfirm": "Delete the account {account}? Nothing uses it yet.",
+    "editAccountTitle": "Edit account"
   },
   "Finance": {
     "title": "Invoices & payments",

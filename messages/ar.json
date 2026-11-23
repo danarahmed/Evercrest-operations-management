@@ -537,7 +537,8 @@
     "editAccount": "تعديل",
     "editAccountHelp": "يتغيّر الاسم فقط. يبقى الرقم والنوع والعملة، لتحتفظ القيود السابقة بمعناها.",
     "deleteAccount": "حذف",
-    "deleteAccountConfirm": "حذف الحساب {account}؟ لا شيء يستخدمه بعد."
+    "deleteAccountConfirm": "حذف الحساب {account}؟ لا شيء يستخدمه بعد.",
+    "editAccountTitle": "تعديل الحساب"
   },
   "Finance": {
     "title": "الفواتير والمدفوعات",

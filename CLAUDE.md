@@ -62,6 +62,7 @@ BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e
 - **Fit the screen.** No horizontal scrolling for normal work. Wide tables fit the window (compact density, units in headers, "Columns" with fit-to-screen), and are checked at 1366 px and 1920 px, in English and in an RTL language, before pushing.
 - **Fast data entry.** Entry screens are built around the keyboard and the order the paper is read: Tab/Enter move forward, sticky values repeat, the hands never have to travel across the screen or reach for the mouse. Propose entry designs to the owner (with pictures) before building a new one.
 - **Pop-ups and panels** must never be clipped by a scrolling container; they open where they fit, one at a time, close on Escape or a click outside.
+- **Every box fits its content.** No dialog, card or table may cut off, overflow or scroll sideways. `e2e/layout-flow.mjs` (part of `npm run e2e`) opens every main screen in English and Arabic at 1366 px, opens every dialog on it, and fails on anything that does not fit; a new screen or dialog is added to it.
 - **Test in the browser before pushing**: full `npm run e2e` on a fresh seed plus a look at the affected screens (screenshots), not only unit tests.
 - Keep the Sandstone design language (`src/app/globals.css`): calm colours, generous whitespace, one accent for the primary action, tabular numerals for money and quantities.
 

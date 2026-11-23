@@ -22,6 +22,23 @@ import { registerApprovable } from "../approvals/approvals";
 const uuid = z.string().uuid();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+/** Cash boxes 1011–1049, bank accounts 1051–1099: the first free number, so money accounts sit together in the chart. */
+const MONEY_CODE_RANGES = { cash: [1011, 1049], bank: [1051, 1099] } as const;
+
+async function nextMoneyAccountCode(tx: Db, companyId: string, kind: "cash" | "bank") {
+  const [lo, hi] = MONEY_CODE_RANGES[kind];
+  // Serialize with other account creation in this company so two people never get the same number.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"accounts:" + companyId}))`);
+  const used = new Set((await tx.select({ code: accounts.code }).from(accounts).where(eq(accounts.companyId, companyId))).map((a) => a.code));
+  for (let n = lo; n <= hi; n++) if (!used.has(String(n))) return String(n);
+  throw new ValidationError(`No free account number left for ${kind === "cash" ? "cash boxes" : "bank accounts"} (${lo}–${hi}); choose an existing account`);
+}
+
+/**
+ * A cash box or bank account. Each one has its own account in the books, so its balance is always
+ * known: created automatically (named after the box, next free number) unless an accountant picks
+ * an existing, unused one.
+ */
 export const createMoneyAccount = defineCommand({
   name: "money_accounts.create",
   permission: "money_accounts.manage",
@@ -29,15 +46,26 @@ export const createMoneyAccount = defineCommand({
     name: z.string().trim().min(1),
     kind: z.enum(["cash", "bank"]),
     currency: currencyCode,
-    ledgerAccountId: uuid,
+    /** Left out: a new account in the books for this box. */
+    ledgerAccountId: uuid.nullish(),
     branchId: uuid.nullish(),
   }),
-  async handler({ tx, actor, audit }, input) {
-    const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, input.ledgerAccountId), eq(accounts.companyId, actor.companyId)));
-    if (!acc) throw new NotFound("account", input.ledgerAccountId);
-    if (acc.type !== "asset" || !acc.postable) throw new ValidationError("A money account must use a postable asset account");
-    if (acc.currency !== input.currency)
-      throw new ValidationError(`Ledger account ${acc.code} must be restricted to ${input.currency}`);
+  async handler({ tx, actor, audit }, given) {
+    let ledgerAccountId = given.ledgerAccountId ?? null;
+    if (ledgerAccountId) {
+      const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, ledgerAccountId), eq(accounts.companyId, actor.companyId)));
+      if (!acc) throw new NotFound("account", ledgerAccountId);
+      if (acc.type !== "asset" || !acc.postable) throw new ValidationError("A money account must use a postable asset account");
+      if (acc.currency !== given.currency) throw new ValidationError(`Ledger account ${acc.code} must be restricted to ${given.currency}`);
+      const [taken] = await tx.select({ name: moneyAccounts.name }).from(moneyAccounts).where(eq(moneyAccounts.ledgerAccountId, acc.id));
+      if (taken) throw new ValidationError(`Account ${acc.code} already belongs to "${taken.name}". Each cash box or bank account needs its own; leave the account empty to create one.`);
+    } else {
+      const code = await nextMoneyAccountCode(tx, actor.companyId, given.kind);
+      const [acc] = await tx.insert(accounts).values({ companyId: actor.companyId, code, name: given.name, type: "asset", currency: given.currency, postable: true }).returning();
+      await audit({ action: "ledger.create_account", entityType: "account", entityId: acc.id, after: { code, name: given.name, type: "asset", currency: given.currency, via: "money_account" } });
+      ledgerAccountId = acc.id;
+    }
+    const input = { ...given, ledgerAccountId };
     const [row] = await tx.insert(moneyAccounts).values({ ...input, companyId: actor.companyId }).returning();
     await audit({ action: "money_accounts.create", entityType: "money_account", entityId: row.id, after: input });
     return { id: row.id };

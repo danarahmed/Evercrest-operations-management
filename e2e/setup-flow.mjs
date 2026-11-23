@@ -42,6 +42,17 @@ await tf.locator("input[name=reason]").evaluate((el) => el.removeAttribute("requ
 await tf.locator(submit).click();
 await tf.locator(".form-msg.error").waitFor();
 
+// A new cash box gets its own account in the books automatically (no ledger account to choose)
+await page.goto(`${base}/en/setup?tab=accounting`);
+await page.click("button:has-text('Add a cash box or bank account')");
+const box = page.locator("dialog[open] form:has(input[name=__command][value='money_accounts.create'])");
+await box.locator("input[name=name]").fill("Rekan Fars diesel");
+await box.locator("select[name=currency]").selectOption("USD");
+await box.locator(submit).click();
+await page.waitForSelector("dialog[open]", { state: "detached" });
+await page.reload();
+assert.match(await page.locator("tr:has-text('Rekan Fars diesel')").first().innerText(), /10\d\d · Rekan Fars diesel/);
+
 assert.deepEqual(errors, []);
 console.log("e2e setup flow: OK");
 await browser.close();

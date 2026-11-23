@@ -353,14 +353,20 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                     <label>{f("name")}<input name="name" required /></label>
                     <label>{t("kind")}<select name="kind"><option value="cash">{t("cashBox")}</option><option value="bank">{t("bank")}</option></select></label>
                     <label>{t("currency")}<select name="currency" required><option value="IQD">IQD</option><option value="USD">USD</option></select></label>
-                    <label>{t("ledgerAccount")}<select name="ledgerAccountId" required>{d.cashLedgerAccounts.map((a) => <option key={a.id} value={a.id}>{acctLabel(a)}</option>)}</select></label>
                   </div>
+                  <p className="muted small" style={{ margin: 0 }}>{t("ledgerAuto")}</p>
+                  {d.cashLedgerAccounts.some((a) => !d.moneyAccounts!.some((m) => m.ledgerAccountId === a.id)) && (
+                    <details>
+                      <summary className="small muted" style={{ cursor: "pointer" }}>{t("useExistingAccount")}</summary>
+                      <label style={{ marginTop: 8 }}>{t("ledgerAccount")}<select name="ledgerAccountId" defaultValue=""><option value="">{t("ledgerAutoOption")}</option>{d.cashLedgerAccounts.filter((a) => !d.moneyAccounts!.some((m) => m.ledgerAccountId === a.id)).map((a) => <option key={a.id} value={a.id}>{acctLabel(a)}</option>)}</select></label>
+                    </details>
+                  )}
                 </ActionForm>
               </Modal>
             }>
               <div className="table-wrap"><table>
-                <thead><tr><th>{f("name")}</th><th>{t("kind")}</th><th>{t("currency")}</th></tr></thead>
-                <tbody>{d.moneyAccounts.map((m) => <tr key={m.id}><td className="cell-title"><Icon name={m.kind === "bank" ? "bank" : "wallet"} size={15} /> {m.name}</td><td>{t(m.kind === "cash" ? "cashBox" : "bank")}</td><td><Cur code={m.currency} /></td></tr>)}</tbody>
+                <thead><tr><th>{f("name")}</th><th>{t("kind")}</th><th>{t("currency")}</th><th>{t("ledgerAccountShort")}</th></tr></thead>
+                <tbody>{d.moneyAccounts.map((m) => <tr key={m.id}><td className="cell-title"><Icon name={m.kind === "bank" ? "bank" : "wallet"} size={15} /> {m.name}</td><td>{t(m.kind === "cash" ? "cashBox" : "bank")}</td><td><Cur code={m.currency} /></td><td className="ltr muted">{(() => { const a = d.accounts?.find((x) => x.id === m.ledgerAccountId); return a ? `${a.code} · ${a.name}` : "—"; })()}</td></tr>)}</tbody>
               </table></div>
             </Card>
           )}

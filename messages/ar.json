@@ -529,7 +529,11 @@
     "validity": "الصلاحية",
     "allPartners": "كل الشركاء",
     "codeAuto": "اختياري",
-    "codeAutoPlaceholder": "الرقم التالي"
+    "codeAutoPlaceholder": "الرقم التالي",
+    "ledgerAuto": "يحصل الصندوق تلقائياً على حسابه الخاص في الدفاتر باسمه: الصناديق 1011–1049، والحسابات المصرفية 1051–1099.",
+    "useExistingAccount": "استخدام حساب موجود بدلاً من ذلك (للمحاسب)",
+    "ledgerAutoOption": "حساب جديد لهذا الصندوق (تلقائي)",
+    "ledgerAccountShort": "الحساب في الدفاتر"
   },
   "Finance": {
     "title": "الفواتير والمدفوعات",

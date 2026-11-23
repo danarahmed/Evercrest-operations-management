@@ -189,7 +189,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "transfers.create": { command: transferMoney },
   "exchanges.create": { command: exchangeCurrency },
   "exchanges.reverse": { command: reverseExchange },
-  "money_accounts.create": { command: createMoneyAccount },
+  // An empty account choice means "a new account in the books for this box".
+  "money_accounts.create": { command: createMoneyAccount, prepare: async (_d, _a, i) => ({ ...i, ledgerAccountId: i.ledgerAccountId || undefined }) },
   "job_types.define": {
     command: defineJobType,
     // Checklist steps are typed one per line.

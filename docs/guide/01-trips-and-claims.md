@@ -56,7 +56,7 @@ Margins and the customer's price are visible only with the profit permission. St
 
 ## 4. The whole flow at a glance
 
-1. Once: cash boxes, limits, required papers, people.
+1. Once: cash boxes, limits, job types and required papers, people.
 2. Create the job.
 3. Fill in its rule card: prices, rules, routes, fees.
 4. Trucks load: enter or import the trips, with advances.
@@ -94,15 +94,169 @@ Setup → Settings tab.
 - **Payment limit per currency.** A payment out above it waits for a second person. Payments to the same person on the same day are added together, so a large payment cannot be split to get through.
 - **Rounding.** Final amounts are rounded to this step, for example 250 IQD. Only the final amount of a claim is rounded, once; the difference is booked to its own account.
 
-### 5.3 Required papers
+### 5.3 Jobs and documents: the five parts
 
-Setup → Operations tab.
+Setup → **Jobs & documents** tab.
 
-![Required papers](img/04-setup-papers.jpg)
+![The Jobs & documents tab](img/s-09-jobs-documents-filled.jpg)
 
-Papers can be required per job type, per customer or per contract, and for the job or for every trip. Petroleum transportation already requires a **Manifest on every trip**. Add a discharge certificate or anything a customer asks for here, not in the code.
+This tab decides how a new job starts, which papers each job needs, which extra facts some jobs must carry, and how jobs can be grouped. It has five parts, top to bottom:
 
-A trip whose required papers are missing cannot be claimed. Papers that arrive together with a claim are ticked in the claim and recorded on each trip automatically.
+| Part | In one sentence | Needed? |
+|---|---|---|
+| **1. Job types** | The kinds of work you do, each with the parts and steps a new job of that kind starts with. | **Yes.** No job can be created without a job type. |
+| **2. Document rules** | Which papers are required, for which jobs, and before which step. | **Yes** for transport: the Manifest rule. Otherwise when a customer asks for a paper. |
+| **3. Custom fields** | Extra facts some jobs must carry, like a customer's PO number or a field permit number. | Only when needed. |
+| **4. Contracts** | A customer's agreement, so jobs and prices can be tied to it. | Optional. |
+| **5. Projects** | A folder that groups several jobs of one customer. | Optional. |
+
+**On your live system all five are empty**, because of the fresh start. Set up parts 1 and 2 before the first job, in the order shown in 5.3.6. Parts 3 to 5 can wait until you need them.
+
+Before contracts and projects you need the customer itself: Setup → **Partners** → **Add a partner**, with the role Customer.
+
+#### 5.3.1 Job types
+
+A job type is a template. When someone creates a job and picks its type, the job starts with the type's **parts** switched on and its **steps** already listed. The person can still change both on that one job. The type only gives the starting point and controls nothing after that.
+
+**Add a job type** → name, the parts to switch on, and the checklist steps, one per line → **Save**. The code (JT-001, JT-002…) is given automatically.
+
+![Adding a job type](img/s-02-add-job-type.jpg)
+
+**What each part switches on in a job:**
+
+| Part | What appears in a job that has it |
+|---|---|
+| **Transportation** | The **Trips**, **Rules** (the rule card) and **Claims** tabs: trucks, drivers, transporters, loading and discharge, the claim process. |
+| **Advances** | The advance field when a trip is entered, and paying advances from a cash box. Needs Transportation to be useful. |
+| **Billing** | **Invoice the customer** from the job's trips or deliveries. |
+| **Expenses** | Recording costs on the job (fuel, a repair, a fee paid) from the job's **Money** tab. |
+| **Products** | The **Deliveries** tab: products, quantities and units delivered to the customer. |
+| **Field work** | The **Work orders** tab: work at a site, with its own completion. |
+| **Documents** | Marks a job that works with papers. The **Documents** tab itself shows as soon as any document type exists, and **document rules apply whether or not this part is on**. |
+| **Purchasing**, **Approvals** | Markers for now. Nothing extra appears yet; they are kept for later steps. |
+
+**Steps** are a short checklist for the job (Arrange trucks → Load → Deliver → Collect manifests → Invoice customer). They appear in the job's **Steps** tab, where people tick them off. Steps from the job type are reminders. A step can be made *required* on a job; a required step must be done (or skipped with a reason) before the job can be completed.
+
+**Edit** on a job type changes its name, parts and steps. The change applies to jobs created from then on. Jobs that already exist keep what they started with.
+
+![Editing a job type](img/s-03-edit-job-type.jpg)
+
+**On a single job**, the button **What this job needs** switches parts on or off for that job only, for example adding Expenses to one transport job. A part cannot be switched off once the job already has records of it (trips, deliveries, work orders).
+
+**Recommended job types for your work:**
+
+| Job type | Parts | Steps |
+|---|---|---|
+| Petroleum transportation | Transportation, Advances, Billing, Expenses, Documents | Arrange trucks · Load at depot · Deliver to field · Collect manifests · Invoice customer |
+| Product supply | Products, Billing, Expenses | Confirm order · Buy from supplier · Deliver · Invoice customer |
+| Field service | Field work, Billing, Expenses, Documents | Mobilize team · Buy materials · Perform work · Inspect · Invoice customer |
+| General service | Billing, Expenses, Documents | none |
+
+Keep the list short. A new kind of work becomes a new job type only when it really starts differently. A one-off variation is handled on the job itself with **What this job needs**.
+
+#### 5.3.2 Document rules
+
+Two steps: first name the paper (a **document type**), then say when it is required (a **rule**).
+
+**Add a document type** → the paper's name, e.g. Manifest, Discharge certificate, Delivery note, Completion certificate → **Save**. A document type alone requires nothing. It only makes the paper known, so it can be recorded and ticked when it arrives.
+
+![Adding a document type](img/s-04-add-document-type.jpg)
+
+**Require a document** creates the rule:
+
+![Requiring a document](img/s-05-require-document.jpg)
+
+| Field | What to choose |
+|---|---|
+| **Document type** | The paper. |
+| **For** | Who the rule applies to: a **job type** (every job of that kind), a **customer** (every job for that customer), or a **contract** (every job under that contract). |
+| **Needed on** | **Each trip** (one paper per truck, like the manifest) or **the job** (one paper for the whole job, like a completion certificate). |
+| **Needed before** | **Completion**: the job cannot be marked completed while the paper is missing. **Financial close**: the work can be completed, but the job cannot be financially closed until the paper is there. |
+| **Rule** | **On** creates or changes the rule. **Off** removes it. |
+| **Reason** | Why. Kept in the audit trail. |
+
+How the rules work together:
+
+- **They add up.** A Petroleum transportation job for North Oil Co under contract NOC-2026-14 needs the papers of all three: the job type's, North Oil Co's and the contract's.
+- **The same paper twice: the stricter one wins.** If one rule says "before completion" and another "before financial close", the paper is needed before completion.
+- **Every non-verified paper holds the job back.** A paper that is missing, received but not yet verified, rejected or expired shows in **What remains** and in the Next action until it is verified.
+- **Trip papers also guard claims.** A trip whose required papers are missing cannot go on a claim. Papers that arrive with the claim are ticked on the claim and recorded on every trip automatically.
+- **Changing a rule:** use **Require a document** again with the same paper, the same "For" and the same "Needed on", and pick the new "Needed before". To remove it, choose **Rule: Off**.
+
+Typical rules:
+
+| Paper | For | Needed on | Needed before |
+|---|---|---|---|
+| Manifest | Job type: Petroleum transportation | Each trip | Completion |
+| Discharge certificate | Customer: the customer who asks for it | Each trip | Financial close |
+| Delivery note | Job type: Product supply | The job | Completion |
+| Completion certificate | Job type: Field service | The job | Financial close |
+
+#### 5.3.3 Custom fields
+
+Extra facts some jobs must carry, without changing the system: a customer's PO or reference number, a field permit number, a site code.
+
+**Add or change a custom field**:
+
+![Adding a custom field](img/s-06-add-custom-field.jpg)
+
+| Field | Meaning |
+|---|---|
+| **Label** | What people see, e.g. "Field permit no.". |
+| **Key** | A short internal name in small English letters, digits and _, e.g. `permit_no`. It identifies the field and is never shown to staff. |
+| **Shown on** | **All jobs**, one **job type**, or one **customer**'s jobs. |
+| **Needed before** | When the field is required: before completion or before financial close. |
+| **Rule** | On or off. Off hides the field from new entries without losing what was typed. |
+| **Required** | Tick it if the job cannot move on without it. Leave it unticked for a field that is only useful. |
+
+Where it shows: on the job, **Extra info & budget**. The value then appears in the job's details. A required field that is empty appears in **What remains** and becomes the Next action.
+
+![Filling a custom field on a job](img/s-11-job-custom-field.jpg)
+
+![A required field shows as the next action](img/s-12-job-blocked-by-field.jpg)
+
+To change a field, use **Add or change a custom field** again with the **same key**: the label, where it shows and whether it is required are updated.
+
+Use custom fields only for simple facts. Anything used in calculations, prices, totals or reports (a quantity, a price, a date that drives a fine) must become a proper part of the system: ask for it, don't make it a custom field.
+
+#### 5.3.4 Contracts
+
+A contract records a customer's agreement: **customer**, your **reference** (e.g. NOC-2026-14), a **title**, the **status** and the **valid from / to** dates.
+
+![Adding a contract](img/s-07-add-contract.jpg)
+
+What a contract is used for:
+
+- A job can be linked to it when the job is created (**+ Project or contract (optional)** on the New job form), so you can see which jobs ran under which agreement.
+- **Document rules** can be set for a contract (5.3.2): papers only that agreement asks for.
+- Prices are not set on the contract. A transport job's prices live on its own rule card (section 6); the contract only records the agreement.
+
+**Status:** **Draft** while it is being agreed, **Active** when it is in force, **Ended** when it is over. **End** on the contract's row stops new jobs from using it; jobs that already used it are not touched.
+
+Contracts are optional. Small, one-off or verbal work needs no contract.
+
+#### 5.3.5 Projects
+
+A project groups several jobs of one customer, for example all the deliveries to one field this year. Choose the **customer**, a **name**, and optionally the **contract** it belongs to. The code (PRJ-0001…) is given automatically.
+
+![Adding a project](img/s-08-add-project.jpg)
+
+Jobs are put into a project when they are created:
+
+![Project and contract on the New job form](img/s-10-new-job-project-contract.jpg)
+
+Projects are optional. Most jobs need none.
+
+#### 5.3.6 First-time setup on your live system, in order
+
+1. **Partners**: add your customer(s), e.g. North Oil Co, with the role Customer.
+2. **Job types**: add *Petroleum transportation* with Transportation, Advances, Billing, Expenses and Documents, and its five steps. Add the other types only when you start that kind of work.
+3. **Document types**: add *Manifest*. Add other papers as customers ask for them.
+4. **Document rules**: *Manifest* · for Job type: Petroleum transportation · each trip · before completion · reason "every trip needs its manifest".
+5. **Custom fields**: only if a customer asks for a reference on every job, e.g. "Customer PO / reference", shown on that customer's jobs, required before financial close.
+6. **Contracts and projects**: only if you want jobs grouped under an agreement or a project.
+
+Then continue with 5.4 and with the first job in section 6.
 
 ### 5.4 People and permissions
 

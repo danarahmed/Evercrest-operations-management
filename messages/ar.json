@@ -401,7 +401,7 @@
     "transitDays": "تنبيه عند عدم تفريغ رحلة محمّلة بعد",
     "days": "أيام",
     "jobTypes": "أنواع الأعمال (قوالب)",
-    "addJobType": "إضافة أو تعديل نوع عمل",
+    "addJobType": "إضافة نوع عمل",
     "defaultCapabilities": "مفعّلة افتراضياً",
     "cap_transportation": "النقل",
     "cap_products": "المنتجات",
@@ -541,7 +541,9 @@
     "editAccountHelp": "يتغيّر الاسم فقط. يبقى الرقم والنوع والعملة، لتحتفظ القيود السابقة بمعناها.",
     "deleteAccount": "حذف",
     "deleteAccountConfirm": "حذف الحساب {account}؟ لا شيء يستخدمه بعد.",
-    "editAccountTitle": "تعديل الحساب"
+    "editAccountTitle": "تعديل الحساب",
+    "editJobType": "تعديل",
+    "editJobTypeHelp": "تسري التغييرات على الأعمال التي تُنشأ من الآن. الأعمال الموجودة تحتفظ بأجزائها وخطواتها."
   },
   "Finance": {
     "title": "الفواتير والمدفوعات",

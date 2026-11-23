@@ -196,7 +196,20 @@ export default async function Setup({ params, searchParams }: { params: Promise<
             }>
               <div className="tiles">{d.jobTypes.map((j) => (
                 <div key={j.id} className="tile">
-                  <div className="tile-title">{j.name} <span className="muted ltr">{j.code}</span></div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="tile-title">{j.name} <span className="muted ltr">{j.code}</span></div>
+                    <span className="flex-none"><Modal label={t("editJobType")} title={<>{t("editJobType")} · {j.name}</>} variant="ghost" small>
+                      <ActionForm command="job_types.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+                        <input type="hidden" name="code" value={j.code} />
+                        <p className="muted">{t("editJobTypeHelp")}</p>
+                        <div className="grid2"><label>{f("name")}<input name="name" required defaultValue={j.name} /></label></div>
+                        <fieldset className="checks"><legend>{t("defaultCapabilities")}</legend>
+                          {CAPABILITIES.map((c) => <label key={c} className="check"><input type="checkbox" name="defaultCapabilities[]" value={c} defaultChecked={(j.defaultCapabilities as string[]).includes(c)} />{t(`cap_${c}`)}</label>)}
+                        </fieldset>
+                        <label>{t("defaultActivities")}<textarea name="activitiesText" rows={4} defaultValue={(j.defaultActivities as string[]).join("\n")} /></label>
+                      </ActionForm>
+                    </Modal></span>
+                  </div>
                   <div className="chips">{(j.defaultCapabilities as string[]).length === 0 ? <span className="muted">{t("noCapabilities")}</span> : (j.defaultCapabilities as string[]).map((c) => <Badge key={c} tone="accent" plain>{t(`cap_${c}`)}</Badge>)}</div>
                   {(j.defaultActivities as string[]).length > 0 && <div className="muted small">{t("steps")}: {(j.defaultActivities as string[]).join(" → ")}</div>}
                 </div>

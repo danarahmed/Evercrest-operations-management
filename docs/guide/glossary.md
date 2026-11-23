@@ -5,6 +5,16 @@ The words the system uses, in the three languages, exactly as they appear on the
 | English | العربية | کوردی | Meaning |
 |---|---|---|---|
 | Job | العمل | کار | One piece of work for one customer, e.g. "Diesel to Latakia, November". Everything else hangs on a job. |
+| Job type | نوع العمل | جۆری کار | A template for a kind of work: the parts and steps a new job starts with. Set up in Setup → Jobs & documents. |
+| Part (of a job) | جزء | بەش | Something a job can have switched on: Transportation, Advances, Billing, Expenses, Products, Field work, Documents. Each one adds its own tab or button to the job. |
+| Step | خطوة | هەنگاو | One line of a job's checklist, ticked off in the Steps tab. A required step must be done before completion. |
+| Document type | نوع المستند | جۆری بەڵگەنامە | The name of a paper the company handles: Manifest, Discharge certificate, Delivery note. |
+| Document rule | قاعدة المستند | یاسای بەڵگەنامە | Says which paper is required, for which job type, customer or contract, on each trip or on the job, and before completion or financial close. |
+| Custom field | حقل مخصص | خانەی تایبەت | An extra fact some jobs must carry, such as a customer's PO number or a field permit number. |
+| Contract | عقد | گرێبەست | A customer's agreement. Jobs can be linked to it and papers can be required for it. Optional. |
+| Project | مشروع | پڕۆژە | A group of jobs of one customer. Optional. |
+| Completion | الإكمال | تەواوکردن | The work is done. Required papers and steps must be in before a job can be marked completed. |
+| Financial close | الإغلاق المالي | داخستنی دارایی | All money of the job is settled. The last status of a job; papers "needed before financial close" must be in by then. |
 | Rule card | بطاقة القواعد | کارتی ڕێسا | The job's prices and rules: carrier price, reward, shortage allowance and fine, customer price, demurrage, advance limit, fees. Shown on the job's Rules tab. |
 | Version | نسخة | وەشان | A rule card change from a date. Trips use the version in force on their loading date. |
 | Route | الطريق | ڕێگا | Where trucks load and discharge. A route can have its own prices and fees. |

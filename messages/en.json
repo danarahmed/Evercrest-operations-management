@@ -401,7 +401,7 @@
     "transitDays": "Alert when a loaded trip is not discharged after",
     "days": "Days",
     "jobTypes": "Job types (templates)",
-    "addJobType": "Add or update a job type",
+    "addJobType": "Add a job type",
     "defaultCapabilities": "Switched on by default",
     "cap_transportation": "Transportation",
     "cap_products": "Products",
@@ -541,7 +541,9 @@
     "editAccountHelp": "Only the name changes. The number, type and currency stay, so postings already made keep their meaning.",
     "deleteAccount": "Delete",
     "deleteAccountConfirm": "Delete the account {account}? Nothing uses it yet.",
-    "editAccountTitle": "Edit account"
+    "editAccountTitle": "Edit account",
+    "editJobType": "Edit",
+    "editJobTypeHelp": "Changes apply to jobs created from now on. Jobs that already exist keep their parts and steps."
   },
   "Finance": {
     "title": "Invoices & payments",

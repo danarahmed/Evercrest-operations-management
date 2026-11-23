@@ -6,6 +6,7 @@ import { users } from "@/db/schema";
 import { Icon, type IconName } from "@/components/icons";
 import { Amounts, Card, EmptyState, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { exceptions } from "@/domain/management/exceptions";
+import { dec, toStr, type Dec } from "@/domain/money";
 import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
 import { activeJobs, dashboardKpis } from "@/server/queries";
@@ -15,7 +16,8 @@ import { Shell } from "./shell";
 export const dynamic = "force-dynamic";
 
 /** Where an exception points to, so the user can act on it in one click. */
-function entityHref(locale: string, e: { type: string; id: string }) {
+function entityHref(locale: string, e: { type: string; id: string; label: string }) {
+  if (e.type === "trip") return `/${locale}/trips?q=${encodeURIComponent(e.label)}`;
   const map: Record<string, string> = {
     job: `/jobs/${e.id}`,
     invoice: `/finance/invoices/${e.id}`,
@@ -40,6 +42,10 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
   const today = new Date().toISOString().slice(0, 10);
   const [alerts, jobList, kpi] = await Promise.all([exceptions(db, actor.companyId, today), activeJobs(db, actor), dashboardKpis(db, actor)]);
   const m = (a: string, c: string) => formatMoney(a, c, locale);
+  // Money customers should already have paid, per currency (never added across currencies).
+  const overdueBy = new Map<string, Dec>();
+  for (const a of alerts) if (a.code === "receivable.overdue") overdueBy.set(a.params.currency, (overdueBy.get(a.params.currency) ?? dec("0")).plus(dec(a.params.amount)));
+  const overdue = [...overdueBy].map(([c, v]) => [c, toStr(v)] as const);
   const dateLine = new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
   const hour = new Date().getHours();
@@ -60,11 +66,12 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
         actions={can(actor, "jobs.create") && <Link href={`/${locale}/jobs/new`} className="btn primary"><Icon name="plus" />{t("newJob")}</Link>}
       />
 
+      {kpi.money && <p className="section-label">{t("financialOverview")}<span className="text-[12px] font-normal normal-case tracking-normal">· {t("ownerOnly")}</span></p>}
       <div className="stats">
         {kpi.money && (
           <>
             <Stat label={t("kpiCash")} value={<Amounts values={kpi.money.cash} format={m} />} icon="bank" href={`/${locale}/finance/accounts`} />
-            <Stat label={t("kpiOwedToUs")} value={<Amounts values={kpi.money.owedToUs} format={m} />} icon="trendingUp" tone="success" href={`/${locale}/finance/partners`} />
+            <Stat label={t("kpiOwedToUs")} value={<Amounts values={kpi.money.owedToUs} format={m} />} icon="trendingUp" tone="success" href={`/${locale}/finance/partners`} flag={overdue.length > 0 && overdue.map(([c, a]) => t("overdue", { amount: m(a, c) })).join(" · ")} />
             <Stat label={t("kpiWeOwe")} value={<Amounts values={kpi.money.weOwe} format={m} />} icon="wallet" tone="warning" href={`/${locale}/finance/partners`} />
           </>
         )}
@@ -84,10 +91,10 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
                   <li key={i} className={a.severity}>
                     <span className="alert-icon"><Icon name={SEVERITY_ICON[a.severity]} size={17} /></span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold">{href ? <Link href={href} className="!text-slate-900 hover:!text-primary-500">{text}</Link> : text}</div>
+                      <div className="font-medium">{href ? <Link href={href} className="!text-slate-900 hover:!text-primary-500">{text}</Link> : text}</div>
                       <div className="ltr text-[13px] text-slate-500">{a.entity.label}</div>
                     </div>
-                    {href && <Link href={href} className="text-[13px] font-bold whitespace-nowrap">{t("open")}</Link>}
+                    {href && <Link href={href} className="btn sm min-w-[84px]">{t("open")}</Link>}
                   </li>
                 );
               })}
@@ -101,14 +108,14 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
           ) : (
             <ul className="m-0 list-none p-0">
               {jobList.slice(0, 8).map(({ job, customer, type, nextAction }) => (
-                <li key={job.id} className="border-b border-slate-100 last:border-b-0">
-                  <Link href={`/${locale}/jobs/${job.id}`} className="grid gap-1 px-[22px] py-3.5 !text-slate-900 hover:bg-slate-50">
+                <li key={job.id} className="border-b border-slate-200/70 last:border-b-0">
+                  <Link href={`/${locale}/jobs/${job.id}`} className="grid gap-1 px-5 py-3.5 !text-slate-900 transition-colors hover:bg-slate-50">
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="truncate font-bold">{job.name}</span>
                       <StatusBadge status={job.status} label={st(job.status)} />
                     </span>
                     <span className="truncate text-[13px] text-slate-500"><span className="ltr">{job.jobNo}</span> · {customer} · {type}</span>
-                    {nextAction && <span className="flex items-center gap-2 text-[13px] font-semibold text-slate-700"><Icon name="flag" size={14} className="text-petro-500" />{describe(codes, nextAction.code, nextAction.params, nextAction.text, locale)}</span>}
+                    {nextAction && <span className="flex items-center gap-2 text-[13px] font-medium text-slate-700"><Icon name="flag" size={14} className="text-petro-500" />{describe(codes, nextAction.code, nextAction.params, nextAction.text, locale)}</span>}
                   </Link>
                 </li>
               ))}
@@ -122,8 +129,8 @@ export default async function Dashboard({ params }: { params: Promise<{ locale: 
           <h2 className="!mt-2">{t("goTo")}</h2>
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))" }}>
             {goTo.map((g) => (
-              <Link key={g.href} href={g.href} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 font-bold !text-slate-900 shadow-card transition hover:border-primary-200">
-                <span className={`grid size-10 place-items-center rounded-[10px] ${g.tone}`}><Icon name={g.icon} /></span>
+              <Link key={g.href} href={g.href} className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white p-4 font-medium !text-slate-900 transition-colors hover:border-slate-300 hover:bg-slate-50">
+                <span className={`grid size-9 place-items-center rounded-lg ${g.tone}`}><Icon name={g.icon} /></span>
                 {g.label}
               </Link>
             ))}

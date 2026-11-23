@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
-import { Manrope, Vazirmatn } from "next/font/google";
+import { Inter, Vazirmatn } from "next/font/google";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { RTL_LOCALES, routing, type Locale } from "@/i18n/routing";
 import "../globals.css";
 
-// Manrope for Latin text and figures; Vazirmatn for Arabic and Kurdish (Sorani). Served from our own site at build time.
-const latin = Manrope({ subsets: ["latin"], variable: "--font-latin", display: "swap", weight: ["400", "500", "600", "700", "800"] });
+// Inter for Latin text and figures; Vazirmatn for Arabic and Kurdish (Sorani). Served from our own site at build time.
+const latin = Inter({ subsets: ["latin"], variable: "--font-latin", display: "swap", weight: ["400", "500", "600", "700"] });
 const arabic = Vazirmatn({ subsets: ["arabic"], variable: "--font-arabic", display: "swap", weight: ["400", "500", "600", "700", "800"] });
 
 export const metadata: Metadata = { title: "Evercrest Operations" };

@@ -35,12 +35,12 @@ export function Notifications({ items, label, empty }: { items: NotificationItem
   const { open, setOpen, ref } = usePopover();
   return (
     <div ref={ref} className="relative">
-      <button type="button" className="relative !rounded-xl !p-2.5" aria-label={label} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="relative !rounded-lg !p-2.5" aria-label={label} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Icon name="bell" />
         {items.length > 0 && <span className="absolute top-2 end-2 size-2 rounded-full bg-amber-500 ring-2 ring-white" />}
       </button>
       {open && (
-        <div className="absolute end-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-pop">
+        <div className="absolute end-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-24px)] overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-pop">
           <div className="border-b border-slate-100 px-4 py-3 text-[14px] font-extrabold text-slate-900">{label}</div>
           {items.length === 0 ? (
             <div className="px-4 py-8 text-center text-[13.5px] text-slate-500">
@@ -51,7 +51,7 @@ export function Notifications({ items, label, empty }: { items: NotificationItem
             <ul className="m-0 list-none p-2">
               {items.map((n) => (
                 <li key={n.href}>
-                  <Link href={n.href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13.5px] font-bold text-slate-800 hover:bg-slate-50 hover:text-slate-900">
+                  <Link href={n.href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-[13.5px] font-bold text-slate-800 hover:bg-slate-50 hover:text-slate-900">
                     <span className={`grid size-9 flex-none place-items-center rounded-[10px] ${TONE[n.tone]}`}><Icon name={n.icon} size={16} /></span>
                     <span className="min-w-0 flex-1">{n.title}</span>
                     <Icon name="chevronRight" size={15} className="text-slate-300" />
@@ -77,10 +77,10 @@ export function NewMenu({ label, items }: { label: ReactNode; items: { href: str
         {label}
       </button>
       {open && (
-        <ul className="absolute inset-x-0 top-full z-50 m-0 mt-2 list-none overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-pop">
+        <ul className="absolute inset-x-0 top-full z-50 m-0 mt-2 list-none overflow-hidden rounded-[10px] border border-slate-200 bg-white p-2 shadow-pop">
           {items.map((n) => (
             <li key={n.href}>
-              <Link href={n.href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-bold text-slate-800 hover:bg-slate-50 hover:text-slate-900">
+              <Link href={n.href} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-bold text-slate-800 hover:bg-slate-50 hover:text-slate-900">
                 <span className="grid size-8 flex-none place-items-center rounded-[10px] bg-primary-50 text-primary-500"><Icon name={n.icon} size={16} /></span>
                 {n.label}
               </Link>

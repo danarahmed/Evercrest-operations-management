@@ -88,7 +88,10 @@
     "goPay": "دفع للسائقين",
     "goInvoices": "الفواتير",
     "goProfit": "تقرير الأرباح",
-    "trucksOnRoad": "{count, plural, one {شاحنة واحدة} other {# شاحنات}} على الطريق"
+    "trucksOnRoad": "{count, plural, one {شاحنة واحدة} other {# شاحنات}} على الطريق",
+    "financialOverview": "النظرة المالية",
+    "ownerOnly": "يراها المالك والمحاسب فقط",
+    "overdue": "{amount} متأخر"
   },
   "Severity": {
     "critical": "حرج",
@@ -1638,6 +1641,16 @@
     "nothingOpen": "لا شيء مفتوح",
     "reversePayment": "عكس",
     "reverseHelp": "عكس {no}: يعود المبلغ إلى الصندوق وتُفتح المطالبة مجدداً بهذا المبلغ. تبقى الدفعة في الدفاتر مع عكسها.",
-    "reverseSubmit": "عكس الدفعة"
+    "reverseSubmit": "عكس الدفعة",
+    "howTitle": "كيف يُحسب المبلغ",
+    "ledgerTitle": "في الدفاتر",
+    "debit": "مدين",
+    "credit": "دائن",
+    "balanced": "الطرفان",
+    "weOweName": "علينا لـ {name}",
+    "nameOwes": "{name} مدين لنا",
+    "advancesTaken": "السلف المأخوذة",
+    "account": "الحساب",
+    "howHelp": "تُدفع كل رحلة على الأقل من الكمية المحمّلة والمفرغة. تُفرض الغرامة فقط على النقص الذي يتجاوز المسموح. تُخصم الرسوم والسلف قبل الدفع."
   }
 }

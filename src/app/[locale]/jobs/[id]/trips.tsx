@@ -169,7 +169,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                 );
               })}</tbody>
               {totals.map((s) => (
-                <tfoot key={s.currency}><tr className="net">
+                <tfoot key={s.currency}><tr className="subtotal">
                   {showJob && <td data-col="job"></td>}
                   <td><strong>{t("total")} · {s.currency}{active ? ` · ${t("filteredRows", { count: s.trips })}` : ""}</strong></td>
                   <td data-col="date"></td><td data-col="route"></td><td data-col="driver"></td><td data-col="transporter"></td><td data-col="plate"></td>

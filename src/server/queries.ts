@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
+import { journalLines, customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist } from "@/domain/documents/documents";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
 import { auditLog, jobHistory } from "@/domain/management/history";
@@ -448,7 +448,17 @@ export async function claimView(db: Db, actor: Actor, claimId: string) {
         .from(moneyAccounts)
         .where(and(eq(moneyAccounts.companyId, actor.companyId), eq(moneyAccounts.active, true), eq(moneyAccounts.currency, detail.claim.currency)))
     : [];
-  return { ...detail, payFrom, canManage: can(actor, "claims.manage"), canPay: can(actor, "payments.create") };
+  // The claim's lines in the books, for people who may see the books (read-only; the entry itself is never edited here).
+  const ledger =
+    can(actor, "reports.financial.view") && detail.claim.journalEntryId
+      ? await db
+          .select({ code: accounts.code, name: accounts.name, debit: journalLines.debit, credit: journalLines.credit })
+          .from(journalLines)
+          .innerJoin(accounts, eq(accounts.id, journalLines.accountId))
+          .where(eq(journalLines.entryId, detail.claim.journalEntryId))
+          .orderBy(desc(journalLines.debit), accounts.code)
+      : [];
+  return { ...detail, payFrom, ledger, canManage: can(actor, "claims.manage"), canPay: can(actor, "payments.create") };
 }
 
 /** A staged site settlement compared with the system, line by line. */

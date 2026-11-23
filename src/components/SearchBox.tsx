@@ -18,7 +18,7 @@ export function SearchBox({ action, placeholder, label, defaultValue }: { action
     return () => document.removeEventListener("keydown", onKey);
   }, []);
   return (
-    <form action={action} method="get" role="search" className="flex min-w-0 max-w-[560px] flex-1 items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 text-slate-500 transition focus-within:border-primary-500 focus-within:ring-4 focus-within:ring-primary-500/12">
+    <form action={action} method="get" role="search" className="flex min-w-0 max-w-[560px] flex-1 items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3.5 text-slate-500 transition focus-within:border-primary-500 focus-within:ring-[3px] focus-within:ring-primary-500/12">
       <Icon name="search" />
       <input
         ref={ref}

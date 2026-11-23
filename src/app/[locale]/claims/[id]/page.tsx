@@ -35,6 +35,8 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
   const sum = (pick: (l: (typeof active)[number]) => string) => active.reduce((a, l) => a.plus(dec(pick(l))), dec("0")).toString();
   const unit = active[0]?.calc.unit ?? "MT";
   const neg = (x: string) => (x === "0" ? "—" : `−${m(x)}`);
+  /** A fine is stored negative; show it like the other deductions: a minus sign, then the amount. */
+  const minus = (x: string) => (dec(x).isZero() ? "—" : `−${m(dec(x).abs().toString())}`);
   const hasWaiver = active.some((l) => l.calc.carrier.fineWaived && l.calc.carrier.fineWaived !== "0");
   const hasDem = active.some((l) => l.calc.carrier.demurrage !== "0");
   const hasCut = active.some((l) => l.calc.carrier.transporterCut !== "0");
@@ -84,10 +86,10 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
         actions={actions}
       />
       <div className="stats">
-        <Stat icon="truck" label={t("trips")} value={active.length} />
-        <Stat icon="wallet" label={t("claimTotalLabel")} value={m(c.totalFinal)} tone={dec(c.totalFinal).lt(0) ? "danger" : undefined} hint={c.total !== c.totalFinal ? t("roundedFrom", { amount: m(c.total) }) : undefined} />
-        <Stat icon="checkCircle" label={t("paidLabel")} value={m(v.paid)} tone={dec(v.paid).gt(0) ? "success" : undefined} />
-        <Stat icon="clock" label={open.gt(0) ? t("stillToPay") : open.lt(0) ? t("claimantOwes") : t("settled")} value={open.isZero() ? t("nothingOpen") : m(open.abs().toString())} tone={open.gt(0) ? "warning" : open.lt(0) ? "danger" : "success"} />
+        <Stat emphasis icon="clock" label={open.gt(0) ? t("weOweName", { name: c.claimant }) : open.lt(0) ? t("nameOwes", { name: c.claimant }) : t("settled")} value={open.isZero() ? t("nothingOpen") : m(open.abs().toString())} flag={open.lt(0) ? t("claimantOwes") : undefined} hint={open.gt(0) && dec(v.paid).gt(0) ? `${t("paidLabel")}: ${m(v.paid)}` : undefined} />
+        <Stat icon="wallet" label={t("claimTotalLabel")} value={m(c.totalFinal)} tone={dec(c.totalFinal).lt(0) ? "danger" : undefined} hint={c.total !== c.totalFinal ? t("roundedFrom", { amount: m(c.total) }) : `${active.length} ${t("trips").toLowerCase()} · ${formatNumber(sum((l) => l.calc.net), locale)} ${unit}`} />
+        <Stat icon="checkCircle" label={t("earned")} value={m(sum((l) => l.calc.carrier.total))} />
+        <Stat icon="truck" label={t("advancesTaken")} value={m(sum((l) => l.calc.carrier.advance))} />
       </div>
 
       <Card flush title={t("linesTitle")} icon="list">
@@ -111,7 +113,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
                 <td className="num">{formatNumber(k.net, locale)}</td>
                 <td className="num" title={k.carrier.price ? `${formatNumber(k.net, locale)} × ${m(k.carrier.price)}` : undefined}>{m(k.carrier.freight)}</td>
                 {hasReward && <td className="num">{m(k.carrier.reward)}</td>}
-                <td className="num neg">{k.carrier.fine !== "0" ? m(k.carrier.fine) : "—"}</td>
+                <td className="num neg">{minus(k.carrier.fine)}</td>
                 {hasWaiver && <td className="num">{k.carrier.fineWaived && k.carrier.fineWaived !== "0" ? m(k.carrier.fineWaived) : "—"}</td>}
                 {hasDem && <td className="num">{k.carrier.demurrage !== "0" ? m(k.carrier.demurrage) : "—"}</td>}
                 <td className="num">{k.carrier.feeDeductions !== "0" ? `−${m(k.carrier.feeDeductions)}` : "—"}</td>
@@ -123,12 +125,12 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
               </tr>
             );
           })}</tbody>
-          <tfoot><tr className="net">
+          <tfoot><tr className="subtotal">
             <td colSpan={4}><strong>{t("claimTotal", { count: active.length })}</strong></td>
             <td className="num"><strong>{formatNumber(sum((l) => l.calc.loaded), locale)}</strong></td><td className="num"><strong>{formatNumber(sum((l) => l.calc.net), locale)}</strong></td>
             <td className="num"><strong>{m(sum((l) => l.calc.carrier.freight))}</strong></td>
             {hasReward && <td className="num"><strong>{m(sum((l) => l.calc.carrier.reward))}</strong></td>}
-            <td className="num neg"><strong>{sum((l) => l.calc.carrier.fine) === "0" ? "—" : m(sum((l) => l.calc.carrier.fine))}</strong></td>
+            <td className="num neg"><strong>{minus(sum((l) => l.calc.carrier.fine))}</strong></td>
             {hasWaiver && <td className="num"><strong>{m(sum((l) => l.calc.carrier.fineWaived ?? "0"))}</strong></td>}
             {hasDem && <td className="num"><strong>{m(sum((l) => l.calc.carrier.demurrage))}</strong></td>}
             <td className="num"><strong>{neg(sum((l) => l.calc.carrier.feeDeductions))}</strong></td>
@@ -142,6 +144,41 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
           </tfoot>
         </table></div>
       </Card>
+
+      <div className="grid side mb-5">
+        <Card title={t("howTitle")} icon="list">
+          <div className="grid items-start gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))" }}>
+          <p className="m-0 max-w-[340px] text-[13.5px] text-slate-600">{t("howHelp")}</p>
+          <div>
+            <div className="amount-line"><span className="text-slate-600">{t("freight")}</span><span>{m(sum((l) => l.calc.carrier.freight))}</span></div>
+            {hasReward && <div className="amount-line"><span className="text-slate-600">{t("reward")}</span><span>{m(sum((l) => l.calc.carrier.reward))}</span></div>}
+            <div className="amount-line"><span className="text-slate-600">{t("fine")}</span><span className="neg">{minus(sum((l) => l.calc.carrier.fine))}</span></div>
+            {hasWaiver && <div className="amount-line"><span className="text-slate-600">{t("waived")}</span><span>{m(sum((l) => l.calc.carrier.fineWaived ?? "0"))}</span></div>}
+            {hasDem && <div className="amount-line"><span className="text-slate-600">{t("demurrage")}</span><span>{m(sum((l) => l.calc.carrier.demurrage))}</span></div>}
+            <div className="amount-line"><span className="text-slate-600">{t("feesDeducted")}</span><span>{neg(sum((l) => l.calc.carrier.feeDeductions))}</span></div>
+            {hasOther && <div className="amount-line"><span className="text-slate-600">{t("otherDeduction")}</span><span>{neg(sum((l) => l.calc.carrier.otherDeduction))}</span></div>}
+            {hasCut && <div className="amount-line"><span className="text-slate-600">{t("transporterCut")}</span><span>{neg(sum((l) => l.calc.carrier.transporterCut))}</span></div>}
+            <div className="amount-line total"><span>{t("earned")}</span><span>{m(sum((l) => l.calc.carrier.total))}</span></div>
+            <div className="amount-line"><span className="text-slate-600">{t("advancesTaken")}</span><span>{neg(sum((l) => l.calc.carrier.advance))}</span></div>
+            {c.total !== c.totalFinal && <div className="amount-line"><span className="text-slate-600">{t("rounding")}</span><span>{m(dec(c.totalFinal).minus(dec(c.total)).toString())}</span></div>}
+            {dec(v.paid).gt(0) ? <>
+              <div className="amount-line total"><span>{t("claimTotalLabel")}</span><span>{m(c.totalFinal)}</span></div>
+              <div className="amount-line"><span className="text-slate-600">{t("paidLabel")}</span><span>{neg(v.paid)}</span></div>
+              <div className="amount-line final"><span>{open.lt(0) ? t("claimantOwes") : open.isZero() ? t("settled") : t("stillToPay")} · {cur}</span><span>{open.isZero() ? "—" : m(open.abs().toString())}</span></div>
+            </> : <div className="amount-line final"><span>{t("claimTotalLabel")} · {cur}</span><span>{m(c.totalFinal)}</span></div>}
+          </div>
+          </div>
+        </Card>
+        {v.ledger.length > 0 && (
+          <Card title={t("ledgerTitle")} icon="book" flush>
+            <div className="table-wrap"><table className="dense">
+              <thead><tr><th>{t("account")}</th><th className="num">{t("debit")}</th><th className="num">{t("credit")}</th></tr></thead>
+              <tbody>{v.ledger.map((x, i) => <tr key={i}><td className="wrap"><span className="ltr text-slate-500">{x.code}</span> {x.name}</td><td className="num">{dec(x.debit).isZero() ? "" : m(x.debit)}</td><td className="num">{dec(x.credit).isZero() ? "" : m(x.credit)}</td></tr>)}</tbody>
+              <tfoot><tr className="subtotal"><td>{t("balanced")}</td><td className="num">{m(v.ledger.reduce((a, x) => a.plus(dec(x.debit)), dec("0")).toString())}</td><td className="num">{m(v.ledger.reduce((a, x) => a.plus(dec(x.credit)), dec("0")).toString())}</td></tr></tfoot>
+            </table></div>
+          </Card>
+        )}
+      </div>
 
       <Card title={t("paymentsTitle")} icon="wallet" flush>
         {v.payments.length === 0 ? <div className="card-body muted">{c.status === "posted" ? t("noPaymentsYet") : t("noPayments")}</div> : (

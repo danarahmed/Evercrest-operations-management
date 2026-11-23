@@ -184,7 +184,7 @@ The trip is saved, it appears in the grid, and the cursor goes back to Driver fo
 
 ![Entry line](img/14-entry-line-typed.jpg)
 
-The grey pills above the line repeat for every truck: load date, route, transporter, price and reward if different from the card, and the advance with its cash box. Change them once with **Change**; they stay until changed again. An empty transporter means the driver works directly with you.
+The small boxes above the line repeat for every truck: load date, route, transporter, price and reward if different from the card, and the advance with its cash box. Change them once with **Change**; they stay until changed again. An empty transporter means the driver works directly with you.
 
 ![Changing the repeated values](img/13-entry-line-change.jpg)
 
@@ -376,6 +376,8 @@ If some lines are not ready, **Claim only the ready trips** keeps the good ones.
 ### 12.3 Post the claim
 
 **Create and post the claim** opens the claim page, laid out like your settlement form.
+
+The first figure at the top is the one to act on: what the company still owes the claimant. Below the trips, **How the amount is worked out** walks from freight to the amount to pay, ending on a green line; people who may see the books also get **In the books**, the claim's debit and credit lines, which always come to the same total on both sides.
 
 ![Claim page](img/32-claim-page.jpg)
 

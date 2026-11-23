@@ -80,7 +80,7 @@ export function StatusBadge({ status, label }: { status: string; label: ReactNod
   return <Badge tone={TONES[status] ?? "neutral"}>{label}</Badge>;
 }
 
-export function Stat({ label, value, icon, tone, href, hint }: { label: ReactNode; value: ReactNode; icon: IconName; tone?: "success" | "warning" | "danger" | "violet"; href?: string; hint?: ReactNode }) {
+export function Stat({ label, value, icon, tone, href, hint, flag, emphasis }: { label: ReactNode; value: ReactNode; icon: IconName; tone?: "success" | "warning" | "danger" | "violet"; href?: string; hint?: ReactNode; /** A problem that must not be missed (overdue money), shown as a red label. */ flag?: ReactNode; /** The one figure the page is about (the amount still to pay). */ emphasis?: boolean }) {
   const body = (
     <>
       <div className="stat-top">
@@ -88,10 +88,12 @@ export function Stat({ label, value, icon, tone, href, hint }: { label: ReactNod
         <div className={`stat-icon${tone ? ` ${tone}` : ""}`}><Icon name={icon} /></div>
       </div>
       <div className="stat-value">{value}</div>
+      {flag && <div><span className="badge danger">{flag}</span></div>}
       {hint && <div className="stat-hint">{hint}</div>}
     </>
   );
-  return href ? <Link href={href} className="stat">{body}</Link> : <div className="stat">{body}</div>;
+  const cls = `stat${tone ? ` ${tone}` : ""}${emphasis ? " key" : ""}`;
+  return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 /** Partner role as a coloured pill (customer, supplier, transporter, driver, contractor). */

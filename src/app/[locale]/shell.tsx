@@ -115,11 +115,11 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
         key={i.key}
         href={`/${locale}${i.href}`}
         aria-current={on ? "page" : undefined}
-        className={`group flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-[14px] font-semibold no-underline transition-colors duration-150 ${on ? "bg-white text-primary-700 shadow-[0_1px_2px_rgb(60_45_20/0.06)] ring-1 ring-slate-200" : "text-slate-700 hover:bg-[#e9e3d9] hover:text-slate-900"}`}
+        className={`group flex h-[34px] items-center gap-3 rounded-lg px-3 text-[14px] font-medium no-underline transition-colors duration-150 ${on ? "bg-primary-50 font-bold text-primary-700" : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"}`}
       >
-        <Icon name={i.icon} className={on ? "text-primary-500" : "text-slate-400 transition-colors group-hover:text-slate-600"} />
+        <Icon name={i.icon} className={on ? "text-primary-500" : "text-slate-500 transition-colors group-hover:text-slate-700"} />
         <span className="nav-text min-w-0 truncate">{nl(i.key)}</span>
-        {!!i.count && <span className="nav-count ms-auto rounded-full bg-amber-50 px-2 text-[12px] font-extrabold leading-5 text-amber-600">{i.count}</span>}
+        {!!i.count && <span className="nav-count ms-auto min-w-5 rounded-full bg-amber-100 px-1.5 text-center text-[12px] font-bold leading-5 text-amber-700">{i.count}</span>}
       </Link>
     );
   };
@@ -131,14 +131,14 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
     <div className="app-shell flex min-h-screen" data-nav={navPinned ? "open" : "rail"}>
       <input type="checkbox" id="nav-toggle" className="peer sr-only" aria-hidden="true" tabIndex={-1} />
       <aside className="fixed inset-y-0 start-0 z-50 w-[var(--sidebar-w)] transition-transform duration-200 max-lg:invisible max-lg:-translate-x-full max-lg:rtl:translate-x-full peer-checked:visible peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen">
-       <div className="aside-panel flex h-full flex-col border-e border-[#e3dbcf] bg-linen">
+       <div className="aside-panel flex h-full flex-col border-e border-slate-200 bg-linen">
         <Link href={`/${locale}`} className="flex items-center gap-3 px-6 pt-5 pb-4 no-underline">
-          <span className="grid size-10 place-items-center rounded-xl bg-primary-500 text-petro-100">
+          <span className="grid size-9 flex-none place-items-center rounded-lg bg-primary-500 text-petro-100">
             <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3c3 4 6 7 6 10.5A6 6 0 0 1 6 13.5C6 10 9 7 12 3z" /><path d="M8.5 15.5c1 1.2 2.2 1.8 3.5 1.8" /></svg>
           </span>
           <span className="nav-text min-w-0 leading-tight">
-            <span className="block truncate text-[16.5px] font-extrabold text-slate-900">{app("brand")}</span>
-            <span className="block text-[12.5px] font-semibold text-slate-500">{app("tagline")}</span>
+            <span className="block truncate text-[15.5px] font-bold text-slate-900">{app("brand")}</span>
+            <span className="block text-[12.5px] font-normal text-slate-500">{app("tagline")}</span>
           </span>
         </Link>
         <div className="px-4">
@@ -150,13 +150,13 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
             if (!items.length) return null;
             return (
               <div key={gi} className={g.label ? "mt-4" : "mt-1"}>
-                {g.label && <div className="nav-group-label nav-text px-3 pb-1.5 text-[11.5px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{g.label}</div>}
+                {g.label && <div className="nav-group-label nav-text px-3 pb-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-slate-500">{g.label}</div>}
                 <div className="grid gap-0.5">{items.map(navLink)}</div>
               </div>
             );
           })}
         </nav>
-        <div className="m-4 mt-0 flex items-center gap-3 rounded-2xl border border-[#e3dbcf] bg-[#f7f3ed] p-3">
+        <div className="m-4 mt-0 flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white/60 p-2.5">
           <span className="avatar">{initials(userName)}</span>
           <span className="nav-text min-w-0 flex-1 leading-snug">
             <span className="block truncate text-[14px] font-bold text-slate-900">{userName}</span>
@@ -172,18 +172,18 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
       <label htmlFor="nav-toggle" className="fixed inset-0 z-40 hidden bg-slate-900/30 backdrop-blur-[2px] peer-checked:block lg:!hidden" aria-hidden="true" />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="topbar sticky top-0 z-30 flex min-h-[68px] flex-wrap items-center gap-3 border-b border-slate-200 bg-[#f8f5f0]/90 px-4 py-3 backdrop-blur-md sm:px-8">
+        <header className="topbar sticky top-0 z-30 flex min-h-16 flex-wrap items-center gap-3 border-b border-slate-200 bg-canvas/95 px-4 py-3 sm:px-8">
           <label htmlFor="nav-toggle" className="btn ghost icon-btn lg:!hidden" aria-label={t("menu")}><Icon name="menu" /></label>
           <SearchBox action={`/${locale}/search`} label={t("search")} placeholder={t("searchPlaceholder")} />
           <div className="ms-auto flex items-center gap-2.5">
-            <div className="flex items-center rounded-full bg-linen p-[3px]" role="group" aria-label={t("language")}>
+            <div className="flex items-center rounded-lg border border-slate-200 bg-white p-[3px]" role="group" aria-label={t("language")}>
               {routing.locales.map((l) => (
                 <Link
                   key={l}
                   href={`/${l}${path}`}
                   lang={l}
                   aria-current={l === locale ? "true" : undefined}
-                  className={`rounded-full px-3 py-1 text-[13px] font-bold no-underline transition-colors ${l === locale ? "bg-white text-slate-900 shadow-[0_1px_2px_rgb(60_45_20/0.08)]" : "text-slate-500 hover:text-slate-900"}`}
+                  className={`rounded-md px-2.5 py-1 text-[13px] no-underline transition-colors ${l === locale ? "bg-slate-100 font-bold text-slate-900" : "font-medium text-slate-500 hover:text-slate-900"}`}
                 >
                   {LANG_NAMES[l]}
                 </Link>
@@ -195,7 +195,7 @@ export async function Shell({ locale, userName, path, permissions, wide, crumb, 
         <main className={`mx-auto w-full flex-1 px-4 pt-7 pb-16 sm:px-8 ${wide ? "max-w-[1560px]" : "max-w-[1280px]"}`}>
           {showCrumbs && (
             <nav aria-label={t("breadcrumbs")} className="no-print mb-3">
-              <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0 text-[13.5px] font-semibold text-slate-500">
+              <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0 text-[13px] font-normal text-slate-500">
                 {crumbs.map((c, i) => (
                   <li key={i} className="flex items-center gap-2">
                     {i > 0 && <span className="text-slate-300">/</span>}

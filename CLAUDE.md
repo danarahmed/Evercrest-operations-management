@@ -64,7 +64,7 @@ BASE_URL=http://localhost:3000 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run e
 - **Pop-ups and panels** must never be clipped by a scrolling container; they open where they fit, one at a time, close on Escape or a click outside.
 - **Every box fits its content.** No dialog, card or table may cut off, overflow or scroll sideways. `e2e/layout-flow.mjs` (part of `npm run e2e`) opens every main screen in English and Arabic at 1366 px, opens every dialog on it, and fails on anything that does not fit; a new screen or dialog is added to it.
 - **Test in the browser before pushing**: full `npm run e2e` on a fresh seed plus a look at the affected screens (screenshots), not only unit tests.
-- Keep the Sandstone design language (`src/app/globals.css`): calm colours, generous whitespace, one accent for the primary action, tabular numerals for money and quantities.
+- Keep the approved look, "Sandstone, refined" (owner-approved 2026-11-23, warm ivory finish; `src/app/globals.css`): ivory ground, flat white panels with one 1px border (no card shadows; shadows only on menus and dialogs), one green for the main action, corners 6/8/10, buttons and fields 36px (32px in lists), weights 400/500/600 (700 only for the one key amount on a page), Inter for Latin and Vazirmatn for Arabic/Kurdish, tabular numerals for money and quantities, status always a word plus a colour. Improve execution, never add decoration: no gradients, no extra cards or charts to fill space. Reference: the "Refined" page of the "Evercrest new look" design board.
 
 ---
 
@@ -363,3 +363,13 @@ Before approving a new architecture or feature, test it against at least:
 **GENERAL AT THE CORE · SPECIALIZED AT THE EDGES · SIMPLE FOR USERS · FLEXIBLE FOR THE BUSINESS · STRICT WITH MONEY AND DATA.**
 
 That is the architecture this project must follow.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -88,7 +88,10 @@
     "goPay": "Pay drivers",
     "goInvoices": "Invoices",
     "goProfit": "Profit report",
-    "trucksOnRoad": "{count, plural, one {# truck} other {# trucks}} on the road"
+    "trucksOnRoad": "{count, plural, one {# truck} other {# trucks}} on the road",
+    "financialOverview": "Financial overview",
+    "ownerOnly": "visible to the owner and the accountant only",
+    "overdue": "{amount} overdue"
   },
   "Severity": {
     "critical": "Critical",
@@ -1638,6 +1641,16 @@
     "nothingOpen": "Nothing open",
     "reversePayment": "Reverse",
     "reverseHelp": "Reverse {no}: the money is back in the box and the claim opens again for this amount. The payment stays in the books with its reversal.",
-    "reverseSubmit": "Reverse the payment"
+    "reverseSubmit": "Reverse the payment",
+    "howTitle": "How the amount is worked out",
+    "ledgerTitle": "In the books",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balanced": "Both sides",
+    "weOweName": "We owe {name}",
+    "nameOwes": "{name} owes us",
+    "advancesTaken": "Advances already taken",
+    "account": "Account",
+    "howHelp": "Each trip is paid on the smaller of the loaded and discharged quantity. A fine applies only to a shortage beyond the allowance. Fees and advances are taken off before payment."
   }
 }

@@ -176,6 +176,13 @@
       "when": 1795004318645,
       "tag": "0024_claims",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795004378645,
+      "tag": "0025_owner_fresh_start",
+      "breakpoints": true
     }
   ]
 }

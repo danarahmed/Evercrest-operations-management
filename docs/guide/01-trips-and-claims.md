@@ -81,6 +81,8 @@ Setup → Accounting tab.
 
 Each safe, site box or bank account is a cash box with one currency. Click **Add a cash box or bank account** and type only the name, the kind and the currency. The box gets its own account in the books automatically, named after it and numbered for you: cash boxes from 1011 to 1049, bank accounts from 1051 to 1099. Advances, claim payments and site payments come out of a cash box, so its balance is always known.
 
+In the **Accounts** list below, every account has **Edit** to change its name; its number, type and currency stay, so postings already made keep their meaning. **Delete** appears only on an account nothing uses yet (no postings, no cash box, not used by the automatic postings), for example one typed by mistake.
+
 Benefit: you see what each box should hold. Step 3 adds counting and reconciling each box.
 
 ### 5.2 Payment limit and rounding

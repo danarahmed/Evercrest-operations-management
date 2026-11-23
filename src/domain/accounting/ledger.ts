@@ -1,7 +1,8 @@
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, currencies, fiscalPeriods, journalEntries, journalLines } from "@/db/schema";
+import { accounts, currencies, feeTypes, fiscalPeriods, invoiceLines, invoices, journalEntries, journalLines, moneyAccounts, payments } from "@/db/schema";
+import { getSetting } from "@/server/settings";
 import { ACCOUNT_TYPES } from "@/db/schema/accounting";
 import { type CommandContext, defineCommand } from "@/server/command";
 import { Conflict, NotFound, ValidationError } from "@/server/errors";
@@ -224,6 +225,58 @@ export const createAccount = defineCommand({
     const [row] = await tx.insert(accounts).values({ ...input, companyId: actor.companyId }).returning();
     await audit({ action: "ledger.create_account", entityType: "account", entityId: row.id, after: row });
     return { id: row.id };
+  },
+});
+
+/**
+ * Why an account cannot be deleted: anything posted to it, or anything that points to it.
+ * Empty = nothing uses it, so it may be deleted (it was only a name in the chart).
+ */
+export async function accountUsage(db: Db, companyId: string, accountId: string): Promise<string[]> {
+  const why: string[] = [];
+  const count = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
+  const n = sql<number>`count(*)::int`;
+  if (await count(db.select({ n }).from(journalLines).where(eq(journalLines.accountId, accountId)))) why.push("it has postings in the books");
+  const [box] = await db.select({ name: moneyAccounts.name }).from(moneyAccounts).where(eq(moneyAccounts.ledgerAccountId, accountId));
+  if (box) why.push(`it belongs to the cash box "${box.name}"`);
+  if (await count(db.select({ n }).from(accounts).where(eq(accounts.parentId, accountId)))) why.push("other accounts are grouped under it");
+  if (await count(db.select({ n }).from(feeTypes).where(eq(feeTypes.expenseAccountId, accountId)))) why.push("a kind of fee is booked to it");
+  if (await count(db.select({ n }).from(payments).where(eq(payments.counterAccountId, accountId)))) why.push("payments use it");
+  if (await count(db.select({ n }).from(invoices).where(eq(invoices.balanceAccountId, accountId)))) why.push("invoices use it");
+  if (await count(db.select({ n }).from(invoiceLines).where(eq(invoiceLines.accountId, accountId)))) why.push("invoice lines use it");
+  const [acc] = await db.select({ code: accounts.code }).from(accounts).where(eq(accounts.id, accountId));
+  const map = ((await getSetting(db, companyId, "accounting.posting_accounts")) ?? {}) as Record<string, string>;
+  if (acc && Object.values(map).includes(acc.code)) why.push("automatic postings use it (Posting accounts)");
+  return why;
+}
+
+/** Rename an account. Its number, type and currency stay: postings already made keep their meaning. */
+export const updateAccount = defineCommand({
+  name: "ledger.update_account",
+  permission: "accounts.manage",
+  input: z.object({ accountId: z.string().uuid(), name: z.string().trim().min(1).max(200) }),
+  async handler({ tx, actor, audit }, { accountId, name }) {
+    const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.companyId, actor.companyId)));
+    if (!acc) throw new NotFound("account", accountId);
+    if (acc.name !== name) await tx.update(accounts).set({ name }).where(eq(accounts.id, accountId));
+    await audit({ action: "ledger.update_account", entityType: "account", entityId: accountId, before: { name: acc.name }, after: { name } });
+    return { id: accountId };
+  },
+});
+
+/** Delete an account nobody uses yet (typed by mistake, or no longer wanted). Anything else is refused with the reason. */
+export const deleteAccount = defineCommand({
+  name: "ledger.delete_account",
+  permission: "accounts.manage",
+  input: z.object({ accountId: z.string().uuid() }),
+  async handler({ tx, actor, audit }, { accountId }) {
+    const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.companyId, actor.companyId))).for("update");
+    if (!acc) throw new NotFound("account", accountId);
+    const why = await accountUsage(tx, actor.companyId, accountId);
+    if (why.length) throw new Conflict(`${acc.code} ${acc.name} cannot be deleted: ${why.join("; ")}`);
+    await tx.delete(accounts).where(eq(accounts.id, accountId));
+    await audit({ action: "ledger.delete_account", entityType: "account", entityId: accountId, before: { code: acc.code, name: acc.name, type: acc.type, currency: acc.currency } });
+    return { id: accountId };
   },
 });
 

@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createAccount, deleteAccount, postJournalEntry, updateAccount } from "@/domain/accounting/ledger";
 import { createMoneyAccount } from "@/domain/finance/payments";
 import { accounts, moneyAccounts } from "@/db/schema";
 import { runCommand } from "@/server/command";
@@ -37,5 +38,31 @@ describe("cash boxes get their own account in the books", () => {
   it("an account already used by another box is refused with a plain reason", async () => {
     const [used] = await env.db.select().from(accounts).where(and(eq(accounts.companyId, env.companyId), eq(accounts.code, "1011")));
     await expect(run(createMoneyAccount, { name: "Second box", kind: "cash", currency: "USD", ledgerAccountId: used.id })).rejects.toThrow(/already belongs to "Main safe USD"/);
+  });
+});
+
+describe("editing and deleting accounts in the chart", () => {
+  const code = async (c: string) => (await env.db.select().from(accounts).where(and(eq(accounts.companyId, env.companyId), eq(accounts.code, c))))[0];
+
+  it("renames an account; number, type and currency stay", async () => {
+    const a = await run(createAccount, { code: "1011-1", name: "Cash USD – Rekan Fars diesel", type: "asset", currency: "USD" });
+    await run(updateAccount, { accountId: a.id, name: "Rekan Fars (old)" });
+    expect(await code("1011-1")).toMatchObject({ name: "Rekan Fars (old)", type: "asset", currency: "USD" });
+  });
+
+  it("deletes an account nothing uses", async () => {
+    const a = await code("1011-1");
+    await run(deleteAccount, { accountId: a.id });
+    expect(await code("1011-1")).toBeUndefined();
+  });
+
+  it("refuses to delete an account in use, and says why", async () => {
+    await expect(run(deleteAccount, { accountId: (await code("1011")).id })).rejects.toThrow(/belongs to the cash box "Main safe USD"/);
+    const posting = await code("1300"); // advances, in the posting map
+    await expect(run(deleteAccount, { accountId: posting.id })).rejects.toThrow(/automatic postings use it/);
+    const x = await run(createAccount, { name: "Misc income", type: "income" });
+    const y = await run(createAccount, { name: "Misc cost", type: "expense" });
+    await run(postJournalEntry, { entryDate: "2026-11-20", description: "test", lines: [{ accountId: y.id, currency: "USD", debit: "10" }, { accountId: x.id, currency: "USD", credit: "10" }] });
+    await expect(run(deleteAccount, { accountId: x.id })).rejects.toThrow(/has postings in the books/);
   });
 });

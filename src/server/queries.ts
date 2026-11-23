@@ -196,6 +196,24 @@ export async function documentsToVerify(db: Db, actor: Actor) {
 }
 
 /** Everything the setup page shows. Each section is only loaded for users allowed to manage it. */
+async function accountsInUse(db: Db, companyId: string): Promise<string[]> {
+  const rows = await db.execute(sql`
+    select distinct id::text as id from (
+      select account_id as id from journal_lines
+      union select ledger_account_id from money_accounts where company_id = ${companyId}
+      union select parent_id from accounts where company_id = ${companyId} and parent_id is not null
+      union select expense_account_id from fee_types where company_id = ${companyId} and expense_account_id is not null
+      union select counter_account_id from payments where company_id = ${companyId} and counter_account_id is not null
+      union select balance_account_id from invoices where company_id = ${companyId}
+      union select account_id from invoice_lines
+    ) x where id is not null`);
+  const used = new Set((rows as unknown as { rows: { id: string }[] }).rows.map((r) => r.id));
+  const map = ((await getSetting(db, companyId, "accounting.posting_accounts")) ?? {}) as Record<string, string>;
+  const codes = new Set(Object.values(map));
+  for (const a of await db.select({ id: accounts.id, code: accounts.code }).from(accounts).where(eq(accounts.companyId, companyId))) if (codes.has(a.code)) used.add(a.id);
+  return [...used];
+}
+
 export async function setupData(db: Db, actor: Actor) {
   const c = actor.companyId;
   const has = (p: Parameters<typeof can>[1]) => can(actor, p);
@@ -210,6 +228,8 @@ export async function setupData(db: Db, actor: Actor) {
   return {
     partners,
     accounts: has("accounts.manage") ? accountList : null,
+    /** Accounts that something uses (postings, a cash box, the posting map …): these cannot be deleted. */
+    accountsInUse: has("accounts.manage") ? await accountsInUse(db, c) : [],
     moneyAccounts: has("money_accounts.manage") ? await db.select().from(moneyAccounts).where(eq(moneyAccounts.companyId, c)).orderBy(moneyAccounts.name) : null,
     /** Asset accounts restricted to one currency: the only valid backing for a cash box or bank account. */
     cashLedgerAccounts: accountList.filter((a) => a.type === "asset" && a.postable && a.currency),

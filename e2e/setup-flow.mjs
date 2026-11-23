@@ -7,6 +7,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const page = await browser.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
+page.on("dialog", (d) => d.accept());
 await page.goto(`${base}/en/login`);
 await page.click("button:has-text('Admin')");
 await page.waitForURL(`${base}/en`);
@@ -52,6 +53,25 @@ await box.locator(submit).click();
 await page.waitForSelector("dialog[open]", { state: "detached" });
 await page.reload();
 assert.match(await page.locator("tr:has-text('Rekan Fars diesel')").first().innerText(), /10\d\d · Rekan Fars diesel/);
+
+// An account typed by mistake is renamed, then deleted (nothing uses it); an account in use shows no Delete
+await page.click("button:has-text('Add an account')");
+const acc = page.locator("dialog[open] form:has(input[name=__command][value='ledger.create_account'])");
+await acc.locator("input[name=name]").fill("Typed by mistake");
+await acc.locator("select[name=type]").selectOption("asset");
+await acc.locator(submit).click();
+await page.waitForSelector("dialog[open]", { state: "detached" });
+await page.reload();
+const row = page.locator("tr:has-text('Typed by mistake')");
+await row.locator("button:has-text('Edit')").click();
+const ed = page.locator("dialog[open] form:has(input[name=__command][value='ledger.update_account'])");
+await ed.locator("input[name=name]").fill("Typed by mistake (renamed)");
+await ed.locator(submit).click();
+await page.waitForSelector("dialog[open]", { state: "detached" });
+await page.reload();
+await page.locator("tr:has-text('Typed by mistake (renamed)') button:has-text('Delete')").click();
+await page.waitForSelector("tr:has-text('Typed by mistake')", { state: "detached" });
+assert.equal(await page.locator("tr:has-text('Rekan Fars diesel') button:has-text('Delete')").count(), 0, "an account used by a cash box cannot be deleted");
 
 assert.deepEqual(errors, []);
 console.log("e2e setup flow: OK");

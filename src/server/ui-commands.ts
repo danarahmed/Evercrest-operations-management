@@ -13,7 +13,7 @@ import { createPartner } from "@/domain/masterdata/partners";
 import { cancelTrip, createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { assignRole, createUser, defineRole, inviteUser, setUserActive } from "@/domain/org/commands";
 import { sendInvitation } from "./invites";
-import { createAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus } from "@/domain/accounting/ledger";
+import { createAccount, deleteAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus, updateAccount } from "@/domain/accounting/ledger";
 import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
 import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
 import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities } from "@/domain/jobs/commands";
@@ -167,6 +167,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "deliveries.bill": { command: billDeliveries },
   "payments.invoice": { command: recordPayment, prepare: invoicePayment },
   "ledger.create_account": { command: createAccount },
+  "ledger.update_account": { command: updateAccount },
+  "ledger.delete_account": { command: deleteAccount },
   // Adding a user also e-mails the sign-in invitation (Supabase Auth); it can be re-sent from Users & roles.
   "org.create_user": { command: createUser, after: async (input) => sendInvitation(String(input.email).toLowerCase(), String(input.locale ?? "en")) },
   "org.invite_user": { command: inviteUser, after: async (_input, result) => { const r = result as { email: string; locale: string }; await sendInvitation(r.email, r.locale); } },

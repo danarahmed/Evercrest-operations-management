@@ -533,7 +533,11 @@
     "ledgerAuto": "The box gets its own account in the books automatically, named after it: cash boxes 1011–1049, bank accounts 1051–1099.",
     "useExistingAccount": "Use an existing account instead (accountant)",
     "ledgerAutoOption": "New account for this box (automatic)",
-    "ledgerAccountShort": "Account in the books"
+    "ledgerAccountShort": "Account in the books",
+    "editAccount": "Edit",
+    "editAccountHelp": "Only the name changes. The number, type and currency stay, so postings already made keep their meaning.",
+    "deleteAccount": "Delete",
+    "deleteAccountConfirm": "Delete the account {account}? Nothing uses it yet."
   },
   "Finance": {
     "title": "Invoices & payments",

@@ -403,8 +403,22 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               </Modal>
             }>
               <div className="table-wrap"><table>
-                <thead><tr><th>{t("code")}</th><th>{f("name")}</th><th>{t("type")}</th><th>{t("onlyCurrency")}</th></tr></thead>
-                <tbody>{d.accounts.map((a) => <tr key={a.id}><td className="ltr font-mono font-semibold text-slate-700">{a.code}</td><td>{a.name}</td><td><Badge tone={({ asset: "info", liability: "warning", equity: "violet", income: "success", expense: "danger" } as const)[a.type as "asset"]} plain>{t(`type_${a.type}`)}</Badge></td><td>{a.currency ? <Cur code={a.currency} /> : <span className="muted">{t("anyCurrency")}</span>}</td></tr>)}</tbody>
+                <thead><tr><th>{t("code")}</th><th>{f("name")}</th><th>{t("type")}</th><th>{t("onlyCurrency")}</th><th /></tr></thead>
+                <tbody>{d.accounts.map((a) => <tr key={a.id}><td className="ltr font-mono font-semibold text-slate-700">{a.code}</td><td>{a.name}</td><td><Badge tone={({ asset: "info", liability: "warning", equity: "violet", income: "success", expense: "danger" } as const)[a.type as "asset"]} plain>{t(`type_${a.type}`)}</Badge></td><td>{a.currency ? <Cur code={a.currency} /> : <span className="muted">{t("anyCurrency")}</span>}</td>
+                  <td className="num"><span className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                    <Modal label={t("editAccount")} variant="ghost" size="sm">
+                      <ActionForm command="ledger.update_account" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+                        <input type="hidden" name="accountId" value={a.id} />
+                        <label>{f("name")} <span className="hint ltr">{a.code}</span><input name="name" required defaultValue={a.name} /></label>
+                        <p className="muted small" style={{ margin: 0 }}>{t("editAccountHelp")}</p>
+                      </ActionForm>
+                    </Modal>
+                    {!d.accountsInUse.includes(a.id) && (
+                      <ActionForm command="ledger.delete_account" locale={locale} idempotencyKey={k()} submitLabel={t("deleteAccount")} inline variant="danger" confirm={t("deleteAccountConfirm", { account: `${a.code} ${a.name}` })}>
+                        <input type="hidden" name="accountId" value={a.id} />
+                      </ActionForm>
+                    )}
+                  </span></td></tr>)}</tbody>
               </table></div>
             </Card>
           )}

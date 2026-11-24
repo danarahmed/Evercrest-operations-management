@@ -70,8 +70,14 @@ await dlg().locator("input[name=reference]").fill("NOC-2026-14");
 await dlg().locator("input[name=title]").fill("Diesel haulage to Field X, 2026");
 await dlg().locator("input[name=validFrom]").fill("2026-01-01");
 await dlg().locator("input[name=validTo]").fill("2026-12-31");
+await dlg().locator("input[name=paymentTermsDays]").fill("30");
+await dlg().locator("textarea[name=notes]").fill("Prices per job on the rule card; invoice monthly");
 await shot("s-07-add-contract", dlg());
 await save();
+// Its files: the signed contract and amendments.
+await p.locator("tr:has-text('NOC-2026-14') button:has-text('Attach')").first().click(); await dlg().waitFor();
+await shot("s-07b-contract-files", dlg());
+await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 
 // 5. Projects.
 await p.goto(tab);

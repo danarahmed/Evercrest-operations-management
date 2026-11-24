@@ -1,9 +1,10 @@
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { documentRequirements, documents, documentTypes, trips } from "@/db/schema";
+import { approvalRequests, documentRequirements, documents, documentTypes, documentWaivers, trips } from "@/db/schema";
 import { defineCommand } from "@/server/command";
-import { Conflict, NotFound, ValidationError } from "@/server/errors";
+import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
+import { registerApprovable } from "../approvals/approvals";
 import { type Blocker, type Job, registerCapabilityModule } from "../jobs/capabilities";
 import { getJob } from "../jobs/commands";
 import { nextCode } from "../sequences";
@@ -113,7 +114,9 @@ export const reviewDocument = defineCommand({
   },
 });
 
-export type RequirementState = "verified" | "awaiting_verification" | "rejected" | "expired" | "missing";
+export type RequirementState = "verified" | "awaiting_verification" | "waived" | "rejected" | "expired" | "missing";
+/** Received (even before it is checked), verified, or excused with approval: the paper no longer holds anything back. */
+export const PAPER_SATISFIED: readonly RequirementState[] = ["verified", "awaiting_verification", "waived"];
 
 export interface RequirementCheck {
   documentType: string;
@@ -139,6 +142,7 @@ export async function documentChecklist(tx: Db, job: Job, today = new Date().toI
 
   const jobTrips = await tx.select({ id: trips.id, tripNo: trips.tripNo }).from(trips).where(and(eq(trips.jobId, job.id), ne(trips.status, "cancelled")));
   const docs = await tx.select().from(documents).where(eq(documents.jobId, job.id));
+  const waived = await tx.select().from(documentWaivers).where(eq(documentWaivers.jobId, job.id));
 
   // Merge duplicate rules for the same (type, target): the strictest stage wins.
   const merged = new Map<string, { typeId: string; typeName: string; appliesTo: "job" | "trip"; before: "completed" | "financially_closed" }>();
@@ -155,8 +159,11 @@ export async function documentChecklist(tx: Db, job: Job, today = new Date().toI
     for (const target of targets) {
       const mine = docs.filter((d) => d.documentTypeId === m.typeId && d.entityType === target.type && d.entityId === target.id);
       const valid = (d: (typeof mine)[number]) => !d.expiryDate || d.expiryDate >= today;
+      const excused = waived.some((w) => w.documentTypeId === m.typeId && w.entityType === target.type && w.entityId === target.id);
       const state: RequirementState = mine.some((d) => d.status === "verified" && valid(d))
         ? "verified"
+        : excused
+          ? "waived"
         : mine.some((d) => d.status === "received" && valid(d))
           ? "awaiting_verification"
           : mine.some((d) => d.status !== "rejected" && !valid(d))
@@ -170,7 +177,7 @@ export async function documentChecklist(tx: Db, job: Job, today = new Date().toI
   return out;
 }
 
-const ACTION: Record<Exclude<RequirementState, "verified">, string> = {
+const ACTION: Record<Exclude<RequirementState, "verified" | "waived">, string> = {
   missing: "Waiting for",
   awaiting_verification: "Verify",
   rejected: "Replace rejected",
@@ -183,10 +190,11 @@ registerCapabilityModule({
   alwaysCheck: true,
   async blockers(tx: Db, job: Job): Promise<Blocker[]> {
     return (await documentChecklist(tx, job))
-      .filter((c) => c.state !== "verified")
+      // A received paper (even before it is checked) and an approved "paper not coming" no longer hold the job back.
+      .filter((c) => !PAPER_SATISFIED.includes(c.state))
       .map((c) => ({
         code: `documents.${c.state}`,
-        action: `${ACTION[c.state as Exclude<RequirementState, "verified">]} ${c.documentType} for ${c.target.label}`,
+        action: `${ACTION[c.state as Exclude<RequirementState, "verified" | "waived" | "awaiting_verification">]} ${c.documentType} for ${c.target.label}`,
         params: { doc: c.documentType, target: c.target.label },
         blocks: c.requiredBefore,
       }));
@@ -215,3 +223,49 @@ export const attachDocumentFile = defineCommand({
     return { id: doc.id };
   },
 });
+
+/**
+ * "Paper not coming": a required paper that will never arrive (lost manifest, a site that never sends it).
+ * Always needs the owner's approval; once approved the requirement counts as met for claims, billing,
+ * completion and financial close. The money is not touched.
+ */
+export const waiveDocument = defineCommand({
+  name: "documents.waive",
+  permission: "documents.record",
+  input: z.object({ documentTypeId: uuid, entityType: z.enum(["job", "trip"]), entityId: uuid, reason: z.string().trim().min(3).max(500) }),
+  async handler(ctx, input) {
+    const { tx, actor, audit } = ctx;
+    const [type] = await tx.select().from(documentTypes).where(and(eq(documentTypes.id, input.documentTypeId), eq(documentTypes.companyId, actor.companyId)));
+    if (!type) throw new NotFound("document_type", input.documentTypeId);
+    let job: Job;
+    let label: string;
+    if (input.entityType === "trip") {
+      const trip = await getTrip(tx, actor.companyId, input.entityId);
+      job = await getJob(tx, actor.companyId, trip.jobId);
+      label = trip.manifestNo ?? trip.tripNo;
+    } else {
+      job = await getJob(tx, actor.companyId, input.entityId);
+      label = job.jobNo;
+    }
+    const check = (await documentChecklist(tx, job)).find((c) => c.documentTypeId === type.id && c.target.type === input.entityType && c.target.id === input.entityId);
+    if (!check) throw new ValidationError(`${type.name} is not required for ${label}`);
+    if (PAPER_SATISFIED.includes(check.state)) throw new Conflict(`${type.name} for ${label} is already there; nothing to excuse`);
+    if (!ctx.approval) throw new ApprovalRequired(`${type.name} for ${label} will not come: this needs approval`, { paper: type.name, for: label, reason: input.reason });
+    const [row] = await tx
+      .insert(documentWaivers)
+      .values({ companyId: actor.companyId, documentTypeId: type.id, entityType: input.entityType, entityId: input.entityId, jobId: job.id, reason: input.reason, requestedBy: actor.userId, approvedBy: ctx.approval.approvedBy })
+      .returning();
+    await audit({ action: "documents.waive", entityType: input.entityType, entityId: input.entityId, after: { waiverId: row.id, documentType: type.name, for: label }, reason: input.reason });
+    return { id: row.id };
+  },
+});
+registerApprovable(waiveDocument);
+
+/** Papers with a "paper not coming" request still waiting in Approvals, keyed `${documentTypeId}:${entityId}`. */
+export async function pendingPaperWaivers(db: Db, companyId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ type: sql<string>`${approvalRequests.input}->>'documentTypeId'`, entity: sql<string>`${approvalRequests.input}->>'entityId'` })
+    .from(approvalRequests)
+    .where(and(eq(approvalRequests.companyId, companyId), eq(approvalRequests.command, "documents.waive"), eq(approvalRequests.status, "pending")));
+  return new Set(rows.map((r) => `${r.type}:${r.entity}`));
+}

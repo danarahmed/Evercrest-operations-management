@@ -12,14 +12,21 @@ The words the system uses, in the three languages, exactly as they appear on the
 | Document rule | قاعدة المستند | یاسای بەڵگەنامە | Says which paper is required, for which job type, customer or contract, on each trip or on the job, and before completion or financial close. |
 | Custom field | حقل مخصص | خانەی تایبەت | An extra fact some jobs must carry, such as a customer's PO number or a field permit number. |
 | Contract | عقد | گرێبەست | A customer's agreement. Jobs can be linked to it and papers can be required for it. Optional. |
+| Team | الفريق | تیم | The people working on a job besides the responsible person. Being on a team gives no extra rights. |
+| My jobs | أعمالي | کارەکانی من | The jobs where you are the responsible person or on the team. |
 | Project | مشروع | پڕۆژە | A group of jobs of one customer. Optional. |
 | Completion | الإكمال | تەواوکردن | The work is done. Required papers and steps must be in before a job can be marked completed. |
 | Financial close | الإغلاق المالي | داخستنی دارایی | All money of the job is settled. The last status of a job; papers "needed before financial close" must be in by then. |
-| Rule card | بطاقة القواعد | کارتی ڕێسا | The job's prices and rules: carrier price, reward, shortage allowance and fine, customer price, demurrage, advance limit, fees. Shown on the job's Rules tab. |
+| Rule card | بطاقة القواعد | کارتی ڕێسا | The job's prices and rules: job-wide rules (fine, customer price, demurrage, advance limit) and prices by route. Shown on the job's Rules tab. |
 | Version | نسخة | وەشان | A rule card change from a date. Trips use the version in force on their loading date. |
-| Route | الطريق | ڕێگا | Where trucks load and discharge. A route can have its own prices and fees. |
-| Fee | الرسوم | خەرجی | Visa, insurance, guarantee, customs and similar. Each fee says whether it is taken back from the carrier and whether the customer pays it. |
+| Route | الطريق | ڕێگا | Where trucks load and discharge. A route can have its own price, reward and allowance. |
+| Prices by route | الأسعار حسب الطريق | نرخ بەپێی ڕێگا | A route's own carrier price from a date, with its reward and allowance if they differ. One price for all carriers on that route. |
+| Fee | الرسوم | خەرجی | Visa, insurance, guarantee, customs and similar, ticked on the trips that had it. |
+| Kinds of fees | أنواع الرسوم | جۆرەکانی خەرجی | The list of fees set up once in Setup: usual amount, per trip or per ton, who pays it at the time, and who carries it in the end. |
+| Pay fees | دفع الرسوم | پارەدانی خەرجییەکان | Pays the fees the company still owes, many trips in one payment from a cash box. |
+| Fees to return to customers | رسوم تُعاد إلى الزبائن | خەرجی کە بۆ کڕیاران دەگەڕێنرێتەوە | A fee the customer paid directly and the carrier gave back: the company owes it to the customer. |
 | Trip | الرحلة | گەشت | One truck carrying one load under a job. |
+| Paper not coming | المستند لن يصل | بەڵگەکە نایەت | A paper that will never arrive, excused with a reason and the owner's approval. It then counts as complete. |
 | Manifest | المنفيست | منفیست | The trip's paper and its identity. One manifest number is used once per job and is paid once. |
 | Loaded | محمل | بارکراو | Quantity loaded, from the loading sheet. |
 | Discharged | مفرغ | بەتاڵکراو | Quantity delivered, from the storage's list or the driver's papers. |

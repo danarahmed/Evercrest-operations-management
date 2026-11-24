@@ -16,7 +16,7 @@ import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jo
 import { createPartner } from "@/domain/masterdata/partners";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { defineRate } from "@/domain/transport/rates";
-import { setJobFee, setTerms } from "@/domain/transport/terms";
+import { defineFeeType, setTerms } from "@/domain/transport/terms";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { createWorkOrder } from "@/domain/field/work-orders";
 import { recordDelivery } from "@/domain/supply/deliveries";
@@ -70,9 +70,10 @@ await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 7", descripti
 await run(createWorkOrder, { jobId: fieldJob, site: "Field Y, well 9", description: "Inspect valves", plannedDate: d(-4) });
 // The job's rule card (owner's diesel terms): customer 120 USD/MT, driver 70 USD/MT, allowance 0.15 t, fine 1,200 USD/t, border fees, customs 30 USD per loaded ton.
 await run(setTerms, { jobId: job.id, effectiveFrom: "2026-01-01", currency: "USD", unit: "MT", customerPrice: "120", carrierPrice: "70", carrierAllowance: "0.15", carrierFinePrice: "1200", advanceNormal: "900", advanceMax: "900" });
-for (const [name, amount, basis] of [["Visa", "50", "per_trip"], ["Insurance", "75", "per_trip"], ["Customs", "30", "per_loaded_unit"]] as const) {
+// Kinds of fees with their usual amounts (set up once; operations tick them on each trip).
+for (const [name, amount, basis, deduct] of [["Visa", "50", "per_trip", true], ["Insurance", "75", "per_trip", false], ["Customs", "30", "per_loaded_unit", false]] as const) {
   const ft = (await db.select().from(feeTypes).where(and(eq(feeTypes.companyId, companyId), eq(feeTypes.name, name))))[0];
-  if (ft) await run(setJobFee, { jobId: job.id, feeTypeId: ft.id, effectiveFrom: "2026-01-01", amount, currency: "USD", basis });
+  if (ft) await run(defineFeeType, { id: ft.id, name, defaultBasis: basis, defaultAmount: amount, defaultCurrency: "USD", paidBy: "company", deductFromCarrier: deduct, billedToCustomer: false, expenseAccountId: ft.expenseAccountId });
 }
 const t1 = await run<{ id: string }>(createTrip, { jobId: job.id, newDriverName: "Ahmed Karim", truckPlate: "12 B 34567", transporterId: zagros, productId: diesel });
 await run(recordLoading, { tripId: t1.id, loadingDate: d(9), loadedQty: "30", loadedUnit: "MT" });

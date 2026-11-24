@@ -1,6 +1,6 @@
 # Chapter 1 — Trips and claims
 
-Build steps 1 and 2. Status: ready for your review.
+Build steps 1 and 2, with your corrections of November 2026. Status: ready for your review.
 
 ---
 
@@ -10,11 +10,13 @@ Before: the site keeps its loading sheet, the office copies it into its own file
 
 Now:
 
-- **Each job has a rule card.** Prices, reward, shortage allowance and fine, fees and the advance limit are set once per job. Every trip is calculated from it automatically.
-- **Trips go in once.** Typed on one fast line, imported from the site's own sheet, or entered in full. The manifest number is the trip's identity and can never be entered twice in a job.
+- **Each job has a rule card.** Prices by route, reward, shortage allowance and fine, and the advance limit are set once per job. Every trip is calculated from it automatically.
+- **Fees are ticked on the trip.** The kinds of fees, with their usual amount and who pays them, are set up once. Operations tick the fees each truck really had, and pay them later in one payment.
+- **Trips go in once.** Imported from the site's own sheet, entered in full, or typed as many rows at once. The manifest number is the trip's identity and can never be entered twice in a job.
 - **Discharge fills in later.** Until a trip is discharged its figures are marked "estimated". The storage's discharge list is imported as it is.
 - **Money follows the papers.** Whoever brings a trip's manifest is paid for it, through a claim. A trip can be claimed once. The system calculates the claim exactly like your settlement form and books it to the claimant's account.
 - **Site settlements are compared, not re-checked by eye.** The site's sheet is imported and compared line by line; only differences need attention.
+- **A paper that will never come** is marked "Paper not coming" with a reason and, after your approval, counts as complete everywhere.
 - **Two people for money above the limits.** Large payments, advances above the card's limit, fine waivers and large site settlements wait for a second person.
 
 ---
@@ -23,12 +25,14 @@ Now:
 
 | Your problem | Where you said it | What the system does now |
 |---|---|---|
-| Site data is copied by hand into the office's own files | Part 2, Q4 | The site's sheet is imported as it is, in Kurdish, Arabic or English headers. Or typed once on the entry line. |
-| Price, reward and route are set trip by trip | Part 2, Q4 | The rule card sets them once per job; a change is a new version from a date. Exceptions per trip are allowed and flagged. |
+| Site data is copied by hand into the office's own files | Part 2, Q4 | The site's sheet is imported as it is, in Kurdish, Arabic or English headers. Or entered once in the trip form. |
+| Price, reward and route are set trip by trip | Part 2, Q4 | The rule card sets them once per job, with a price per route; a change is a new line from a date. Exceptions per trip are allowed and flagged. |
 | Discharge data comes back late, sometimes only when the driver returns | Part 2, Q4 | Trips stay "estimated" until discharge; the storage list fills them in; nothing is paid on estimates. |
 | The transporter at loading is not the one who brings the papers | Part 4, D4 | The claimant is chosen when the papers come back. The trip's advance and fines stay with the trip. |
 | A fine larger than the pay | Part 4, D7 and D11 | The trip's negative amount is offset inside the claim; a negative claim is collected from the claimant. |
-| Fees paid for the carrier and taken back later | Part 4, D10 | Fee types on the rule card say whether each fee is taken back from the carrier and whether the customer pays it. |
+| Fees paid for the carrier and taken back later | Part 4, D10 | Each kind of fee says who pays it at the time, and who carries it in the end: the company, the carrier (taken back) or the customer. A fee the customer paid and the carrier gives back is owed back to the customer automatically. |
+| A paper that will never arrive blocks the job forever | Your review, 5.3.2 | "Paper not coming", with a reason and your approval; a received paper no longer blocks anything. |
+| Several people work on one job | Your review, 6.1 | One responsible person plus a team; "My jobs" shows each person their jobs. |
 | Remote settlements with the site's own figures, wrong payments, delays | Part 2, Q5 and part 12 | Import the site's sheet; see matches and differences per trip and per driver; approve once. |
 | Settlement journals typed by hand and wrong | Part 9, Q4 | Posting a claim and paying it create the journal entries; the accountant only reviews. |
 | Not knowing who did what | Part 11, Q1 | Every change records who, when, what it was before and after, and why. |
@@ -43,11 +47,13 @@ Today's roles are the starter set; step 6 rebuilds them around your five office 
 | Work | Suggested person | Role today |
 |---|---|---|
 | Set up cash boxes, limits, required papers | You or the administrator | Administrator |
+| Set up the kinds of fees | You or the accountant | Administrator |
 | Create jobs and fill in the rule card | Operations lead, checked by you | Administrator, or Operations plus the "Job rules" permission |
-| Enter or import loading, advances, discharge | Trip clerk (site or office) | Operations |
+| Be on a job's team | Anyone working on the job | Any role. Being on a team gives no extra rights. |
+| Enter or import loading, advances, discharge, tick fees | Trip clerk (site or office) | Operations |
 | Record papers, open claims | Documents and claims clerk | Finance (has the claims permission) |
-| Pay claims from a cash box | Cashier | Finance |
-| Approve large payments, waivers, site settlements | You | Administrator or anyone with "Approve" — never the person who asked |
+| Pay claims and fees from a cash box | Cashier | Finance |
+| Approve large payments, waivers, papers not coming, site settlements | You | Administrator or anyone with "Approve" — never the person who asked |
 | Review the books | Accountant | Accountant |
 
 Margins and the customer's price are visible only with the profit permission. Staff without it never see profit.
@@ -56,15 +62,15 @@ Margins and the customer's price are visible only with the profit permission. St
 
 ## 4. The whole flow at a glance
 
-1. Once: cash boxes, limits, job types and required papers, people.
-2. Create the job.
-3. Fill in its rule card: prices, rules, routes, fees.
-4. Trucks load: enter or import the trips, with advances.
+1. Once: cash boxes, limits, kinds of fees, job types and required papers, people.
+2. Create the job, with its team.
+3. Fill in its rule card: job-wide rules and prices by route.
+4. Trucks load: enter or import the trips, with advances and the fees each truck had.
 5. Trucks discharge: import the storage list or enter by hand.
 6. Corrections, if any, with a reason.
 7. A fine waiver, if you forgive a fine. Before the claim.
-8. Papers come back: open a claim, check, post.
-9. Pay the claim from a cash box, all or in parts.
+8. Papers come back: open a claim, check, post. A paper that will never come: "Paper not coming".
+9. Pay the claim from a cash box, all or in parts. Pay the fees in one payment.
 10. Sites that paid drivers themselves: import their sheet, compare, approve.
 11. You approve what waits in Approvals.
 12. Everything shows in the carrier's account, the cash box and the journal.
@@ -179,7 +185,8 @@ How the rules work together:
 
 - **They add up.** A Petroleum transportation job for North Oil Co under contract NOC-2026-14 needs the papers of all three: the job type's, North Oil Co's and the contract's.
 - **The same paper twice: the stricter one wins.** If one rule says "before completion" and another "before financial close", the paper is needed before completion.
-- **Every non-verified paper holds the job back.** A paper that is missing, received but not yet verified, rejected or expired shows in **What remains** and in the Next action until it is verified.
+- **Received is enough.** A paper that is received (verified or not) no longer holds anything back. A missing, rejected or expired paper shows in **What remains** and in the Next action until it arrives.
+- **A paper that will never come.** Use **Paper not coming** on its row (section 10). With your approval it counts as complete everywhere.
 - **Trip papers also guard claims.** A trip whose required papers are missing cannot go on a claim. Papers that arrive with the claim are ticked on the claim and recorded on every trip automatically.
 - **Changing a rule:** use **Require a document** again with the same paper, the same "For" and the same "Needed on", and pick the new "Needed before". To remove it, choose **Rule: Off**.
 
@@ -221,7 +228,7 @@ Use custom fields only for simple facts. Anything used in calculations, prices, 
 
 #### 5.3.4 Contracts
 
-A contract records a customer's agreement: **customer**, your **reference** (e.g. NOC-2026-14), a **title**, the **status** and the **valid from / to** dates.
+A contract records a customer's agreement: **customer**, your **reference** (e.g. NOC-2026-14), a **title**, the **status** and the **valid from / to** dates. Optionally the **payment terms** (days the customer has to pay) and **notes**.
 
 ![Adding a contract](img/s-07-add-contract.jpg)
 
@@ -232,6 +239,15 @@ What a contract is used for:
 - Prices are not set on the contract. A transport job's prices live on its own rule card (section 6); the contract only records the agreement.
 
 **Status:** **Draft** while it is being agreed, **Active** when it is in force, **Ended** when it is over. **End** on the contract's row stops new jobs from using it; jobs that already used it are not touched.
+
+On the contract's row:
+
+- **Files** — attach the signed contract and each amendment (PDF or photo). Open them from the same list. Only people who manage contracts can open them.
+
+![A contract's files](img/s-07b-contract-files.jpg)
+
+- **Edit** — change the title, dates, payment terms and notes. The change is recorded with who made it.
+- **Ending soon** — 30 days before the "valid to" date the home screen shows a reminder, so the contract is renewed or ended on time.
 
 Contracts are optional. Small, one-off or verbal work needs no contract.
 
@@ -266,13 +282,44 @@ Administration → Users & roles.
 
 The new permissions from step 2 are in the Money group: open and post claims, waive shortage fines, approve site settlements.
 
+### 5.5 Kinds of fees
+
+Setup → **Accounting & money** tab → **Kinds of fees**.
+
+![Kinds of fees](img/02b-setup-kinds-of-fees.jpg)
+
+Each kind of fee (visa, insurance, guarantee, entry slip, declaration, border commission, customs, and any you add) is set up once for all jobs. **Add a kind of fee**, or **Edit** on its row:
+
+![Adding a kind of fee](img/02c-setup-add-fee-kind.jpg)
+
+| Field | What it means |
+|---|---|
+| **Name** | As people say it, e.g. Visa. |
+| **Usual amount and currency** | Filled in when the fee is ticked on a trip; it can be changed on that trip. Leave it empty if it changes every time. |
+| **Per trip or per ton** | A fixed amount per truck, or an amount per ton loaded. |
+| **Who pays it at the time** | **The company** (from a cash box, through "Pay fees") or **the customer directly** (the company pays nothing). |
+| **Taken back from the carrier** | The carrier gives it back: it comes off the carrier's pay in the claim. |
+| **Billed to the customer** | The customer pays the company back for it on the invoice (step 5). |
+| **Account in the books** | Optional. Empty = the shared "Trip fees" account (5300 Permits and fees). Give a fee its own account only if the accountant wants it reported apart. |
+
+Who carries the fee in the end:
+
+| Paid at the time by | Taken back from carrier | Who carries it | What happens |
+|---|---|---|---|
+| The company | No | The company | A job cost. |
+| The company | Yes | The carrier | Comes off the claim. |
+| The company | No, but billed to customer | The customer | On the customer's invoice (step 5). |
+| The customer directly | Yes | Back to the customer | Comes off the carrier's claim and is **owed back to the customer** automatically (account 2400 "Fees to return to customers"). |
+
+**Fees are never added to trips automatically.** A kind of fee only becomes a cost when someone ticks it on a trip (section 7).
+
 ---
 
 ## 6. A job and its rule card
 
 ### 6.1 Create the job
 
-Click the **+** at the top of the side menu → New job. Only five things are needed: customer, job type, name, start date, responsible person.
+Click the **+** at the top of the side menu → New job. Only five things are needed: customer, job type, name, start date, responsible person. **+ Team (optional)** adds the other people who work on it.
 
 ![New job](img/06-new-job.jpg)
 
@@ -280,18 +327,25 @@ The job opens on its Overview with the **Next action**: the one thing the job is
 
 ![Job overview](img/07-job-overview.jpg)
 
+**The team.** Each job has one **responsible person**, who answers for it, and any number of **team members**. Change them from the job's Overview → **Team**. Being on a team gives no extra rights: what a person can do still comes from their role. A team member who is not allowed to change the rule card still cannot.
+
+![The job's team](img/07b-job-team.jpg)
+
+On the Jobs list, **My jobs** shows only the jobs where you are the responsible person or on the team.
+
 ### 6.2 The rule card
 
-Job → **Rules** tab → **New version**.
+Job → **Rules** tab. The card has two parts: **Job-wide rules** (this section) and **Prices by route** (6.3).
+
+**Job-wide rules** → **New version**.
 
 ![New rule card version](img/09-rules-new-version.jpg)
 
 | Field | What it means |
 |---|---|
 | From | The date this version starts. Trips loaded on or after it use it. |
-| Route | Leave empty for the whole job, or pick a route to give that route its own prices. |
 | Currency, unit | The job's currency and quantity unit, e.g. USD and MT. |
-| Carrier price, per ton or per trip | What the carrier earns. |
+| Carrier price, per ton or per trip | What the carrier earns on a route without its own price. Leave it empty if every route has its own. |
 | Reward per trip | Added to every trip's freight. |
 | Transporter commission | An amount per ton the transporter earns on top, if agreed. |
 | Allowance | Shortage per trip the carrier is not fined for, e.g. 0.15 MT. |
@@ -302,16 +356,23 @@ Job → **Rules** tab → **New version**.
 
 **A price change is a new version from a date.** Old trips keep the old price. Nothing already calculated changes behind your back.
 
-### 6.3 Routes and fees
+### 6.3 Prices by route
 
-Same tab, below the versions.
+Most of the time only the price and the reward differ between routes, sometimes the shortage allowance. So a route gets only those; everything else (fine, customer side, demurrage, advance limit) stays job-wide.
 
-![Setting a fee](img/10-rules-set-fee.jpg)
+**Set a route price** → route (pick one, or type a new route's name) → from date → carrier price → reward and allowance only if they differ from the job-wide ones.
 
-- **Routes**: where trucks load and discharge. Also created automatically from imported sheets.
-- **Fees**: visa, insurance, guarantee, entry slip, declaration, border commission, customs, and any new kind you add with "New kind of fee". Each fee has an amount from a date, per trip or per ton, and two switches: **taken back from the carrier**, and **billed to the customer**.
+![Setting a route price](img/10-rules-route-price.jpg)
+
+- One price for all carriers on that route.
+- Typed fresh on each job: prices are not copied from older jobs.
+- A change is a new line from a date. Older trips keep the price of their loading date.
+- A trip on a route with no price of its own uses the job-wide price.
+- Routes are also created from the trip form and from imported sheets; they then use the job-wide price until you set one.
 
 ![The finished rule card](img/11-rules-done.jpg)
+
+Fees are no longer on the rule card: they are set up once in Setup (5.5) and ticked on each trip (7.2).
 
 Tip from the owner's seat: fill in the rule card before the first truck loads. A trip loaded before any version exists shows "no rule" until one covers its date.
 
@@ -323,32 +384,37 @@ Job → **Trips** tab.
 
 ![Empty trips tab](img/12-trips-empty.jpg)
 
-There are four ways to enter trips. They all end in the same trips.
+There are three ways to enter trips. They all end in the same trips.
 
-### 7.1 The entry line — one truck at a time
+### 7.1 The trip form — one trip with everything
 
-The line at the top of the trips. You type only what changes per truck:
+**New trip** opens one screen with every field: manifest, route (or a new route's name), dates, quantities, driver, transporter, plate, a price or reward for this trip only, the transporter's cut, other deductions, notes, an advance with its cash box, and the fees.
 
-1. **Driver.** Names are suggested as you type. For a driver seen before, the plate fills in by itself.
-2. **Plate.**
-3. **Manifest.**
-4. **Loaded quantity**, then **Enter**.
+![Trip form](img/13-trip-form-filled.jpg)
 
-The trip is saved, it appears in the grid, and the cursor goes back to Driver for the next truck.
+A new driver, transporter or route is typed by name and created on save. An empty transporter means the driver works directly with you.
 
-![Entry line](img/14-entry-line-typed.jpg)
-
-The small boxes above the line repeat for every truck: load date, route, transporter, price and reward if different from the card, and the advance with its cash box. Change them once with **Change**; they stay until changed again. An empty transporter means the driver works directly with you.
-
-![Changing the repeated values](img/13-entry-line-change.jpg)
+![A trip direct with the driver](img/16-trip-dialog-new.jpg)
 
 ![After three trucks](img/15-trips-after-entry.jpg)
 
-### 7.2 The full form — one trip with everything
+### 7.2 Fees on a trip
 
-**New trip** opens one screen with every field: manifest, route, dates, quantities, driver, transporter, plate, a price or reward for this trip only, the transporter's cut, other deductions, notes, and an advance.
+At the bottom of the trip form, **Fees this trip had** lists every kind of fee. Tick only those this truck really had. The usual amount is filled in; change it if the paper says otherwise. Untick a fee to remove it.
 
-![Full trip form](img/16-trip-dialog-new.jpg)
+![Fees on a trip](img/14-trip-form-fees.jpg)
+
+- A fee marked "paid by the customer" costs the company nothing; if it is taken back from the carrier it is owed back to the customer.
+- A fee already paid (see "Pay fees") cannot be changed on the trip. Reverse its payment first.
+- An imported sheet can carry fee columns; they are ticked the same way.
+
+**One fee on many trucks.** Trips tab → **Add a fee to trips** → the kind of fee, the amount (empty = usual), and the manifest numbers, one per line. Trips that already have that fee are left as they are.
+
+![Adding a fee to many trips](img/19b-add-fee-to-trips.jpg)
+
+**Pay fees.** Trips tab → **Pay fees (n)** lists the fees the company still has to pay, by kind and currency. Open one kind, untick any fee you are not paying now, choose the cash box and the date → **Pay**. It is one payment out of the box; the books show each fee on its own job. Above the payment limit it waits for approval.
+
+![Paying fees](img/19c-pay-fees.jpg)
 
 ### 7.3 Import the site's sheet
 
@@ -383,7 +449,7 @@ A sheet import refuses advances above the card's limit; enter that one trip in t
 
 ### 7.6 What the cards above the grid tell you
 
-Trips loaded, on the way (not discharged, figures estimated), discharged, still to pay carriers with the advances already paid, total cost with fees, and the margin (profit permission only).
+Trips loaded, on the way (not discharged, figures estimated), discharged, still to pay carriers with the advances already paid, total cost with the fees the company pays, and the margin (profit permission only).
 
 ---
 
@@ -413,7 +479,7 @@ Once a trip is on a claim it is locked: its money has moved. To correct it, canc
 
 ### 8.4 How the money is calculated — worked example
 
-Trip H-402, from the screenshots: loaded 30.45 MT, discharged 30.1 MT.
+Trip H-402, from the screenshots: loaded 30.45 MT, discharged 30.1 MT, on the Erbil – Latakia route, which uses the job-wide price.
 
 | | Rule | Amount |
 |---|---|---|
@@ -423,7 +489,7 @@ Trip H-402, from the screenshots: loaded 30.45 MT, discharged 30.1 MT.
 | Freight | 30.1 × 70 | 2,107 |
 | Reward | per trip | + 10 |
 | Fine | 0.2 × 1,200 | − 240 |
-| Visa | taken back from the carrier | − 50 |
+| Visa | ticked on the trip, taken back from the carrier | − 50 |
 | **Earned** | | **1,827** |
 | Advance | paid at loading | − 500 |
 | **To pay** | | **1,327** |
@@ -460,11 +526,17 @@ The **Trips** page in the side menu shows all trips of all jobs with the same to
 
 ## 10. Papers
 
-Job → **Documents** tab shows every required paper per trip and its state: missing, received and waiting for verification, verified, rejected or expired.
+Job → **Documents** tab shows every required paper per trip and its state: missing, received, verified, rejected, expired, or not coming.
 
 ![Documents tab](img/27-documents-tab.jpg)
 
-You rarely need to record manifests here one by one: when a claim is opened, tick the papers that came with it and they are recorded on every trip of the claim. A received but not yet verified paper is a warning, not a block.
+You rarely need to record manifests here one by one: when a claim is opened, tick the papers that came with it and they are recorded on every trip of the claim. A received paper, verified or not, blocks nothing.
+
+**Paper not coming.** When a paper will never arrive (lost, the site never sends it), click **Paper not coming** on its row, write why, and **Send for approval**. It goes straight to Approvals; nobody approves their own request.
+
+![Paper not coming](img/27b-paper-not-coming.jpg)
+
+While it waits, the row shows "Waiting for approval". Once approved the paper counts as complete everywhere: the trip can be claimed and billed and the job can close. The money does not change. If rejected, the paper is missing as before.
 
 ---
 
@@ -514,7 +586,7 @@ Every manifest gets a result before anything is created:
 | Ready | Can be claimed; amount shown | — |
 | No such manifest in this job | Wrong number, or another job's trip | Check the paper |
 | No discharge data yet | Not discharged | Import or enter discharge |
-| Papers missing | A required paper is not there | Tick it if it came with the claim, or record it |
+| Papers missing | A required paper is not there | Tick it if it came with the claim, record it, or ask for "Paper not coming" |
 | Waiver waiting for approval | A fine waiver is undecided | Decide it in Approvals |
 | Already claimed | On another claim (number shown) | Nothing: it cannot be paid twice |
 | Already paid by settlement | Paid the old way, before claims existed | Nothing |
@@ -607,6 +679,8 @@ Side menu → **Approvals**. Everything waiting for a second person:
 - advances above a job's advance limit;
 - payments above the payment limit;
 - fine waivers;
+- papers not coming;
+- fee payments above the payment limit;
 - site settlements above the limit;
 - write-offs.
 
@@ -623,9 +697,11 @@ The books hold only real events. While trips are loading, the system calculates 
 | Event | What the books record |
 |---|---|
 | Advance paid | Cash box down; advance owed by that driver or transporter |
-| Claim posted | Trips' earnings as a job cost; fines and recovered fees against it; advances cleared; the claimant is owed the net |
+| Fees paid ("Pay fees") | Cash box down; each fee as a cost of its job, on the fee's account (or the shared 5300 Permits and fees) |
+| Claim posted | Trips' earnings as a job cost; fines against it; fees taken back from the carrier back to the fee's account; fees the customer paid and the carrier gave back owed to the customer (2400 Fees to return to customers); advances cleared; the claimant is owed the net |
 | Claim payment | Cash box down; the claimant is owed less |
 | Fine waiver | No entry of its own; the claim is smaller |
+| Paper not coming | No entry; the paper counts as complete |
 | Site settlement approved | A claim and a payment per driver, as above |
 | Claim cancelled | The claim's entry reversed |
 
@@ -656,7 +732,9 @@ Where to see it:
 | What waits for you | Side menu → Approvals (a dot shows when something waits) |
 | Cash box balances | Cash, bank & books |
 | Every booking | Journal |
-| Cash boxes, limits, papers | Setup |
+| Cash boxes, limits, papers, kinds of fees, contracts | Setup |
+| Fees still to pay | Job → Trips → Pay fees |
+| Your own jobs | Jobs → My jobs |
 | People and permissions | Users & roles |
 
 ![Claims page](img/44-claims-page.jpg)
@@ -672,6 +750,9 @@ The side menu is a strip of icons; move the mouse onto it to open it, or pin it 
 | A quantity or date was typed wrong | Open the trip, correct it, write the reason. If the trip is claimed, cancel the claim first, correct, claim again. |
 | The same manifest typed twice | The system refuses it. Check which trip is right. |
 | A trip shows "no rule" | Add a rule card version whose date covers the trip's loading date. |
+| A fee was ticked on the wrong trip | Untick it in the trip form. If it was already paid, reverse the fees payment first (on the payment), then untick. |
+| A fee was paid from the wrong box | Reverse the payment; the fees become unpaid again; pay them from the right box. |
+| A paper will never come | Paper not coming, with the reason, and approve it. |
 | A sheet is refused or columns are not read | The preview lists the columns it recognised. Rename the header to one of the recognised names, or ask for it to be added. |
 | A name in a sheet was spelled differently | It becomes a new person. Correct the trip to the right driver; names will be merged in a later step. |
 | An advance went out from the wrong cash box or in the wrong currency | Open the trip → History → "Reverse this advance" with the reason, then pay it again from the right box. Only before the trip is claimed. |
@@ -703,11 +784,11 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 
 ## 19. Try it — checklist
 
-1. Create a job for a real customer and fill in the rule card with your real prices.
-2. Add a route and two fees, one taken back from the carrier.
-3. Enter three trucks on the entry line, with an advance.
-4. Enter one trip in the full form, direct with the driver.
-5. Import a real loading sheet from a site.
+1. In Setup, check the kinds of fees: usual amounts, who pays, taken back from the carrier.
+2. Create a job for a real customer with a team of two, and find it under "My jobs" as the second person.
+3. Fill in the job-wide rules, and set a price for one route.
+4. Enter three trucks in the trip form, with an advance and the visa ticked; one of them direct with the driver.
+5. Import a real loading sheet from a site. Add a fee to all its trips at once, then pay the fees in one payment.
 6. Import a discharge list with manifest, date and quantity.
 7. Correct one trip and read its History.
 8. Use the chips and the column funnels to find trips with fines.
@@ -717,7 +798,9 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 12. Try to claim one of those manifests again.
 13. Import a site settlement sheet with one difference; approve it.
 14. Open the carrier's account and the journal and follow each entry back to its claim.
-15. Switch the language to Kurdish and Arabic and repeat one claim.
+15. Mark one manifest "Paper not coming" and approve it as a second user.
+16. Attach a contract's signed file in Setup and set its payment terms.
+17. Switch the language to Kurdish and Arabic and repeat one claim.
 
 ---
 
@@ -727,7 +810,7 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 |---|---|
 | Counting cash boxes; site differences landing on the site's box; daily rate; exchangers; paying in the other currency | Step 3 |
 | The accountant's review queue; the month-end accrual for trips waiting for papers | Step 4 |
-| Customer invoicing from the rule card; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card | Step 5 |
+| Customer invoicing from the rule card, with the fees billed to the customer and the fees owed back to the customer as invoice lines; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card | Step 5 |
 | Roles rebuilt around your staff; "my work" lists; your owner board and phone view | Step 6 |
 | Storage, shared overheads, staff and payroll, several companies | Step 7 |
 | Accident or contamination recovery charged to a carrier | To be scheduled |

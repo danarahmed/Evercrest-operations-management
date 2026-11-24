@@ -41,15 +41,16 @@ describe("document requirements", () => {
     await run(changeJobStatus, { jobId: j.id, status: "completed" });
   });
 
-  it("requires a verified manifest per trip before completion, and drives the next action", async () => {
+  it("requires a manifest per trip before completion (received is enough), and drives the next action", async () => {
     const j = await job(ids.customer, ids.ptr);
     const t = await dischargedTrip(j.id, "D1");
     const load = () => getJob(env.db, env.companyId, j.id);
     expect(await nextAction(env.db, await load())).toBe(`Waiting for Manifest for ${t.tripNo}`);
     await expect(run(changeJobStatus, { jobId: j.id, status: "completed" })).rejects.toMatchObject({ code: "validation" });
 
+    // Owner's rule: a received paper no longer holds the job back, even before it is checked.
     const d = await run(recordDocument, { documentTypeId: ids.manifest, entityType: "trip", entityId: t.id, reference: "MF-1001" });
-    expect(await nextAction(env.db, await load())).toBe(`Verify Manifest for ${t.tripNo}`);
+    expect(await nextAction(env.db, await load())).not.toMatch(/Manifest/);
     await run(reviewDocument, { documentId: d.id, decision: "verified" });
     // Manifest done → can complete, but the customer's certificate still blocks financial close
     await run(changeJobStatus, { jobId: j.id, status: "completed" });

@@ -123,17 +123,6 @@ await page.click("button:has-text('Save all rows')");
 await page.waitForSelector("table tbody tr:has-text('Grid Two')");
 assert.equal(await page.locator("table tbody tr:has-text('E2E-G1')").count(), 1);
 
-// The entry line: driver, plate, manifest, tons, Enter — saved without leaving the line; the plate repeats for a known driver
-const line = page.locator("form.entry-line .entry-fields");
-await line.locator("input[list=el-drivers]").fill("Hemin Aziz");
-assert.equal(await line.locator("label:has-text('Plate') input").inputValue(), "33 C 12345", "plate pre-filled from the driver's last trip");
-await line.locator("label:has-text('Manifest') input").fill("E2E-L1");
-await line.locator("label:has-text('Loaded') input").fill("33");
-await line.locator("label:has-text('Loaded') input").press("Enter");
-await page.waitForSelector("table tbody tr:has-text('E2E-L1')");
-await page.locator("form.entry-line .entry-saved").waitFor();
-assert.equal(await line.locator("label:has-text('Manifest') input").inputValue(), "", "line cleared for the next truck");
-
 // Filters: search narrows the rows and the totals follow
 await page.goto(`${trips}&q=Grid`);
 assert.equal(await page.locator("form.trip-filter-form tbody tr").count(), 2);

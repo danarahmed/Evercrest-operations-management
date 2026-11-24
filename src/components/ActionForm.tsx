@@ -9,7 +9,7 @@ import { type FormState, submitCommand } from "@/app/[locale]/actions";
  * "send for approval" when a limit is exceeded. Inside a dialog it closes the
  * dialog after a successful save.
  */
-export function ActionForm({ command, locale, idempotencyKey, submitLabel, summary, redirectTo, children, inline, variant = "primary", confirm }: {
+export function ActionForm({ command, locale, idempotencyKey, submitLabel, summary, redirectTo, children, inline, variant = "primary", confirm, approvalOnly }: {
   command: string;
   locale: string;
   idempotencyKey: string;
@@ -23,6 +23,8 @@ export function ActionForm({ command, locale, idempotencyKey, submitLabel, summa
   variant?: "primary" | "secondary" | "danger";
   /** Ask before submitting (irreversible or money-moving actions). */
   confirm?: string;
+  /** The command always needs approval (e.g. a fine waiver): the one button sends it straight to Approvals. */
+  approvalOnly?: boolean;
 }) {
   const t = useTranslations("Forms");
   const [state, action, pending] = useActionState<FormState, FormData>(submitCommand, {});
@@ -63,8 +65,8 @@ export function ActionForm({ command, locale, idempotencyKey, submitLabel, summa
       {state.ok && !inline && <div className="form-msg ok" role="status">{t("saved")}</div>}
       {state.warning && <div className="form-msg error" role="alert">{t(`warning_${state.warning}`)}</div>}
       <div className="form-actions">
-        <button className={`${btn}${inline ? " sm" : ""}`.trim() || undefined} type="submit" disabled={pending}>{pending ? t("saving") : submitLabel}</button>
-        {state.approvalRequired && (
+        <button className={`${btn}${inline ? " sm" : ""}`.trim() || undefined} type="submit" disabled={pending} {...(approvalOnly ? { name: "__mode", value: "approval" } : {})}>{pending ? t("saving") : submitLabel}</button>
+        {state.approvalRequired && !approvalOnly && (
           // The clicked button's name/value is part of the submitted form data.
           <button type="submit" name="__mode" value="approval" disabled={pending} className={inline ? "sm" : undefined}>{t("sendForApproval")}</button>
         )}

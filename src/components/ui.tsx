@@ -68,7 +68,7 @@ const TONES: Record<string, Tone> = {
   // trips
   planned: "neutral", loaded: "accent", discharged: "success",
   // documents
-  verified: "success", awaiting_verification: "warning", missing: "danger", rejected: "danger", expired: "danger", received: "warning",
+  verified: "success", waived: "success", awaiting_verification: "warning", missing: "danger", rejected: "danger", expired: "danger", received: "warning",
   // money
   posted: "success", reversed: "neutral", paid: "success", nothing: "neutral",
   // approvals

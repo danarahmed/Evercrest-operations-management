@@ -38,6 +38,14 @@ export default async function NewJob({ params }: { params: Promise<{ locale: str
               <label>{t("responsible")}<select name="responsibleUserId" required defaultValue={actor.userId}>{o.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
             </div>
             <label>{t("description")}<textarea name="description" rows={3} /></label>
+            {o.users.length > 1 && (
+              <details className="more">
+                <summary>+ {j("teamOptional")}</summary>
+                <fieldset className="checks" style={{ marginBlockStart: 10 }}><legend>{j("team")}</legend>
+                  {o.users.map((u) => <label key={u.id} className="check"><input type="checkbox" name="memberUserIds[]" value={u.id} />{u.name}</label>)}
+                </fieldset>
+              </details>
+            )}
             {(o.projects.length > 0 || o.contracts.length > 0) && (
               <details className="more">
                 <summary>+ {t("moreLinks")}</summary>

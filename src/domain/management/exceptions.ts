@@ -1,6 +1,6 @@
-import { and, eq, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { approvalRequests, documents, invoices, jobs, journalLines, moneyAccounts, payments, trips } from "@/db/schema";
+import { approvalRequests, contracts, documents, invoices, jobs, journalLines, moneyAccounts, payments, trips } from "@/db/schema";
 import { postingAccount } from "../accounting/posting";
 import { jobProfitability } from "../finance/invoices";
 import { statementDebts } from "../transport/statement-debts";
@@ -107,6 +107,16 @@ export async function exceptions(db: Db, companyId: string, today: string): Prom
   if (pending.n) out.push({ severity: "info", code: "approvals.pending", params: { count: String(pending.n) }, message: `${pending.n} request(s) waiting for approval.`, entity: { type: "approvals", id: companyId, label: "Approvals" } });
   const [unverified] = await db.select({ n: sql<number>`count(*)::int` }).from(documents).where(and(eq(documents.companyId, companyId), eq(documents.status, "received")));
   if (unverified.n) out.push({ severity: "info", code: "documents.unverified", params: { count: String(unverified.n) }, message: `${unverified.n} document(s) received but not yet verified.`, entity: { type: "documents", id: companyId, label: "Documents" } });
+
+  // A customer contract that ends within 30 days: time to renew it or to stop taking work under it.
+  const soon = new Date(`${today}T00:00:00Z`);
+  soon.setUTCDate(soon.getUTCDate() + 30);
+  const ending = await db
+    .select({ id: contracts.id, reference: contracts.reference, validTo: contracts.validTo })
+    .from(contracts)
+    .where(and(eq(contracts.companyId, companyId), eq(contracts.status, "active"), gte(contracts.validTo, today), lte(contracts.validTo, soon.toISOString().slice(0, 10))));
+  for (const c of ending)
+    out.push({ severity: "info", code: "contract.ending", params: { contract: c.reference, date: c.validTo! }, message: `Contract ${c.reference} ends on ${c.validTo}.`, entity: { type: "contracts", id: c.id, label: c.reference } });
 
   const rank = { critical: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]);

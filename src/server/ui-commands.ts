@@ -5,7 +5,7 @@ import { invoices, moneyAccounts, partnerRoles } from "@/db/schema";
 import { createWorkOrder, setWorkOrderStatus } from "@/domain/field/work-orders";
 import { billDeliveries, cancelDelivery, recordDelivery } from "@/domain/supply/deliveries";
 import { decideApproval } from "@/domain/approvals/approvals";
-import { attachDocumentFile, defineDocumentType, recordDocument, reviewDocument } from "@/domain/documents/documents";
+import { attachDocumentFile, defineDocumentType, recordDocument, reviewDocument, waiveDocument } from "@/domain/documents/documents";
 import { createInvoice } from "@/domain/finance/invoices";
 import { recordPayment, reversePayment } from "@/domain/finance/payments";
 import { changeJobStatus, createJob } from "@/domain/jobs/commands";
@@ -16,17 +16,18 @@ import { sendInvitation } from "./invites";
 import { createAccount, deleteAccount, postJournalEntry, reverseJournalEntry, setPeriodStatus, updateAccount } from "@/domain/accounting/ledger";
 import { exchangeCurrency, reverseExchange } from "@/domain/finance/exchange";
 import { createMoneyAccount, transferMoney } from "@/domain/finance/payments";
-import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities } from "@/domain/jobs/commands";
+import { createContract, createProject, defineJobType, setContractStatus, setJobCapabilities, updateContract, attachContractFile, setJobTeam } from "@/domain/jobs/commands";
 import { addActivity, setActivityStatus } from "@/domain/jobs/activities";
 import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jobs/custom-fields";
 import { setDocumentRequirement } from "@/domain/documents/documents";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { billTrips } from "@/domain/transport/billing";
+import { addFeeToTrips, payFees } from "@/domain/transport/fees";
 import { defineRate, endRate } from "@/domain/transport/rates";
 import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
 import { cancelPayStatement, collectStatementDebt, createPayStatement, payStatement, writeOffStatementDebt } from "@/domain/transport/statements";
 import { recordArrival } from "@/domain/transport/trips";
-import { defineFeeType, defineRoute, setJobFee, setTerms } from "@/domain/transport/terms";
+import { defineFeeType, defineRoute, setJobFee, setTerms, setRoutePrice } from "@/domain/transport/terms";
 import { applyTripImport, discardTripImport, saveTripRows } from "@/domain/transport/trip-import";
 import { saveTrip } from "@/domain/transport/trip-edit";
 import { cancelClaim, createClaim, payClaim, waiveFine } from "@/domain/transport/claims";
@@ -93,7 +94,8 @@ type After = (input: Record<string, unknown>, result: unknown) => Promise<void>;
  * Storage) and the command records it; if the command fails, the upload is removed.
  */
 export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?: Prepare; after?: After; file?: boolean }> = {
-  "jobs.create": { command: createJob },
+  "jobs.create": { command: createJob, prepare: async (_d, _a, i) => ({ ...i, memberUserIds: i.memberUserIds ?? [] }) },
+  "jobs.set_team": { command: setJobTeam, prepare: async (_d, _a, i) => ({ ...i, memberUserIds: i.memberUserIds ?? [] }) },
   "jobs.change_status": { command: changeJobStatus },
   "partners.create": { command: createPartner },
   "trips.create": { command: createTrip },
@@ -102,12 +104,26 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "trips.cancel": { command: cancelTrip },
   // The job's rule card. Checkboxes arrive as "on"; absent means false.
   "job_routes.define": { command: defineRoute },
+  "route_prices.set": { command: setRoutePrice, prepare: async (_d, _a, i) => ({ ...i, routeId: i.routeId || null, routeName: i.routeId ? null : i.routeName || null }) },
   "job_terms.set": { command: setTerms },
-  "fee_types.define": { command: defineFeeType, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on", active: i.active !== "off" }) },
+  "fee_types.define": { command: defineFeeType, prepare: async (_d, _a, i) => ({ ...i, id: i.id || undefined, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on", active: i.active !== "off" }) },
   "job_fees.set": { command: setJobFee, prepare: async (_d, _a, i) => ({ ...i, deductFromCarrier: i.deductFromCarrier === "on", billedToCustomer: i.billedToCustomer === "on" }) },
   "trip_imports.apply": { command: applyTripImport },
   // One screen per trip; an empty transporter field means "direct with the driver".
-  "trips.save": { command: saveTrip, prepare: async (_d, _a, i) => ({ ...i, ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) }) },
+  // Fees arrive as fee_<feeTypeId>=on with feeAmount_<feeTypeId>; the form marks feesShown=1 so an empty list means "no fees".
+  "trips.save": {
+    command: saveTrip,
+    prepare: async (_d, _a, i) => {
+      const fees = Object.keys(i).filter((k) => k.startsWith("fee_") && i[k] === "on").map((k) => ({ feeTypeId: k.slice(4), amount: (i[`feeAmount_${k.slice(4)}`] as string) || null }));
+      const rest = Object.fromEntries(Object.entries(i).filter(([k]) => !k.startsWith("fee_") && !k.startsWith("feeAmount_") && k !== "feesShown"));
+      return { ...rest, ...(i.feesShown === "1" ? { fees } : {}), ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) };
+    },
+  },
+  "trip_fees.add_many": {
+    command: addFeeToTrips,
+    prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || null, manifests: String(i.manifests ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean) }),
+  },
+  "fees.pay": { command: payFees, prepare: async (_d, _a, i) => ({ ...i, tripFeeIds: (i.tripFeeIds as string[] | undefined) ?? [] }) },
   // Grid rows arrive as parallel arrays (r_manifest[], r_driver[], …); empty rows are dropped; fee columns as f_<key>[].
   "trips.save_many": {
     command: saveTripRows,
@@ -146,6 +162,7 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "remote_settlements.discard": { command: discardRemoteSettlement },
   "payments.record": { command: recordPayment, prepare: currencyFromMoneyAccount },
   "documents.record": { command: recordDocument, file: true },
+  "documents.waive": { command: waiveDocument },
   "documents.attach_file": { command: attachDocumentFile, file: true },
   "documents.review": { command: reviewDocument },
   "documents.define_type": { command: defineDocumentType },
@@ -202,6 +219,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "activities.add": { command: addActivity },
   "activities.set_status": { command: setActivityStatus },
   "contracts.create": { command: createContract },
+  "contracts.update": { command: updateContract },
+  "contracts.attach_file": { command: attachContractFile, file: true },
   "contracts.set_status": { command: setContractStatus },
   "projects.create": { command: createProject },
   "documents.set_requirement": {

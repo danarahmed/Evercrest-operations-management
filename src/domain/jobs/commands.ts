@@ -1,7 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { businessPartners, contracts, jobActivities, jobs, jobTypes, partnerRoles, projects, users } from "@/db/schema";
+import { businessPartners, contractFiles, contracts, jobActivities, jobMembers, jobs, jobTypes, partnerRoles, projects, users } from "@/db/schema";
 import { type JobStatus } from "@/db/schema/jobs";
 import { requirePermission } from "@/server/authz";
 import { defineCommand } from "@/server/command";
@@ -23,6 +23,9 @@ async function assertPartnerRole(tx: Db, companyId: string, partnerId: string, r
   if (!p.role) throw new ValidationError(`Partner is not marked as a ${role}`, { partnerId });
 }
 
+/** Optional whole number of days (empty = not agreed). */
+const paymentDays = z.preprocess((v) => (v === "" || v === null || v === undefined ? null : Number(v)), z.number().int().min(0).max(365).nullable()).optional();
+
 export const createContract = defineCommand({
   name: "contracts.create",
   permission: "contracts.manage",
@@ -33,7 +36,8 @@ export const createContract = defineCommand({
     validFrom: isoDate.nullish(),
     validTo: isoDate.nullish(),
     status: z.enum(["draft", "active", "ended"]).default("draft"),
-    notes: z.string().nullish(),
+    notes: z.string().trim().nullish(),
+    paymentTermsDays: paymentDays,
   }),
   async handler({ tx, actor, audit }, input) {
     const [p] = await tx.select().from(businessPartners).where(and(eq(businessPartners.id, input.partnerId), eq(businessPartners.companyId, actor.companyId)));
@@ -55,6 +59,37 @@ export const createProject = defineCommand({
     const code = input.code ?? (await nextCode(tx, actor.companyId, "PRJ", 4, taken));
     const [row] = await tx.insert(projects).values({ ...input, code, companyId: actor.companyId }).returning();
     await audit({ action: "projects.create", entityType: "project", entityId: row.id, after: { ...input, code } });
+    return { id: row.id };
+  },
+});
+
+/** Correct a contract's title, dates, payment terms and notes. The customer and reference stay. */
+export const updateContract = defineCommand({
+  name: "contracts.update",
+  permission: "contracts.manage",
+  input: z.object({ contractId: uuid, title: z.string().trim().min(1), validFrom: isoDate.nullish(), validTo: isoDate.nullish(), notes: z.string().trim().nullish(), paymentTermsDays: paymentDays }),
+  async handler({ tx, actor, audit }, { contractId, ...input }) {
+    const [c] = await tx.select().from(contracts).where(and(eq(contracts.id, contractId), eq(contracts.companyId, actor.companyId)));
+    if (!c) throw new NotFound("contract", contractId);
+    if (input.validFrom && input.validTo && input.validTo < input.validFrom) throw new ValidationError("The end date cannot be before the start date");
+    const next = { title: input.title, validFrom: input.validFrom ?? null, validTo: input.validTo ?? null, notes: input.notes || null, paymentTermsDays: input.paymentTermsDays ?? null };
+    await tx.update(contracts).set(next).where(eq(contracts.id, contractId));
+    await audit({ action: "contracts.update", entityType: "contract", entityId: contractId, before: { title: c.title, validFrom: c.validFrom, validTo: c.validTo, notes: c.notes, paymentTermsDays: c.paymentTermsDays }, after: next });
+    return { id: contractId };
+  },
+});
+
+/** Keep the signed contract (or an amendment) with the contract: the file is already in private storage. */
+export const attachContractFile = defineCommand({
+  name: "contracts.attach_file",
+  permission: "contracts.manage",
+  input: z.object({ contractId: uuid, kind: z.enum(["signed", "amendment", "other"]).default("signed"), note: z.string().trim().nullish(), fileKey: z.string().min(1), fileName: z.string().min(1) }),
+  async handler({ tx, actor, audit }, input) {
+    if (!input.fileKey.startsWith(`${actor.companyId}/`)) throw new ValidationError("Invalid file");
+    const [c] = await tx.select().from(contracts).where(and(eq(contracts.id, input.contractId), eq(contracts.companyId, actor.companyId)));
+    if (!c) throw new NotFound("contract", input.contractId);
+    const [row] = await tx.insert(contractFiles).values({ ...input, note: input.note || null, companyId: actor.companyId, uploadedBy: actor.userId }).returning();
+    await audit({ action: "contracts.attach_file", entityType: "contract", entityId: c.id, after: { fileId: row.id, kind: input.kind, fileName: input.fileName } });
     return { id: row.id };
   },
 });
@@ -121,8 +156,10 @@ export const createJob = defineCommand({
     contractId: uuid.nullish(),
     branchId: uuid.nullish(),
     capabilities: capabilityList.optional(),
+    /** The people working on the job besides the main responsible person. */
+    memberUserIds: z.array(uuid).optional(),
   }),
-  async handler({ tx, actor, audit }, input) {
+  async handler({ tx, actor, audit }, { memberUserIds, ...input }) {
     await assertPartnerRole(tx, actor.companyId, input.customerId, "customer");
     const [type] = await tx.select().from(jobTypes).where(and(eq(jobTypes.id, input.jobTypeId), eq(jobTypes.companyId, actor.companyId)));
     if (!type) throw new NotFound("job_type", input.jobTypeId);
@@ -148,8 +185,42 @@ export const createJob = defineCommand({
     const steps = type.defaultActivities as string[];
     if (steps.length)
       await tx.insert(jobActivities).values(steps.map((title, i) => ({ companyId: actor.companyId, jobId: row.id, position: i + 1, title, createdBy: actor.userId })));
-    await audit({ action: "jobs.create", entityType: "job", entityId: row.id, after: { jobNo, ...input, capabilities } });
+    const team = await checkTeam(tx, actor.companyId, input.responsibleUserId, memberUserIds ?? []);
+    if (team.length) await tx.insert(jobMembers).values(team.map((userId) => ({ companyId: actor.companyId, jobId: row.id, userId, addedBy: actor.userId })));
+    await audit({ action: "jobs.create", entityType: "job", entityId: row.id, after: { jobNo, ...input, capabilities, team } });
     return { id: row.id, jobNo };
+  },
+});
+
+/** Active users of the company, without the main responsible person and without repeats. */
+async function checkTeam(tx: Db, companyId: string, responsibleUserId: string, memberUserIds: string[]) {
+  const wanted = [...new Set(memberUserIds)].filter((x) => x !== responsibleUserId);
+  if (!wanted.length) return [];
+  const found = await tx.select({ id: users.id, active: users.active }).from(users).where(and(eq(users.companyId, companyId), inArray(users.id, wanted)));
+  if (found.length !== wanted.length || found.some((u) => !u.active)) throw new ValidationError("Every team member must be an active user");
+  return wanted;
+}
+
+/**
+ * Who works on a job: the main responsible person and the team. Being on a job gives no rights;
+ * what each person may do still comes from their role's permissions.
+ */
+export const setJobTeam = defineCommand({
+  name: "jobs.set_team",
+  permission: "jobs.manage",
+  input: z.object({ jobId: uuid, responsibleUserId: uuid, memberUserIds: z.array(uuid).default([]) }),
+  async handler({ tx, actor, audit }, input) {
+    const job = await getJob(tx, actor.companyId, input.jobId);
+    if (LOCKED.includes(job.status)) throw new Conflict(`Job is ${job.status}`);
+    const [resp] = await tx.select().from(users).where(and(eq(users.id, input.responsibleUserId), eq(users.companyId, actor.companyId)));
+    if (!resp?.active) throw new ValidationError("Responsible person must be an active user");
+    const team = await checkTeam(tx, actor.companyId, input.responsibleUserId, input.memberUserIds);
+    const before = (await tx.select({ userId: jobMembers.userId }).from(jobMembers).where(eq(jobMembers.jobId, job.id))).map((r) => r.userId);
+    await tx.update(jobs).set({ responsibleUserId: input.responsibleUserId }).where(eq(jobs.id, job.id));
+    await tx.delete(jobMembers).where(eq(jobMembers.jobId, job.id));
+    if (team.length) await tx.insert(jobMembers).values(team.map((userId) => ({ companyId: actor.companyId, jobId: job.id, userId, addedBy: actor.userId })));
+    await audit({ action: "jobs.set_team", entityType: "job", entityId: job.id, before: { responsibleUserId: job.responsibleUserId, team: before }, after: { responsibleUserId: input.responsibleUserId, team } });
+    return { id: job.id };
   },
 });
 

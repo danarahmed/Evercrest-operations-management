@@ -25,6 +25,7 @@ function entityHref(locale: string, e: { type: string; id: string; label: string
     money_account: "/finance/accounts",
     approvals: "/approvals",
     documents: "/documents",
+    contracts: "/setup?tab=operations",
   };
   return map[e.type] ? `/${locale}${map[e.type]}` : null;
 }

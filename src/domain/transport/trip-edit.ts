@@ -12,7 +12,8 @@ import { getJob } from "../jobs/commands";
 import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
-import { feesOn, loadRuleCard, type RuleCard, routeByName, termsOn } from "./terms";
+import { feeChoice, setTripFeesTx } from "./fees";
+import { loadRuleCard, routeByName, termsOn } from "./terms";
 import { manifestKey } from "./trip-import";
 import { findOrCreateTruck, isSettled } from "./trips";
 
@@ -52,20 +53,11 @@ const tripInput = z.object({
   /** A new advance paid now (create or edit). */
   advanceAmount: optAmount,
   advanceMoneyAccountId: uuid.nullish(),
+  /** The fees this trip had, ticked by operations (left out = unchanged). Never added automatically. */
+  fees: z.array(feeChoice).optional(),
   reason: z.string().trim().max(500).nullish(),
 });
 export type TripInput = z.infer<typeof tripInput>;
-
-/** Replace the trip's rule-card fee lines with the card's fees in force on its loading date (entered lines are kept). */
-async function syncRuleFees(tx: Db, companyId: string, tripId: string, card: RuleCard, routeId: string | null, loadingDate: string | null) {
-  await tx.delete(tripFees).where(and(eq(tripFees.tripId, tripId), eq(tripFees.source, "rule")));
-  if (!loadingDate) return;
-  const entered = new Set((await tx.select({ feeTypeId: tripFees.feeTypeId }).from(tripFees).where(eq(tripFees.tripId, tripId))).map((f) => f.feeTypeId));
-  const rows = feesOn(card, routeId, loadingDate)
-    .filter((f) => !entered.has(f.feeTypeId))
-    .map((f) => ({ companyId, tripId, feeTypeId: f.feeTypeId, rate: f.amount, basis: f.basis, currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: f.billedToCustomer, source: "rule" as const }));
-  if (rows.length) await tx.insert(tripFees).values(rows);
-}
 
 export async function partnerByNameOrId(tx: Db, companyId: string, role: "driver" | "transporter", id: string | null | undefined, name: string | null | undefined, audit: (e: { action: string; entityType: string; entityId: string; after: unknown }) => Promise<void>) {
   if (id) {
@@ -184,7 +176,6 @@ export const saveTrip = defineCommand({
     };
 
     let tripId: string;
-    let feesStale = !existing;
     if (existing) {
       const before: Partial<Record<Tracked, unknown>> = {};
       const after: Partial<Record<Tracked, unknown>> = {};
@@ -198,7 +189,6 @@ export const saveTrip = defineCommand({
           after[k] = b;
         }
       }
-      feesStale = "loadingDate" in after || "routeId" in after;
       if (Object.keys(after).length) {
         await tx.update(trips).set(values).where(eq(trips.id, existing.id));
         await audit({ action: "trips.save", entityType: "trip", entityId: existing.id, before, after, reason: input.reason ?? null });
@@ -213,8 +203,12 @@ export const saveTrip = defineCommand({
       tripId = row.id;
       await audit({ action: "trips.save", entityType: "trip", entityId: tripId, after: { tripNo, ...values } });
     }
-    // The rule card's fees follow the trip (a new trip, or a changed loading date / route); fees typed from the papers stay.
-    if (feesStale) await syncRuleFees(tx, actor.companyId, tripId, card, routeId, loadingDate);
+    // The fees ticked for this trip (owner: fees are never added automatically).
+    if (input.fees !== undefined) {
+      const [saved] = await tx.select().from(trips).where(eq(trips.id, tripId));
+      const change = await setTripFeesTx(tx, actor.companyId, saved, input.fees);
+      if (change.changed) await audit({ action: "trips.fees", entityType: "trip", entityId: tripId, before: change.before, after: change.after, reason: input.reason ?? null });
+    }
 
     if (input.advanceAmount && dec(input.advanceAmount).gt(0)) {
       if (!caps.includes("advances")) throw new ValidationError("Advances are not enabled for this job");

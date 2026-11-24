@@ -17,7 +17,7 @@ import { Shell } from "../shell";
 export const dynamic = "force-dynamic";
 
 /** Every job, searchable. Active jobs by default. */
-export default async function JobsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ q?: string; status?: string; customer?: string; type?: string }> }) {
+export default async function JobsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ q?: string; status?: string; customer?: string; type?: string; mine?: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const actor = await currentActor(locale);
@@ -28,7 +28,7 @@ export default async function JobsPage({ params, searchParams }: { params: Promi
   const st = await getTranslations({ locale, namespace: "JobStatus" });
   const codes = await getTranslations({ locale, namespace: "Codes" });
   const sp = await searchParams;
-  const [rows, o] = await Promise.all([jobsList(db, actor, { q: sp.q, status: sp.status, customerId: sp.customer, typeId: sp.type }), formOptions(db, actor)]);
+  const [rows, o] = await Promise.all([jobsList(db, actor, { q: sp.q, status: sp.status, customerId: sp.customer, typeId: sp.type, mine: sp.mine === "1" }), formOptions(db, actor)]);
   return (
     <Shell permissions={actor.permissions} locale={locale} userName={user.displayName} path="/jobs">
       <PageHeader
@@ -47,6 +47,7 @@ export default async function JobsPage({ params, searchParams }: { params: Promi
         </label>
         <label>{t("customer")}<select name="customer" defaultValue={sp.customer ?? ""}><option value="">{t("allCustomers")}</option>{o.customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
         <label>{t("type")}<select name="type" defaultValue={sp.type ?? ""}><option value="">{t("allTypes")}</option>{o.jobTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label className="check self-center"><input type="checkbox" name="mine" value="1" defaultChecked={sp.mine === "1"} />{t("myJobs")}</label>
         <button type="submit"><Icon name="search" size={16} />{t("show")}</button>
       </form>
       <Card flush title={t("count", { count: rows.length })}>

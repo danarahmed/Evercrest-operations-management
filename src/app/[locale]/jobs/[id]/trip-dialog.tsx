@@ -86,6 +86,27 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                 </>)}
               </div>
             </fieldset>
+            {options.feeTypes.length > 0 && (
+              <fieldset disabled={locked}>
+                <legend>{t("feesLegend")}</legend>
+                <input type="hidden" name="feesShown" value="1" />
+                <p className="muted small !m-0 basis-full">{t("feesHelp")}</p>
+                <div className="grid2 basis-full">
+                  {options.feeTypes.map((ft) => {
+                    const has = detail?.fees.find((x) => x.feeTypeId === ft.id);
+                    return (
+                      <div key={ft.id} className="flex items-end gap-2">
+                        <label className="check min-w-0 flex-1 pb-2"><input type="checkbox" name={`fee_${ft.id}`} defaultChecked={!!has} disabled={!!has?.paymentId} />
+                          <span className="min-w-0">{ft.name}{has?.paymentId ? <span className="muted small"> · {t("feePaid")}</span> : ft.paidBy === "customer" ? <span className="muted small"> · {t("feeByCustomer")}</span> : null}</span>
+                        </label>
+                        {has?.paymentId && <input type="hidden" name={`fee_${ft.id}`} value="on" />}
+                        <label className="w-28 flex-none">{ft.defaultBasis === "per_trip" ? t("feeAmount") : t("feePerUnit")}<input name={`feeAmount_${ft.id}`} inputMode="decimal" dir="ltr" readOnly={!!has?.paymentId} defaultValue={has ? String(Number(has.rate)) : ft.defaultAmount ? String(Number(ft.defaultAmount)) : ""} /></label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
             <fieldset disabled={locked}>
               <legend>{t("later")}</legend>
               <div className="grid2">
@@ -134,7 +155,7 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                 <div className="card-body stack" style={{ gap: 10 }}>
                   {detail.waivers.map((w) => <div key={w.id} className="small"><strong>{m(w.amount, w.currency)}</strong> · {w.waiverDate} — <em className="muted">{w.reason}</em></div>)}
                   {detail.canWaive && (
-                    <ActionForm command="fines.waive" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("waiverSubmit")} summary={t("waiverSummary", { trip: trip?.manifestNo ?? trip?.tripNo ?? "" })} variant="secondary">
+                    <ActionForm approvalOnly command="fines.waive" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("waiverSubmit")} summary={t("waiverSummary", { trip: trip?.manifestNo ?? trip?.tripNo ?? "" })} variant="secondary">
                       <input type="hidden" name="tripId" value={trip!.id} />
                       <input type="hidden" name="waiverDate" value={new Date().toISOString().slice(0, 10)} />
                       <p className="muted small" style={{ margin: 0 }}>{t("waiverHelp", { fine: m(c.carrier.fine, c.currency) })}</p>

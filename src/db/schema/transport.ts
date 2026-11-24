@@ -105,8 +105,12 @@ export const tripFees = pgTable(
     currency: char("currency", { length: 3 }).notNull().references(() => currencies.code),
     deductFromCarrier: boolean("deduct_from_carrier").notNull(),
     billedToCustomer: boolean("billed_to_customer").notNull(),
-    /** rule = from the rule card; entered = typed/imported from the papers. */
+    /** rule = from the rule card (older trips); entered = ticked by operations or imported from the papers. */
     source: text("source", { enum: ["rule", "entered"] }).notNull(),
+    /** Who paid it at the time: the company (then it is paid from a cash box with "Pay fees") or the customer directly. */
+    paidBy: text("paid_by", { enum: ["company", "customer"] }).notNull().default("company"),
+    /** The "Pay fees" payment that paid this fee (company-paid fees only). */
+    paymentId: uuid("payment_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.tripId, t.feeTypeId), check("trip_fee_non_negative", sql`${t.rate} >= 0`)],

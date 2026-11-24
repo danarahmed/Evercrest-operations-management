@@ -28,6 +28,8 @@ export const contracts = pgTable(
     validTo: date("valid_to", { mode: "string" }),
     status: text("status", { enum: ["draft", "active", "ended"] }).notNull().default("draft"),
     notes: text("notes"),
+    /** Days the customer has to pay an invoice, as agreed (optional). */
+    paymentTermsDays: integer("payment_terms_days"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -164,4 +166,34 @@ export const customFields = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.companyId, t.key), check("scope_target", sql`(${t.scope} = 'all') = (${t.scopeId} is null)`)],
+);
+
+/** The signed contract and its amendments: scanned files kept with the contract (private storage). */
+export const contractFiles = pgTable(
+  "contract_files",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    contractId: uuid("contract_id").notNull().references(() => contracts.id),
+    kind: text("kind", { enum: ["signed", "amendment", "other"] }).notNull().default("signed"),
+    fileKey: text("file_key").notNull(),
+    fileName: text("file_name").notNull(),
+    note: text("note"),
+    uploadedBy: uuid("uploaded_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.contractId)],
+);
+
+/** The people working on a job besides its main responsible person. Gives no rights by itself. */
+export const jobMembers = pgTable(
+  "job_members",
+  {
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    addedBy: uuid("added_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.jobId, t.userId] }), index().on(t.userId)],
 );

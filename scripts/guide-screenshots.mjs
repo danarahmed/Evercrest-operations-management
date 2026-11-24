@@ -29,6 +29,9 @@ const logout = async () => { await p.hover("aside"); await p.click("button[aria-
 await login("Admin");
 await shot("01-home");
 await p.goto(`${base}/en/setup?tab=accounting`); await shot("02-setup-cash-boxes");
+await p.evaluate(() => { const h = [...document.querySelectorAll(".card-title")].find((e) => /Kinds of fees/.test(e.textContent)); window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 110); }); await shot("02b-setup-kinds-of-fees");
+await p.click("button:has-text('Add a kind of fee')"); await p.waitForSelector("dialog[open]"); await shot("02c-setup-add-fee-kind");
+await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 await p.goto(`${base}/en/setup?tab=settings`); await shot("03-setup-limits-rounding");
 await p.goto(`${base}/en/setup?tab=operations`); await shot("04-setup-papers", { fullPage: true });
 await p.goto(`${base}/en/admin`); await shot("05-users-roles");
@@ -43,6 +46,10 @@ await p.click("button:has-text('Create job')");
 await p.waitForURL(/\/en\/jobs\/[0-9a-f-]{36}$/);
 const job = p.url();
 await shot("07-job-overview");
+await p.click("button:has-text('Team')"); await p.waitForSelector("dialog[open]");
+await p.locator("dialog[open] label.check:not(:has-text('Admin')) input[name='memberUserIds[]']").first().check();
+await shot("07b-job-team");
+await p.locator("dialog[open] form .form-actions button").first().click(); await closed();
 
 // Rule card
 await p.goto(`${job}?tab=rules`);
@@ -59,53 +66,54 @@ if (await rf.locator("input[name=advanceNormal]").count()) await rf.locator("inp
 await rf.locator("input[name=advanceMax]").fill("900");
 await shot("09-rules-new-version");
 await rf.locator(submit).click(); await closed();
-// route
-await p.click("button:has-text('Add route')");
-const routeForm = p.locator("dialog[open] form:has(input[name=__command][value='job_routes.define'])");
-await routeForm.locator("input[name=name]").fill("Erbil – Latakia");
-await routeForm.locator(submit).click(); await closed();
-// a fee taken back from the carrier
-await p.click("button:has-text('Set fee')");
-const ff = p.locator("dialog[open] form:has(input[name=__command][value='job_fees.set'])");
-const visa = await ff.locator("select[name=feeTypeId] option", { hasText: "Visa" }).first().getAttribute("value");
-await ff.locator("select[name=feeTypeId]").selectOption(visa);
-await ff.locator("input[name=effectiveFrom]").fill(day(20));
-await ff.locator("input[name=amount]").fill("50");
-if (await ff.locator("input[name=deductFromCarrier]").count()) await ff.locator("input[name=deductFromCarrier]").check();
-await shot("10-rules-set-fee");
-await ff.locator(submit).click(); await closed();
+// a route with its own price (everything else stays job-wide)
+await p.click("button:has-text('Set a route price')");
+const rp = p.locator("dialog[open] form:has(input[name=__command][value='route_prices.set'])");
+await rp.locator("select[name=routeId]").selectOption("");
+await rp.locator("input[name=routeName]").fill("Erbil – Baniyas");
+await rp.locator("input[name=effectiveFrom]").fill(day(20));
+await rp.locator("input[name=carrierPrice]").fill("78");
+await rp.locator("input[name=rewardPerTrip]").fill("15");
+await shot("10-rules-route-price");
+await rp.locator(submit).click(); await closed();
 await p.goto(`${job}?tab=rules`);
 await shot("11-rules-done", { fullPage: true });
 
 // ---------- Trips ----------
 await p.goto(`${job}?tab=trips`);
 await shot("12-trips-empty");
-// change the sticky values on the entry line
-await p.click("details.entry-change > summary");
-const pop = p.locator("details.entry-change .entry-pop");
-await pop.locator("input[type=date]").fill(day(12));
-await pop.locator("input[list=el-routes]").fill("Erbil – Latakia");
-await pop.locator("input[list=el-transporters]").fill("Masoud Transport");
-await pop.locator("label:has-text('Advance') input").fill("500");
-await shot("13-entry-line-change");
-await p.keyboard.press("Escape");
-const line = p.locator("form.entry-line .entry-fields");
+// three trucks from the full form (transporter, route, advance), the first one with its visa ticked
 const trucks = [["Hemin Aziz", "22 C 32754", "H-401", "30.68"], ["Karwan Ali", "22 E 26642", "H-402", "30.4"], ["Aso Rahman", "22 C 32038", "H-403", "29.9"]];
+let tf;
 for (const [i, [d, plate, man, qty]] of trucks.entries()) {
-  await line.locator("input[list=el-drivers]").fill(d);
-  await line.locator("label:has-text('Plate') input").fill(plate);
-  await line.locator("label:has-text('Manifest') input").fill(man);
-  await line.locator("input[inputmode=decimal]").fill(qty);
-  if (i === 0) await shot("14-entry-line-typed");
-  await line.locator("input[inputmode=decimal]").press("Enter");
+  await p.click("a:has-text('New trip')");
+  tf = p.locator("dialog[open] form:has(input[name=__command][value='trips.save'])");
+  await tf.locator("input[name=manifestNo]").fill(man);
+  if (i === 0) { await tf.locator("select[name=routeId]").selectOption(""); await tf.locator("input[name=routeName]").fill("Erbil – Latakia"); }
+  else await tf.locator("select[name=routeId]").selectOption({ label: "Erbil – Latakia" });
+  await tf.locator("input[name=loadingDate]").fill(day(12));
+  await tf.locator("input[name=loadedQty]").fill(qty);
+  await tf.locator("input[name=driverName]").fill(d);
+  await tf.locator("input[name=transporterName]").fill("Masoud Transport");
+  await tf.locator("input[name=plate]").fill(plate);
+  await tf.locator("input[name=advanceAmount]").fill("500");
+  await tf.locator("select[name=advanceMoneyAccountId]").selectOption({ label: "Main safe USD (USD)" });
+  if (i === 0) {
+    await shot("13-trip-form-filled");
+    await tf.locator("label.check:has-text('Visa') input[type=checkbox]").check();
+    await tf.locator("fieldset:has(input[name=feesShown])").scrollIntoViewIfNeeded();
+    await shot("14-trip-form-fees");
+  }
+  await tf.locator(submit).click(); await closed();
   await p.waitForSelector(`table tbody tr:has-text('${man}')`);
 }
 await shot("15-trips-after-entry");
 
-// one trip from the full form, direct with the driver
+// one trip from the full form, direct with the driver, on the Baniyas route
 await p.click("a:has-text('New trip')");
-let tf = p.locator("dialog[open] form:has(input[name=__command][value='trips.save'])");
+tf = p.locator("dialog[open] form:has(input[name=__command][value='trips.save'])");
 await tf.locator("input[name=manifestNo]").fill("H-404");
+await tf.locator("select[name=routeId]").selectOption({ label: "Erbil – Baniyas" });
 await tf.locator("input[name=driverName]").fill("Dler Omer");
 await tf.locator("input[name=plate]").fill("21 K 10337");
 await tf.locator("input[name=loadingDate]").fill(day(11));
@@ -128,6 +136,20 @@ await p.selectOption("select[name=moneyAccountId]", { label: "Main safe USD (USD
 await shot("18-import-preview", { fullPage: true });
 await p.click("button:has-text('Create and update')"); await p.waitForURL(/tab=trips/);
 await shot("19-trips-after-import");
+// the visa on every other trip at once, then pay the visas in one payment
+await p.click("button:has-text('Add a fee to trips')");
+const af = p.locator("dialog[open] form:has(input[name=__command][value='trip_fees.add_many'])");
+await af.locator("select[name=feeTypeId]").selectOption(await af.locator("select[name=feeTypeId] option", { hasText: "Visa" }).first().getAttribute("value"));
+await af.locator("textarea[name=manifests]").fill("H-402\nH-403\nH-404\nH-405\nH-406\nH-407\nH-408");
+await shot("19b-add-fee-to-trips");
+await af.locator(submit).click(); await closed();
+await p.goto(`${job}?tab=trips`);
+await p.click("button:has-text('Pay fees')");
+await p.locator("dialog[open] details summary:has-text('Visa')").click();
+await p.locator("dialog[open] details[open] select[name=moneyAccountId]").selectOption({ label: "Main safe USD (USD)" }).catch(() => {});
+await shot("19c-pay-fees");
+await p.locator("dialog[open] details[open] form .form-actions button").first().click(); await closed();
+await p.goto(`${job}?tab=trips`);
 
 // discharge data comes back: re-import fills only discharge
 const disBook = new ExcelJS.Workbook(); const ds = disBook.addWorksheet("بەتاڵکردن");
@@ -178,9 +200,7 @@ await wf.locator("input[name=amount]").fill("1000");
 await wf.locator("input[name=reason]").fill("Road closed at the border for 3 days; tank checked");
 await wf.scrollIntoViewIfNeeded();
 await shot("26-waiver-request");
-await wf.locator(submit).click();
-await wf.locator(".form-msg.error", { hasText: "Approval needed" }).waitFor();
-await wf.locator("button:has-text('Send for approval')").click();
+await wf.locator(submit).click(); // always goes to approval: one click
 await p.waitForTimeout(800);
 // the waiver holds the trip back from claims until a second person decides
 await p.goto(`${job}?tab=claims&claimant=Zagros+Transport&m=H-406`);
@@ -197,6 +217,12 @@ await shot("26d-trip-waived");
 await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 
 // ---------- Documents ----------
+await p.goto(`${job}?tab=documents`);
+const nc0 = p.locator("tr:has(button:has-text('Paper not coming'))").first();
+await nc0.locator("button:has-text('Paper not coming')").click();
+await p.locator("dialog[open] input[name=reason]").fill("Original lost at the border; the customer accepts a copy");
+await shot("27b-paper-not-coming");
+await p.locator("dialog[open] form .form-actions button").first().click(); await closed();
 await p.goto(`${job}?tab=documents`);
 await shot("27-documents-tab", { fullPage: true });
 
@@ -259,7 +285,7 @@ await logout();
 await login("Finance Manager");
 await p.goto(`${base}/en/approvals`);
 await shot("38-approvals", { fullPage: true });
-for (let i = 0; i < 3; i++) {
+for (let i = 0; i < 5; i++) {
   const forms = p.locator("form:has(input[name=requestId])");
   if (!(await forms.count())) break;
   await forms.first().locator(submit).click();

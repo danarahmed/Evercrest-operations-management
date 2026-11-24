@@ -20,7 +20,8 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
   jobId: string;
   card: RuleCard;
   units: { code: string; name: string }[];
-  expenseAccounts: { id: string; code: string; name: string }[];
+  /** Kept for the page's call; fee types are set up in Setup now. */
+  expenseAccounts?: { id: string; code: string; name: string }[];
 }) {
   const t = await getTranslations({ locale, namespace: "Rules" });
   const f = await getTranslations({ locale, namespace: "Forms" });
@@ -29,9 +30,12 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
   const feeName = (id: string) => card.allFeeTypes.find((x) => x.id === id)?.name ?? "?";
   const plus = <Icon name="plus" size={16} />;
   const latest = [...card.terms].reverse();
-  const routeOptions = (
-    <label>{t("route")}<select name="routeId" defaultValue=""><option value="">{t("allRoutes")}</option>{card.routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
-  );
+  const job = latest.find((v) => v.routeId === null) ?? latest[0];
+  const unit = job?.unit ?? "MT";
+  const cur = job?.currency ?? "USD";
+  // Route lines, newest first per route; the first one of each route is the price in force today.
+  const byRoute = card.routes.map((r) => ({ route: r, lines: card.routePrices.filter((p) => p.routeId === r.id).sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom)) }));
+  const nowIso = today();
   const currencySelect = (
     <label>{f("currency")}<select name="currency" defaultValue="USD"><option value="USD">USD</option><option value="IQD">IQD</option></select></label>
   );
@@ -40,19 +44,56 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
     <div className="stack">
       {!card.terms.length && <div className="banner"><Icon name="info" /><div><div className="banner-label">{t("noRulesTitle")}</div><div>{t("noRulesHelp")}</div></div></div>}
 
+      <Card title={t("routePrices")} subtitle={t("routePricesHelp")} icon="map" flush actions={card.canManage && (
+        <Modal label={t("setRoutePrice")} variant="primary" icon={plus} small>
+          <p className="muted">{t("setRoutePriceHelp")}</p>
+          <ActionForm command="route_prices.set" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
+            <input type="hidden" name="jobId" value={jobId} />
+            <div className="grid2">
+              <label>{t("route")}<select name="routeId" defaultValue={card.routes[0]?.id ?? ""}><option value="">{t("newRoute")}</option>{card.routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+              <label>{t("newRouteName")} <span className="hint">{t("newRouteNameHint")}</span><input name="routeName" placeholder={t("routeExample")} /></label>
+              <label>{t("from")}<input type="date" name="effectiveFrom" required defaultValue={nowIso} /></label>
+              <label>{t("carrierPrice")} <span className="hint">{cur} / {unit}</span><input name="carrierPrice" required inputMode="decimal" dir="ltr" placeholder="70" /></label>
+              <label>{t("reward")} <span className="hint">{t("emptyJobWide")}</span><input name="rewardPerTrip" inputMode="decimal" dir="ltr" /></label>
+              <label>{t("allowance")} <span className="hint">{t("emptyJobWide")}</span><input name="carrierAllowance" inputMode="decimal" dir="ltr" /></label>
+            </div>
+            <label>{t("note")} <span className="hint">{f("optional")}</span><input name="note" /></label>
+          </ActionForm>
+        </Modal>
+      )}>
+        {!byRoute.length ? <EmptyState icon="map" title={t("noRoutes")} hint={t("noRoutesHint")} /> : (
+          <div className="table-wrap"><table className="dense">
+            <thead><tr><th>{t("route")}</th><th>{t("from")}</th><th className="num">{t("carrierPrice")} ({cur}/{unit})</th><th className="num">{t("reward")}</th><th className="num">{t("allowance")}</th><th>{t("note")}</th></tr></thead>
+            <tbody>{byRoute.flatMap(({ route, lines }) => {
+              if (!lines.length) return [<tr key={route.id}><td><strong>{route.name}</strong></td><td colSpan={5} className="muted">{t("usesJobWide")}</td></tr>];
+              const current = lines.find((l) => l.effectiveFrom <= nowIso) ?? lines[lines.length - 1];
+              return lines.map((l, i) => (
+                <tr key={l.id} className={l === current || l.effectiveFrom > nowIso ? "" : "muted"}>
+                  <td>{i === 0 ? <strong>{route.name}</strong> : null}</td>
+                  <td className="ltr">{l.effectiveFrom}{l.effectiveFrom > nowIso ? <> <Badge tone="info">{t("upcoming")}</Badge></> : l === current ? <> <Badge tone="success">{t("inForce")}</Badge></> : null}</td>
+                  <td className="num">{formatMoney(l.carrierPrice, cur, locale)}</td>
+                  <td className="num">{l.rewardPerTrip !== null ? formatMoney(l.rewardPerTrip, cur, locale) : <span className="muted">{t("jobWide")}</span>}</td>
+                  <td className="num">{l.carrierAllowance !== null ? formatQty(l.carrierAllowance, unit, locale) : <span className="muted">{t("jobWide")}</span>}</td>
+                  <td className="wrap muted">{l.note ?? ""}</td>
+                </tr>
+              ));
+            })}</tbody>
+          </table></div>
+        )}
+      </Card>
+
       <Card title={t("terms")} subtitle={t("termsHelp")} icon="sliders" flush actions={card.canManage && (
-        <Modal label={t("newVersion")} variant="primary" icon={plus} size="lg">
+        <Modal label={t("newVersion")} variant={card.terms.length ? "secondary" : "primary"} icon={plus} size="lg">
           <ActionForm command="job_terms.set" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
             <input type="hidden" name="jobId" value={jobId} />
             <div className="grid2">
               <label>{t("from")}<input type="date" name="effectiveFrom" required defaultValue={today()} /></label>
-              {routeOptions}
               {currencySelect}
               <label>{f("unit")}<select name="unit" defaultValue="MT">{units.map((u) => <option key={u.code} value={u.code}>{u.code}</option>)}</select></label>
             </div>
             <fieldset className="checks"><legend>{t("carrierSide")}</legend>
               <div className="grid2">
-                <label>{t("carrierPrice")}<input name="carrierPrice" inputMode="decimal" dir="ltr" placeholder="70" /></label>
+                <label>{t("carrierPrice")} <span className="hint">{t("jobWidePriceHint")}</span><input name="carrierPrice" inputMode="decimal" dir="ltr" placeholder="70" /></label>
                 <label>{t("basis")}<select name="carrierPriceBasis" defaultValue="per_unit"><option value="per_unit">{t("perUnit")}</option><option value="per_trip">{t("perTrip")}</option></select></label>
                 <label>{t("reward")}<input name="rewardPerTrip" inputMode="decimal" dir="ltr" defaultValue="0" /></label>
                 <label>{t("commission")}<input name="transporterCommission" inputMode="decimal" dir="ltr" defaultValue="0" /></label>
@@ -89,95 +130,28 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
         {!latest.length ? <EmptyState icon="sliders" title={t("noTerms")} /> : (
           <div className="table-wrap"><table className="dense">
             <thead><tr>
-              <th>{t("from")}</th><th>{t("route")}</th><th>{f("unit")}</th>
+              <th>{t("from")}</th><th>{f("unit")}</th>
               <th className="num">{t("carrierPrice")}</th><th className="num">{t("reward")}</th><th className="num">{t("allowance")}</th><th className="num">{t("finePrice")}</th>
               {card.showProfit && <th className="num">{t("customerPrice")}</th>}
-              <th>{t("demurrage")}</th><th className="num">{t("advanceNormal")}</th>
+              <th>{t("demurrage")}</th><th className="num">{t("advanceMax")}</th>
             </tr></thead>
             <tbody>{latest.map((v) => (
               <tr key={v.id}>
-                <td className="ltr">{v.effectiveFrom}</td><td>{routeName(v.routeId)}</td><td className="ltr">{v.currency} / {v.unit}</td>
+                <td className="ltr">{v.effectiveFrom}{v.routeId ? <div className="cell-sub">{routeName(v.routeId)}</div> : null}</td><td className="ltr">{v.currency} / {v.unit}</td>
                 <td className="num">{m(v.carrierPrice, v.currency)}{v.carrierPriceBasis === "per_trip" ? ` ${t("perTripShort")}` : ""}</td>
                 <td className="num">{m(v.rewardPerTrip, v.currency)}</td>
                 <td className="num">{formatQty(v.carrierAllowance, v.unit, locale)}</td>
                 <td className="num">{m(v.carrierFinePrice, v.currency)}</td>
                 {card.showProfit && <td className="num">{m(v.customerPrice, v.currency)}{v.customerPrice !== null && v.customerPriceBasis === "per_trip" ? ` ${t("perTripShort")}` : ""}</td>}
                 <td>{v.demurrageMethod === "none" ? <span className="muted">—</span> : `${t("dem_arrival_to_discharge")} · ${v.demurrageFreeDays} ${t("daysFree")} · ${formatMoney(v.carrierDemurrageRate, v.currency, locale)}`}</td>
-                <td className="num">{v.advanceNormal ? m(v.advanceNormal, v.currency) : <span className="muted">—</span>}</td>
+                <td className="num">{v.advanceMax ? m(v.advanceMax, v.currency) : <span className="muted">—</span>}</td>
               </tr>
             ))}</tbody>
           </table></div>
         )}
       </Card>
 
-      <div className="grid cols-2">
-        <Card title={t("routes")} subtitle={t("routesHelp")} icon="map" flush actions={card.canManage && (
-          <Modal label={t("addRoute")} icon={plus} small>
-            <ActionForm command="job_routes.define" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
-              <input type="hidden" name="jobId" value={jobId} />
-              <label>{t("routeName")}<input name="name" required placeholder={t("routeExample")} /></label>
-              <div className="grid2">
-                <label>{t("loadingPlace")}<input name="loadingPlace" /></label>
-                <label>{t("dischargePlace")}<input name="dischargePlace" /></label>
-              </div>
-            </ActionForm>
-          </Modal>
-        )}>
-          {!card.routes.length ? <EmptyState icon="map" title={t("noRoutes")} /> : (
-            <div className="table-wrap"><table className="dense">
-              <thead><tr><th>{t("route")}</th><th>{t("loadingPlace")}</th><th>{t("dischargePlace")}</th></tr></thead>
-              <tbody>{card.routes.map((r) => <tr key={r.id}><td><strong>{r.name}</strong></td><td>{r.loadingPlace ?? "—"}</td><td>{r.dischargePlace ?? "—"}</td></tr>)}</tbody>
-            </table></div>
-          )}
-        </Card>
-
-        <Card title={t("fees")} subtitle={t("feesHelp")} icon="receipt" flush actions={card.canManage && (<>
-          <Modal label={t("setFee")} variant="primary" icon={plus} small>
-            <ActionForm command="job_fees.set" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
-              <input type="hidden" name="jobId" value={jobId} />
-              <div className="grid2">
-                <label>{t("fee")}<select name="feeTypeId" required>{card.allFeeTypes.filter((x) => x.active).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-                <label>{t("from")}<input type="date" name="effectiveFrom" required defaultValue={today()} /></label>
-                <label>{f("amount")} <span className="hint">{t("zeroEnds")}</span><input name="amount" required inputMode="decimal" dir="ltr" /></label>
-                {currencySelect}
-                <label>{t("basis")}<select name="basis" defaultValue="per_trip"><option value="per_trip">{t("perTrip")}</option><option value="per_loaded_unit">{t("perLoadedUnit")}</option><option value="per_net_unit">{t("perNetUnit")}</option></select></label>
-                {routeOptions}
-              </div>
-              <label className="check"><input type="checkbox" name="deductFromCarrier" />{t("deductFromCarrier")}</label>
-              {card.showProfit && <label className="check"><input type="checkbox" name="billedToCustomer" />{t("billedToCustomer")}</label>}
-            </ActionForm>
-          </Modal>
-          <Modal label={t("newFeeType")} small>
-            <ActionForm command="fee_types.define" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
-              <p className="muted !m-0">{t("newFeeTypeHelp")}</p>
-              <div className="grid2">
-                <label>{f("name")}<input name="name" required /></label>
-                <label>{t("basis")}<select name="defaultBasis" defaultValue="per_trip"><option value="per_trip">{t("perTrip")}</option><option value="per_loaded_unit">{t("perLoadedUnit")}</option><option value="per_net_unit">{t("perNetUnit")}</option></select></label>
-                <label>{t("expenseAccount")}<select name="expenseAccountId" defaultValue=""><option value="">{f("choose")}</option>{expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
-              </div>
-              <label className="check"><input type="checkbox" name="deductFromCarrier" />{t("deductFromCarrier")}</label>
-              {card.showProfit && <label className="check"><input type="checkbox" name="billedToCustomer" />{t("billedToCustomer")}</label>}
-            </ActionForm>
-          </Modal>
-        </>)}>
-          {!card.fees.length ? <EmptyState icon="receipt" title={t("noFees")} /> : (
-            <div className="table-wrap"><table className="dense">
-              <thead><tr><th>{t("fee")}</th><th>{t("from")}</th><th>{t("route")}</th><th className="num">{f("amount")}</th><th>{t("basis")}</th><th></th></tr></thead>
-              <tbody>{[...card.fees].reverse().map((x) => (
-                <tr key={x.id}>
-                  <td><strong>{feeName(x.feeTypeId)}</strong></td><td className="ltr">{x.effectiveFrom}</td><td>{routeName(x.routeId)}</td>
-                  <td className="num">{formatMoney(x.amount, x.currency, locale)}</td>
-                  <td>{x.basis === "per_trip" ? t("perTrip") : x.basis === "per_loaded_unit" ? t("perLoadedUnit") : t("perNetUnit")}</td>
-                  <td className="chips">
-                    {x.deductFromCarrier && <Badge tone="warning" plain>{t("deductedShort")}</Badge>}
-                    {card.showProfit && x.billedToCustomer && <Badge tone="success" plain>{t("billedShort")}</Badge>}
-                  </td>
-                </tr>
-              ))}</tbody>
-            </table></div>
-          )}
-        </Card>
-      </div>
+      <div className="alert info flex items-start gap-3"><Icon name="info" size={18} /><div>{t("feesMoved")}</div></div>
     </div>
   );
 }

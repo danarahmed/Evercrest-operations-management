@@ -97,7 +97,7 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
   const feesBy = new Map<string, FeeForCalc[]>();
   for (const fee of feeRows) {
     const list = feesBy.get(fee.tripId) ?? [];
-    list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: fee.billedToCustomer });
+    list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: fee.billedToCustomer, paidBy: fee.paidBy });
     feesBy.set(fee.tripId, list);
   }
   const [advances, waivers, claimed] = await Promise.all([advancesByTrip(db, ids), waiversByTrip(db, ids), claimsByTrip(db, ids)]);

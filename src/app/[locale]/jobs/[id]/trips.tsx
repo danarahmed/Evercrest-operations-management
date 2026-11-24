@@ -7,7 +7,6 @@ import { Icon } from "@/components/icons";
 import { Modal } from "@/components/Modal";
 import { ColumnHeader } from "@/components/trips/ColumnFilter";
 import { ColumnPicker } from "@/components/trips/ColumnPicker";
-import { EntryLine } from "@/components/trips/EntryLine";
 import { TripGrid } from "@/components/trips/TripGrid";
 import { Badge, Card, EmptyState, Stat } from "@/components/ui";
 import { TRIP_CHIPS, type TripFilters, type TripSort } from "@/domain/transport/trip-view";
@@ -94,10 +93,6 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
         )}
         {actions}
       </>}>
-        {view.canEdit && jobId && (
-          <EntryLine locale={locale} jobId={jobId} lists={{ routes: options.routes.map((r) => r.name), transporters: options.transporters.map((r) => r.name), drivers: options.drivers.map((d) => ({ name: d.name, plate: d.plate })) }}
-            moneyAccounts={moneyAccounts} advancesEnabled={advancesEnabled} defaults={{ loadingDate: gridDefaults.loadingDate, route: gridDefaults.route, transporter: gridDefaults.transporter }} currency={currency} />
-        )}
         <form method="get" className="trip-filter-form">
           {Object.entries(baseParams).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
           {filters.sort && <input type="hidden" name="sort" value={filters.sort} />}

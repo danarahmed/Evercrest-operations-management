@@ -1,8 +1,9 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { journalLines, customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
-import { documentChecklist } from "@/domain/documents/documents";
+import { feeTypes, tripFees, contractFiles, jobMembers, journalLines, customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
+import { documentChecklist, pendingPaperWaivers } from "@/domain/documents/documents";
+import { unpaidFees } from "@/domain/transport/fees";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
 import { auditLog, jobHistory } from "@/domain/management/history";
 import { jobBreakdown, jobProfitReport, jobTransactions, monthlySummary, totalsByCurrency, workQueues } from "@/domain/management/reports";
@@ -101,7 +102,10 @@ export async function jobWorkspace(db: Db, actor: Actor, jobId: string) {
     nextAction: await nextActionInfo(db, job),
     blockers: await jobBlockers(db, job),
     trips: tripsView,
+    team: await db.select({ id: users.id, name: users.displayName }).from(jobMembers).innerJoin(users, eq(users.id, jobMembers.userId)).where(eq(jobMembers.jobId, job.id)).orderBy(users.displayName),
     documents: await documentChecklist(db, job),
+    /** Papers with a "paper not coming" request waiting for approval (`${documentTypeId}:${entityId}`). */
+    papersPending: [...(await pendingPaperWaivers(db, actor.companyId))],
     // Financial figures only for people allowed to see them.
     // Profit and margins are for the owner and the people he allows (owner's rule: staff never see profit).
     profitability: can(actor, "profit.view") ? await jobProfitability(db, job.id) : null,
@@ -143,6 +147,8 @@ export async function formOptions(db: Db, actor: Actor) {
       .where(and(eq(accounts.companyId, actor.companyId), eq(accounts.type, "expense"), eq(accounts.postable, true), eq(accounts.active, true)))
       .orderBy(accounts.code),
     users: await db.select({ id: users.id, name: users.displayName }).from(users).where(and(eq(users.companyId, actor.companyId), eq(users.active, true))).orderBy(users.displayName),
+    /** The kinds of fees operations tick on a trip (set up in Setup → Accounting & money). */
+    feeTypes: await db.select({ id: feeTypes.id, name: feeTypes.name, defaultAmount: feeTypes.defaultAmount, defaultCurrency: feeTypes.defaultCurrency, defaultBasis: feeTypes.defaultBasis, paidBy: feeTypes.paidBy, deductFromCarrier: feeTypes.deductFromCarrier, billedToCustomer: feeTypes.billedToCustomer }).from(feeTypes).where(and(eq(feeTypes.companyId, actor.companyId), eq(feeTypes.active, true))).orderBy(feeTypes.name),
   };
 }
 export type FormOptions = Awaited<ReturnType<typeof formOptions>>;
@@ -234,6 +240,9 @@ export async function setupData(db: Db, actor: Actor) {
     /** Asset accounts restricted to one currency: the only valid backing for a cash box or bank account. */
     cashLedgerAccounts: accountList.filter((a) => a.type === "asset" && a.postable && a.currency),
     postableAccounts: accountList.filter((a) => a.postable && a.active),
+    /** The kinds of fees (set up here; ticked on each trip). */
+    feeTypes: has("job_terms.manage") ? await db.select().from(feeTypes).where(eq(feeTypes.companyId, c)).orderBy(feeTypes.name) : null,
+    expenseAccounts: accountList.filter((a) => a.type === "expense" && a.postable && a.active),
     settings: has("settings.manage")
       ? {
           posting: (await getSetting(db, c, "accounting.posting_accounts")) ?? {},
@@ -245,6 +254,10 @@ export async function setupData(db: Db, actor: Actor) {
     contracts: has("contracts.manage")
       ? await db.select({ c: contracts, partner: businessPartners.name }).from(contracts).innerJoin(businessPartners, eq(businessPartners.id, contracts.partnerId)).where(eq(contracts.companyId, c)).orderBy(desc(contracts.createdAt))
       : null,
+    /** The scanned contracts and amendments, newest first (opened only through /api/contracts/files/[id]). */
+    contractFiles: has("contracts.manage")
+      ? await db.select({ id: contractFiles.id, contractId: contractFiles.contractId, kind: contractFiles.kind, fileName: contractFiles.fileName, note: contractFiles.note, createdAt: contractFiles.createdAt }).from(contractFiles).where(eq(contractFiles.companyId, c)).orderBy(desc(contractFiles.createdAt))
+      : [],
     projects: has("projects.manage")
       ? await db.select({ p: projects, customer: businessPartners.name, contract: contracts.reference }).from(projects).innerJoin(businessPartners, eq(businessPartners.id, projects.customerId)).leftJoin(contracts, eq(contracts.id, projects.contractId)).where(eq(projects.companyId, c)).orderBy(desc(projects.createdAt))
       : null,
@@ -528,13 +541,15 @@ export async function dashboardKpis(db: Db, actor: Actor) {
 }
 
 /** All jobs with simple filters (search by number/name/customer, status, customer, type). */
-export async function jobsList(db: Db, actor: Actor, f: { q?: string; status?: string; customerId?: string; typeId?: string }) {
+export async function jobsList(db: Db, actor: Actor, f: { q?: string; status?: string; customerId?: string; typeId?: string; mine?: boolean }) {
   requirePermission(actor, "jobs.view");
   const conds = [eq(jobs.companyId, actor.companyId)];
   if (f.status === "active" || !f.status) conds.push(inArray(jobs.status, ["draft", "open", "in_progress", "pending", "completed"]));
   else if (f.status !== "all") conds.push(eq(jobs.status, f.status as (typeof jobs.$inferSelect)["status"]));
   if (f.customerId) conds.push(eq(jobs.customerId, f.customerId));
   if (f.typeId) conds.push(eq(jobs.jobTypeId, f.typeId));
+  // "My jobs": the person is the main responsible or on the team.
+  if (f.mine) conds.push(sql`(${jobs.responsibleUserId} = ${actor.userId} or exists (select 1 from ${jobMembers} where ${jobMembers.jobId} = ${jobs.id} and ${jobMembers.userId} = ${actor.userId}))`);
   if (f.q) conds.push(sql`(${jobs.jobNo} ilike ${`%${f.q}%`} or ${jobs.name} ilike ${`%${f.q}%`} or ${businessPartners.name} ilike ${`%${f.q}%`})`);
   const rows = await db
     .select({ job: jobs, customer: businessPartners.name, type: jobTypes.name, responsible: users.displayName })
@@ -692,7 +707,8 @@ export async function tripDetail(db: Db, actor: Actor, tripId: string) {
   const history = await tripHistory(db, actor.companyId, tripId);
   const [transporter] = trip.transporterId ? await db.select({ name: businessPartners.name }).from(businessPartners).where(eq(businessPartners.id, trip.transporterId)) : [];
   const waivers = await tripWaivers(db, tripId);
-  return { trip, line, history, waivers, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canReverse: can(actor, "payments.reverse"), canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
+  const fees = await db.select().from(tripFees).where(eq(tripFees.tripId, tripId));
+  return { trip, line, history, waivers, fees, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canReverse: can(actor, "payments.reverse"), canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
 }
 
 /** A staged sheet with what applying it would do. */
@@ -705,4 +721,11 @@ export async function tripImportPreview(db: Db, actor: Actor, importId: string) 
   // Advances in the sheet are in the job's currency (the rule card's), not the first cash box's.
   const currency = card.terms.at(-1)?.currency ?? null;
   return { imp, job, plan, rows: imp.rows as ImportRow[], currency };
+}
+
+/** Fees the company still has to pay on a job's trips (for "Pay fees"). */
+export async function jobUnpaidFees(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  if (!can(actor, "payments.create")) return [];
+  return unpaidFees(db, actor.companyId, jobId);
 }

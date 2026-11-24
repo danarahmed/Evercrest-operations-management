@@ -62,3 +62,24 @@ export const documents = pgTable(
   },
   (t) => [index().on(t.companyId, t.entityType, t.entityId), index().on(t.jobId)],
 );
+
+/**
+ * A required paper that will never come, accepted with a reason and the owner's approval.
+ * From then on the requirement counts as met everywhere (claims, completion, close).
+ */
+export const documentWaivers = pgTable(
+  "document_waivers",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    documentTypeId: uuid("document_type_id").notNull().references(() => documentTypes.id),
+    entityType: text("entity_type", { enum: ["job", "trip"] }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    reason: text("reason").notNull(),
+    requestedBy: uuid("requested_by").notNull().references(() => users.id),
+    approvedBy: uuid("approved_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.documentTypeId, t.entityType, t.entityId), index().on(t.jobId)],
+);

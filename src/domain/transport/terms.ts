@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, ALLOWANCE_BASES, DEMURRAGE_METHODS, FEE_BASES, feeTypes, jobFees, jobRoutes, jobTerms, PRICE_BASES, QUANTITY_BASES } from "@/db/schema";
+import { accounts, ALLOWANCE_BASES, DEMURRAGE_METHODS, FEE_BASES, FEE_PAYERS, feeTypes, jobFees, jobRoutes, jobTerms, PRICE_BASES, QUANTITY_BASES, routePrices } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { NotFound, ValidationError } from "@/server/errors";
 import { amountString, currencyCode } from "../currency";
@@ -25,6 +25,7 @@ const optAmount = amountString.nullish();
 export type JobTerms = typeof jobTerms.$inferSelect;
 export type JobFee = typeof jobFees.$inferSelect;
 export type FeeType = typeof feeTypes.$inferSelect;
+export type RoutePrice = typeof routePrices.$inferSelect;
 
 async function assertRoute(tx: Db, jobId: string, routeId: string | null | undefined) {
   if (!routeId) return;
@@ -106,6 +107,52 @@ export const setTerms = defineCommand({
   },
 });
 
+/**
+ * A route's own price from a date: carrier price, reward and (optionally) the shortage allowance.
+ * The route can be new (typed by name). Setting the same route and date again replaces that line.
+ */
+export const setRoutePrice = defineCommand({
+  name: "route_prices.set",
+  permission: "job_terms.manage",
+  input: z.object({
+    jobId: uuid,
+    routeId: uuid.nullish(),
+    routeName: z.string().trim().nullish(),
+    loadingPlace: z.string().trim().nullish(),
+    dischargePlace: z.string().trim().nullish(),
+    effectiveFrom: isoDate,
+    carrierPrice: amountString,
+    rewardPerTrip: optAmount,
+    carrierAllowance: optAmount,
+    note: z.string().trim().nullish(),
+  }),
+  async handler({ tx, actor, audit }, input) {
+    await getJob(tx, actor.companyId, input.jobId);
+    let routeId = input.routeId ?? null;
+    if (routeId) await assertRoute(tx, input.jobId, routeId);
+    else if (input.routeName) {
+      const { route, created } = await routeByName(tx, actor.companyId, input.jobId, input.routeName, input);
+      if (created) await audit({ action: "job_routes.define", entityType: "job_route", entityId: route.id, after: { name: route.name } });
+      routeId = route.id;
+    } else throw new ValidationError("Choose the route or type its name");
+    const values = {
+      companyId: actor.companyId,
+      jobId: input.jobId,
+      routeId,
+      effectiveFrom: input.effectiveFrom,
+      carrierPrice: input.carrierPrice,
+      rewardPerTrip: input.rewardPerTrip || null,
+      carrierAllowance: input.carrierAllowance || null,
+      note: input.note || null,
+      createdBy: actor.userId,
+    };
+    const [prev] = await tx.select().from(routePrices).where(and(eq(routePrices.routeId, routeId), eq(routePrices.effectiveFrom, input.effectiveFrom)));
+    const [row] = prev ? await tx.update(routePrices).set(values).where(eq(routePrices.id, prev.id)).returning() : await tx.insert(routePrices).values(values).returning();
+    await audit({ action: "route_prices.set", entityType: "job_route", entityId: routeId, before: prev ?? null, after: values });
+    return { id: row.id, routeId };
+  },
+});
+
 export const defineFeeType = defineCommand({
   name: "fee_types.define",
   permission: "job_terms.manage",
@@ -114,12 +161,20 @@ export const defineFeeType = defineCommand({
     id: uuid.optional(),
     name: z.string().trim().min(1),
     defaultBasis: z.enum(FEE_BASES).default("per_trip"),
+    /** The usual amount, filled in when the fee is ticked on a trip. */
+    defaultAmount: optAmount,
+    defaultCurrency: currencyCode.nullish(),
+    /** Who pays it at the time: the company (paid later with "Pay fees") or the customer directly. */
+    paidBy: z.enum(FEE_PAYERS).default("company"),
     deductFromCarrier: z.boolean().default(false),
     billedToCustomer: z.boolean().default(false),
     expenseAccountId: uuid.nullish(),
     active: z.boolean().default(true),
   }),
-  async handler({ tx, actor, audit }, input) {
+  async handler({ tx, actor, audit }, given) {
+    // A fee the customer paid directly is never billed to them again.
+    const input = { ...given, defaultAmount: given.defaultAmount || null, defaultCurrency: given.defaultCurrency || null, expenseAccountId: given.expenseAccountId || null, billedToCustomer: given.paidBy === "company" && given.billedToCustomer };
+    if (input.defaultAmount && !input.defaultCurrency) throw new ValidationError("Choose the currency of the usual amount");
     if (input.expenseAccountId) {
       const [acc] = await tx.select().from(accounts).where(and(eq(accounts.id, input.expenseAccountId), eq(accounts.companyId, actor.companyId)));
       if (!acc || acc.type !== "expense" || !acc.postable) throw new ValidationError("Choose a postable expense account");
@@ -185,13 +240,14 @@ export const setJobFee = defineCommand({
 
 /** Everything on a job's rule card, loaded once (then resolved in memory for many trips). */
 export async function loadRuleCard(db: Db, companyId: string, jobId: string) {
-  const [terms, fees, types, routes] = await Promise.all([
+  const [terms, fees, types, routes, prices] = await Promise.all([
     db.select().from(jobTerms).where(eq(jobTerms.jobId, jobId)).orderBy(asc(jobTerms.effectiveFrom)),
     db.select().from(jobFees).where(eq(jobFees.jobId, jobId)).orderBy(asc(jobFees.effectiveFrom)),
     db.select().from(feeTypes).where(eq(feeTypes.companyId, companyId)).orderBy(asc(feeTypes.code)),
     db.select().from(jobRoutes).where(eq(jobRoutes.jobId, jobId)).orderBy(asc(jobRoutes.name)),
+    db.select().from(routePrices).where(eq(routePrices.jobId, jobId)).orderBy(asc(routePrices.effectiveFrom)),
   ]);
-  return { terms, fees, feeTypes: types.filter((t) => fees.some((f) => f.feeTypeId === t.id)), allFeeTypes: types, routes };
+  return { terms, fees, feeTypes: types.filter((t) => fees.some((f) => f.feeTypeId === t.id)), allFeeTypes: types, routes, routePrices: prices };
 }
 export type RuleCard = Awaited<ReturnType<typeof loadRuleCard>>;
 
@@ -202,8 +258,28 @@ function pick<T extends { routeId: string | null; effectiveFrom: string }>(rows:
   return (routeId && latest(rows.filter((r) => r.routeId === routeId))) || latest(rows.filter((r) => r.routeId === null));
 }
 
+/** The route's own price line in force on a date (latest on or before it), if the route has one. */
+export function routePriceOn(card: RuleCard, routeId: string | null, date: string): RoutePrice | null {
+  if (!routeId) return null;
+  return card.routePrices.filter((p) => p.routeId === routeId && p.effectiveFrom <= date).reduce<RoutePrice | null>((a, p) => (!a || p.effectiveFrom >= a.effectiveFrom ? p : a), null);
+}
+
+/**
+ * The rules for a trip: the job-wide version on its loading date (or the route's own full version), with the
+ * route's price line on top: its carrier price, reward and allowance win; everything else stays job-wide.
+ */
 export function termsOn(card: RuleCard, routeId: string | null, date: string): JobTerms | null {
-  return pick(card.terms, routeId, date);
+  const t = pick(card.terms, routeId, date);
+  if (!t) return null;
+  const rp = routePriceOn(card, routeId, date);
+  if (!rp) return t;
+  return {
+    ...t,
+    carrierPrice: rp.carrierPrice,
+    carrierPriceBasis: "per_unit",
+    rewardPerTrip: rp.rewardPerTrip ?? t.rewardPerTrip,
+    carrierAllowance: rp.carrierAllowance ?? t.carrierAllowance,
+  };
 }
 
 /** Fees in force on a date for a route: per fee type, the route's version first, else the job-wide one; zero amounts end a fee. */

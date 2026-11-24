@@ -1,3 +1,4 @@
+import { formatMoney } from "@/lib/format";
 import { eq } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getDb } from "@/db/client";
@@ -16,7 +17,7 @@ import { Shell } from "../shell";
 export const dynamic = "force-dynamic";
 const POSTING_KEYS = [
   "advances", "customer_receivables", "supplier_payables", "payables_to_transporters", "payables_to_drivers", "currency_exchange",
-  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences", "bad_debts", "product_sales",
+  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences", "bad_debts", "product_sales", "trip_fees", "customer_fee_credits",
 ] as const;
 const RATE_TYPES = ["driver_pay", "transporter_fee", "customer_price", "shortage_fine", "allowance", "demurrage_pay", "demurrage_bill", "product_price"] as const;
 const BASES = ["actual_qty", "per_trip", "per_day", "quantity", "per_unit"] as const;
@@ -62,6 +63,26 @@ export default async function Setup({ params, searchParams }: { params: Promise<
     const list = scope === "job_type" ? d.targets?.jobTypes : scope === "customer" ? d.targets?.customers : d.targets?.contracts;
     return `${t(`scope_${scope}`)}: ${list?.find((x) => x.id === id)?.name ?? "?"}`;
   };
+
+  const feeForm = (ft?: NonNullable<typeof d.feeTypes>[number]) => (
+    <ActionForm command="fee_types.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+      {ft && <input type="hidden" name="id" value={ft.id} />}
+      <div className="grid2">
+        <label>{f("name")}<input name="name" required defaultValue={ft?.name} placeholder={t("feeNameExample")} /></label>
+        <label>{t("feeBasis")}<select name="defaultBasis" defaultValue={ft?.defaultBasis ?? "per_trip"}><option value="per_trip">{t("feePerTrip")}</option><option value="per_loaded_unit">{t("feePerLoaded")}</option><option value="per_net_unit">{t("feePerNet")}</option></select></label>
+        <label>{t("feeUsualAmount")} <span className="hint">{f("optional")}</span><input name="defaultAmount" inputMode="decimal" dir="ltr" defaultValue={ft?.defaultAmount ? String(Number(ft.defaultAmount)) : ""} /></label>
+        <label>{f("currency")}<select name="defaultCurrency" defaultValue={ft?.defaultCurrency ?? "USD"}><option value="USD">USD</option><option value="IQD">IQD</option></select></label>
+        <label>{t("feePaidBy")}<select name="paidBy" defaultValue={ft?.paidBy ?? "company"}><option value="company">{t("feePaidByCompany")}</option><option value="customer">{t("feePaidByCustomer")}</option></select></label>
+        <label>{t("feeAccount")} <span className="hint">{t("feeAccountHint")}</span><select name="expenseAccountId" defaultValue={ft?.expenseAccountId ?? ""}><option value="">{t("feeAccountShared")}</option>{d.expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
+      </div>
+      <fieldset className="checks"><legend>{t("feeCarriedBy")}</legend>
+        <label className="check"><input type="checkbox" name="deductFromCarrier" defaultChecked={ft?.deductFromCarrier} />{t("feeDeduct")}</label>
+        <label className="check"><input type="checkbox" name="billedToCustomer" defaultChecked={ft?.billedToCustomer} />{t("feeBilled")}</label>
+        <p className="muted small !m-0 basis-full">{t("feeCarriedHelp")}</p>
+      </fieldset>
+      {ft && <label>{t("feeActive")}<select name="active" defaultValue={ft.active ? "on" : "off"}><option value="on">{t("on")}</option><option value="off">{t("off")}</option></select></label>}
+    </ActionForm>
+  );
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/setup">
@@ -297,26 +318,65 @@ export default async function Setup({ params, searchParams }: { params: Promise<
                     <label>{t("contractStatus")}<select name="status" defaultValue="active">{["draft", "active", "ended"].map((x) => <option key={x} value={x}>{t(`contract_${x}`)}</option>)}</select></label>
                     <label>{t("validFrom")}<input type="date" name="validFrom" /></label>
                     <label>{t("validTo")}<input type="date" name="validTo" /></label>
+                    <label>{t("paymentTerms")} <span className="hint">{t("paymentTermsHint")}</span><input name="paymentTermsDays" inputMode="numeric" dir="ltr" /></label>
                   </div>
+                  <label>{t("contractNotes")}<textarea name="notes" rows={2} /></label>
                 </ActionForm>
               </Modal>
             }>
               {d.contracts.length === 0 ? <EmptyState icon="clipboard" title={t("noneContracts")} /> : (
                 <div className="table-wrap"><table>
-                  <thead><tr><th>{t("contractRef")}</th><th>{t("contractTitle")}</th><th>{t("contractPartner")}</th><th>{t("validity")}</th><th>{t("contractStatus")}</th><th /></tr></thead>
-                  <tbody>{d.contracts.map(({ c, partner }) => (
+                  <thead><tr><th>{t("contractRef")}</th><th>{t("contractTitle")}</th><th>{t("contractPartner")}</th><th>{t("validity")}</th><th>{t("paymentTerms")}</th><th>{t("contractFiles")}</th><th>{t("contractStatus")}</th><th /></tr></thead>
+                  <tbody>{d.contracts.map(({ c, partner }) => {
+                    const files = d.contractFiles.filter((x) => x.contractId === c.id);
+                    return (
                     <tr key={c.id}>
-                      <td className="ltr cell-title">{c.reference}</td><td>{c.title}</td><td>{partner}</td><td>{c.validFrom ?? "—"} → {c.validTo ?? "—"}</td>
+                      <td className="ltr cell-title">{c.reference}</td><td className="wrap">{c.title}{c.notes && <div className="cell-sub">{c.notes}</div>}</td><td>{partner}</td><td className="ltr">{c.validFrom ?? "—"} → {c.validTo ?? "—"}</td>
+                      <td>{c.paymentTermsDays != null ? t("paymentTermsDays", { days: c.paymentTermsDays }) : <span className="muted">—</span>}</td>
+                      <td>
+                        <Modal label={files.length ? t("contractFilesCount", { count: files.length }) : t("contractAttach")} title={<>{t("contractFiles")} · <span className="ltr">{c.reference}</span></>} variant="ghost" small>
+                          {files.length > 0 && (
+                            <ul className="m-0 mb-4 grid list-none gap-2 p-0">{files.map((x) => (
+                              <li key={x.id} className="flex flex-wrap items-center gap-2">
+                                <Badge tone={x.kind === "signed" ? "success" : "info"}>{t(`fileKind_${x.kind}`)}</Badge>
+                                <a href={`/api/contracts/files/${x.id}`} target="_blank" rel="noopener" className="font-medium">{x.fileName}</a>
+                                {x.note && <span className="muted small">· {x.note}</span>}
+                              </li>
+                            ))}</ul>
+                          )}
+                          <ActionForm command="contracts.attach_file" locale={locale} idempotencyKey={k()} submitLabel={t("contractAttach")}>
+                            <input type="hidden" name="contractId" value={c.id} />
+                            <div className="grid2">
+                              <label>{t("fileKind")}<select name="kind" defaultValue={files.some((x) => x.kind === "signed") ? "amendment" : "signed"}>{["signed", "amendment", "other"].map((x) => <option key={x} value={x}>{t(`fileKind_${x}`)}</option>)}</select></label>
+                              <label>{t("fileNote")}<input name="note" /></label>
+                            </div>
+                            <label>{t("contractFile")} <span className="hint">{t("contractFileHint")}</span><input type="file" name="__file" required accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" /></label>
+                          </ActionForm>
+                        </Modal>
+                      </td>
                       <td><Badge tone={c.status === "active" ? "success" : c.status === "draft" ? "warning" : undefined}>{t(`contract_${c.status}`)}</Badge></td>
-                      <td className="actions-cell">{c.status !== "ended" && (
+                      <td className="actions-cell"><div className="flex items-center justify-end gap-1">
+                        <Modal label={t("editContract")} title={<>{t("editContract")} · <span className="ltr">{c.reference}</span></>} variant="ghost" small>
+                          <ActionForm command="contracts.update" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+                            <input type="hidden" name="contractId" value={c.id} />
+                            <div className="grid2">
+                              <label>{t("contractTitle")}<input name="title" required defaultValue={c.title} /></label>
+                              <label>{t("paymentTerms")} <span className="hint">{t("paymentTermsHint")}</span><input name="paymentTermsDays" inputMode="numeric" dir="ltr" defaultValue={c.paymentTermsDays ?? ""} /></label>
+                              <label>{t("validFrom")}<input type="date" name="validFrom" defaultValue={c.validFrom ?? ""} /></label>
+                              <label>{t("validTo")}<input type="date" name="validTo" defaultValue={c.validTo ?? ""} /></label>
+                            </div>
+                            <label>{t("contractNotes")}<textarea name="notes" rows={2} defaultValue={c.notes ?? ""} /></label>
+                          </ActionForm>
+                        </Modal>
+                        {c.status !== "ended" && (
                         <ActionForm command="contracts.set_status" locale={locale} idempotencyKey={k()} submitLabel={c.status === "draft" ? t("activate") : t("endContract")} inline variant="secondary" confirm={c.status === "active" ? t("endContractConfirm") : undefined}>
                           <input type="hidden" name="contractId" value={c.id} />
                           <input type="hidden" name="status" value={c.status === "draft" ? "active" : "ended"} />
                           <input type="hidden" name="reason" value={c.status === "draft" ? "activated" : "contract ended"} />
                         </ActionForm>
-                      )}</td>
+                      )}</div></td>
                     </tr>
-                  ))}</tbody>
+                  );})}</tbody>
                 </table></div>
               )}
             </Card>
@@ -358,6 +418,32 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               {d.settings && <Stat label={t("postingAccounts")} value={`${POSTING_KEYS.filter((k) => (d.settings!.posting as Record<string, string>)[k]).length} / ${POSTING_KEYS.length}`} icon="layers" />}
             </div>
           )}
+          {d.feeTypes && (
+            <Card flush title={t("feeTypesTitle")} subtitle={t("feeTypesHelp")} icon="receipt" actions={
+              <Modal label={t("addFeeType")} icon={plus}>{feeForm()}</Modal>
+            }>
+              {d.feeTypes.length === 0 ? <EmptyState icon="receipt" title={t("noFeeTypes")} /> : (
+                <div className="table-wrap"><table>
+                  <thead><tr><th>{f("name")}</th><th className="num">{t("feeUsualAmount")}</th><th>{t("feePaidBy")}</th><th>{t("feeCarriedBy")}</th><th>{t("feeAccount")}</th><th /></tr></thead>
+                  <tbody>{d.feeTypes.map((ft) => (
+                    <tr key={ft.id} className={ft.active ? "" : "muted"}>
+                      <td className="cell-title">{ft.name}</td>
+                      <td className="num">{ft.defaultAmount ? <>{formatMoney(ft.defaultAmount, ft.defaultCurrency ?? "USD", locale)} <span className="muted small">{ft.defaultBasis === "per_trip" ? t("feePerTripShort") : t("feePerTonShort")}</span></> : <span className="muted">—</span>}</td>
+                      <td>{ft.paidBy === "customer" ? <Badge tone="info">{t("feePaidByCustomer")}</Badge> : <Badge>{t("feePaidByCompany")}</Badge>}</td>
+                      <td className="wrap"><div className="chips">
+                        {!ft.deductFromCarrier && !ft.billedToCustomer && <Badge plain>{t("feeCarriedCompany")}</Badge>}
+                        {ft.deductFromCarrier && <Badge tone="warning" plain>{t("feeCarriedCarrier")}</Badge>}
+                        {ft.billedToCustomer && <Badge tone="success" plain>{t("feeCarriedCustomer")}</Badge>}
+                      </div></td>
+                      <td className="small">{(() => { const a = d.expenseAccounts.find((x) => x.id === ft.expenseAccountId); return a ? <><span className="ltr muted">{a.code}</span> {a.name}</> : <span className="muted">{t("feeAccountShared")}</span>; })()}</td>
+                      <td className="actions-cell"><Modal label={t("editContract")} title={<>{t("editContract")} · {ft.name}</>} variant="ghost" small>{feeForm(ft)}</Modal></td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </Card>
+          )}
+
           {d.moneyAccounts && (
             <Card flush title={t("moneyAccounts")} subtitle={t("moneyAccountsHelp")} icon="wallet" actions={
               <Modal label={t("addMoneyAccount")} icon={plus}>

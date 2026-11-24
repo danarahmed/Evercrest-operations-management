@@ -42,6 +42,8 @@ export interface FeeForCalc {
   currency: string;
   deductFromCarrier: boolean;
   billedToCustomer: boolean;
+  /** Who paid it at the time; a fee the customer paid directly is not a company cost (default: the company). */
+  paidBy?: "company" | "customer";
 }
 
 export interface TripForCalc {
@@ -66,6 +68,7 @@ export interface FeeLine {
   currency: string;
   deductFromCarrier: boolean;
   billedToCustomer: boolean;
+  paidBy: "company" | "customer";
 }
 
 export interface TripCalc {
@@ -102,6 +105,8 @@ export interface TripCalc {
   fees: FeeLine[];
   /** All fees in the job currency that the company pays on this trip. */
   feesTotal: string;
+  /** Fees the customer paid directly and the carrier gives back: owed back to the customer. */
+  customerFeeCredit: string;
   /** Company cost of the trip: carrier total + transporter cut + fees. */
   cost: string;
   customer: {
@@ -167,12 +172,16 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
 
   const feeLines: FeeLine[] = fees.map((f) => {
     const qty = f.basis === "per_trip" ? new D(1) : f.basis === "per_loaded_unit" ? loaded : net;
-    return { feeTypeId: f.feeTypeId, name: f.name, amount: toStr(r2(qty.times(dec(f.rate)))), currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: f.billedToCustomer };
+    const paidBy = f.paidBy ?? "company";
+    // A fee the customer paid directly is never billed to them again.
+    return { feeTypeId: f.feeTypeId, name: f.name, amount: toStr(r2(qty.times(dec(f.rate)))), currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: paidBy === "company" && f.billedToCustomer, paidBy };
   });
   const inCurrency = feeLines.filter((f) => f.currency === terms.currency);
   if (inCurrency.length !== feeLines.length) flags.push("fee_other_currency");
   const sum = (xs: FeeLine[]) => xs.reduce((a, f) => a.plus(dec(f.amount)), new D(0));
-  const feesTotal = sum(inCurrency);
+  // The company's own fee cost: only what it paid. What the customer paid and the carrier gives back is owed back to the customer.
+  const feesTotal = sum(inCurrency.filter((f) => f.paidBy === "company"));
+  const customerFeeCredit = sum(inCurrency.filter((f) => f.paidBy === "customer" && f.deductFromCarrier));
   const feeDeductions = sum(inCurrency.filter((f) => f.deductFromCarrier));
   const billedFees = sum(inCurrency.filter((f) => f.billedToCustomer));
 
@@ -182,7 +191,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   const advance = dec(trip.advances[terms.currency] ?? "0");
   if (Object.keys(trip.advances).some((c) => c !== terms.currency && !dec(trip.advances[c]).isZero())) flags.push("advance_other_currency");
   if (terms.advanceMax !== null && advance.gt(dec(terms.advanceMax))) flags.push("advance_above_max");
-  const cost = carrierTotal.plus(transporterCut).plus(feesTotal);
+  const cost = carrierTotal.plus(transporterCut).plus(feesTotal).plus(customerFeeCredit);
 
   // Customer side
   const custQty = terms.customerQtyBasis === "loaded" ? loaded : net;
@@ -223,6 +232,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
     },
     fees: feeLines,
     feesTotal: toStr(feesTotal),
+    customerFeeCredit: toStr(customerFeeCredit),
     cost: toStr(cost),
     customer: {
       price: terms.customerPrice,

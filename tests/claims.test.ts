@@ -10,7 +10,7 @@ import { assignRole, createUser, defineRole } from "@/domain/org/commands";
 import { defineRate } from "@/domain/transport/rates";
 import { settleTrip } from "@/domain/transport/settlement";
 import { cancelClaim, carrierClaims, claimDetail, createClaim, payClaim, previewClaim, waiveFine } from "@/domain/transport/claims";
-import { defineFeeType, setJobFee, setTerms } from "@/domain/transport/terms";
+import { defineFeeType, setTerms } from "@/domain/transport/terms";
 import { saveTrip } from "@/domain/transport/trip-edit";
 import { tripLines } from "@/domain/transport/trip-view";
 import { journalEntries, journalLines } from "@/db/schema";
@@ -43,6 +43,7 @@ async function trip(opts: { driver: string; transporter?: string | null; dischar
     transporterCut: opts.cut,
     advanceAmount: opts.advance,
     advanceMoneyAccountId: opts.advance ? ids.cash : undefined,
+    fees: [{ feeTypeId: ids.visa }],
   });
   return { id: r.id, manifest };
 }
@@ -58,8 +59,9 @@ beforeAll(async () => {
   // Owner's diesel card: 70 $/MT, reward 0 here, allowance 0.15 MT, fine 1,200 $/MT, advance up to 900.
   await run(setTerms, { jobId: ids.job, effectiveFrom: "2026-10-01", currency: "USD", unit: "MT", customerPrice: "120", carrierPrice: "70", carrierAllowance: "0.15", carrierFinePrice: "1200", advanceMax: "900" });
   // A visa fee the company pays and takes back from the carrier.
-  const visa = await run(defineFeeType, { name: "Visa", defaultBasis: "per_trip", deductFromCarrier: true, billedToCustomer: false });
-  await run(setJobFee, { jobId: ids.job, feeTypeId: visa.id, effectiveFrom: "2026-10-01", amount: "50", currency: "USD", basis: "per_trip", deductFromCarrier: true, billedToCustomer: false });
+  // Operations tick it on each trip (the owner's rule: fees are never added automatically); usual amount 50 USD.
+  const visa = await run(defineFeeType, { name: "Visa", defaultBasis: "per_trip", defaultAmount: "50", defaultCurrency: "USD", deductFromCarrier: true, billedToCustomer: false });
+  ids.visa = visa.id;
   ids.masoud = (await run(createPartner, { kind: "organization", name: "Masoud", roles: ["transporter"] })).id;
   ids.zagros = (await run(createPartner, { kind: "organization", name: "Zagros", roles: ["transporter"] })).id;
   // A second person who can approve (the requester may not approve his own request).

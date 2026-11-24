@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, claims, invoiceLines, invoices, journalLines, moneyAccounts, partnerRoles, payments, payStatementItems, payStatements } from "@/db/schema";
+import { accounts, claims, invoiceLines, invoices, journalLines, moneyAccounts, partnerRoles, payments, payStatementItems, payStatements, tripFees } from "@/db/schema";
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
@@ -307,7 +307,7 @@ export async function advanceRuleCheck(tx: Db, companyId: string, tripId: string
   return { verdict: total.lte(dec(terms.advanceMax)) ? ("within" as const) : ("above" as const), total: toStr(total), limit: toStr(dec(terms.advanceMax)), tripNo: trip.tripNo };
 }
 
-async function assertWithinLimit(tx: Db, companyId: string, currency: string, amount: string, partnerId: string | null, date: string) {
+export async function assertWithinLimit(tx: Db, companyId: string, currency: string, amount: string, partnerId: string | null, date: string) {
   const limits = (await getSetting(tx, companyId, "approvals.payment_out_limits")) ?? {};
   const limit = limits[currency];
   if (limit === undefined) return;
@@ -390,6 +390,8 @@ export const reversePayment = defineCommand({
     // The payee is owed again, so the statement is open again.
     if (p.statementId && p.direction === "out") await tx.update(payStatements).set({ status: "open" }).where(and(eq(payStatements.id, p.statementId), eq(payStatements.status, "paid")));
     if (p.claimId) await tx.update(claims).set({ status: "posted" }).where(and(eq(claims.id, p.claimId), eq(claims.status, "paid")));
+    // A reversed "Pay fees" payment: those fees are unpaid again and can be paid properly.
+    await tx.update(tripFees).set({ paymentId: null }).where(eq(tripFees.paymentId, paymentId));
     await audit({ action: "payments.reverse", entityType: "payment", entityId: paymentId, before: { status: "posted" }, after: { status: "reversed", reversalEntryId: rev.id }, reason });
     return { paymentId, reversalEntryId: rev.id };
   },

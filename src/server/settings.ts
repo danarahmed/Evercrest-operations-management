@@ -38,6 +38,8 @@ export const SETTINGS = {
       transport_revenue: z.string(),
       demurrage_revenue: z.string(),
       rounding_differences: z.string(),
+      trip_fees: z.string().optional(),
+      customer_fee_credits: z.string().optional(),
       bad_debts: z.string(),
       product_sales: z.string(),
     })

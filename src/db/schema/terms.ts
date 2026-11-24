@@ -99,7 +99,37 @@ export const jobTerms = pgTable(
   ],
 );
 
+/**
+ * A route's own prices (owner: "different routes mean different prices"): carrier price, reward and,
+ * when it differs, the shortage allowance, from a date. Everything else comes from the job-wide card.
+ * A later line for the same route replaces it from its date; older trips keep the price of their loading date.
+ */
+export const routePrices = pgTable(
+  "route_prices",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    routeId: uuid("route_id").notNull().references(() => jobRoutes.id),
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    carrierPrice: numeric("carrier_price", { precision: 20, scale: 6 }).notNull(),
+    /** Null = the job-wide reward. */
+    rewardPerTrip: numeric("reward_per_trip", { precision: 20, scale: 4 }),
+    /** Null = the job-wide shortage allowance. */
+    carrierAllowance: numeric("carrier_allowance", { precision: 20, scale: 6 }),
+    note: text("note"),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("route_prices_version").on(t.routeId, t.effectiveFrom),
+    check("route_price_non_negative", sql`${t.carrierPrice} >= 0 and coalesce(${t.rewardPerTrip}, 0) >= 0 and coalesce(${t.carrierAllowance}, 0) >= 0`),
+  ],
+);
+
 export const FEE_BASES = ["per_trip", "per_loaded_unit", "per_net_unit"] as const;
+/** Who pays a fee at the moment it is paid: the company (from a cash box) or the customer directly. */
+export const FEE_PAYERS = ["company", "customer"] as const;
 
 /**
  * A kind of fee the company deals with (visa, insurance, guarantee, customs,
@@ -116,6 +146,10 @@ export const feeTypes = pgTable(
     code: text("code").notNull(),
     name: text("name").notNull(),
     defaultBasis: text("default_basis", { enum: FEE_BASES }).notNull().default("per_trip"),
+    /** The usual amount, filled in when the fee is ticked on a trip (it can be changed there). */
+    defaultAmount: numeric("default_amount", { precision: 20, scale: 6 }),
+    defaultCurrency: char("default_currency", { length: 3 }).references(() => currencies.code),
+    paidBy: text("paid_by", { enum: FEE_PAYERS }).notNull().default("company"),
     deductFromCarrier: boolean("deduct_from_carrier").notNull().default(false),
     billedToCustomer: boolean("billed_to_customer").notNull().default(false),
     expenseAccountId: uuid("expense_account_id").references(() => accounts.id),

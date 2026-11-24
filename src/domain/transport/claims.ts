@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { approvalRequests, businessPartners, claimItems, claims, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
+import { approvalRequests, businessPartners, claimItems, claims, feeTypes, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand, type CommandContext } from "@/server/command";
 import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -203,6 +203,13 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
   const advances = await acct("advances");
   const transporterPayable = await acct("payables_to_transporters");
   const jobId = claim.jobId;
+  const [job] = await tx.select({ customerId: jobs.customerId }).from(jobs).where(eq(jobs.id, jobId));
+  const types = new Map((await tx.select({ id: feeTypes.id, accountId: feeTypes.expenseAccountId }).from(feeTypes).where(eq(feeTypes.companyId, actor.companyId))).map((t) => [t.id, t.accountId]));
+  // Fees taken back from the carrier: a fee the company paid goes back to that fee's account (its own, or "Trip fees");
+  // a fee the customer paid directly is owed back to the customer.
+  const feeBack = new Map<string, Dec>();
+  let customerCredit = new D(0);
+  let tripFeesAccount: string | null = null;
 
   let gross = new D(0);
   let fine = new D(0);
@@ -213,7 +220,15 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
     const c = live.calc!.carrier;
     gross = gross.plus(dec(c.freight)).plus(dec(c.reward)).plus(dec(c.commission)).plus(dec(c.demurrage));
     fine = fine.plus(dec(c.fine)); // ≤ 0
-    recovered = recovered.plus(dec(c.feeDeductions)).plus(dec(c.otherDeduction));
+    recovered = recovered.plus(dec(c.otherDeduction));
+    for (const f of live.calc!.fees) {
+      if (!f.deductFromCarrier || f.currency !== C || dec(f.amount).isZero()) continue;
+      if (f.paidBy === "customer") customerCredit = customerCredit.plus(dec(f.amount));
+      else {
+        const account = types.get(f.feeTypeId) ?? (tripFeesAccount ??= (await acct("trip_fees")).id);
+        feeBack.set(account, (feeBack.get(account) ?? new D(0)).plus(dec(f.amount)));
+      }
+    }
     const cut = dec(c.transporterCut);
     if (cut.gt(0)) {
       if (trip.transporterId) cuts.set(trip.transporterId, (cuts.get(trip.transporterId) ?? new D(0)).plus(cut));
@@ -226,7 +241,9 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
   const lines = [
     ...lineFor(costs.id, C, gross, { jobId, memo: `${claim.claimNo} trips earned` }),
     ...lineFor(fines.id, C, fine, { jobId, memo: `${claim.claimNo} shortage fines` }),
-    ...lineFor(costs.id, C, recovered.neg(), { jobId, memo: `${claim.claimNo} fees and deductions recovered` }),
+    ...lineFor(costs.id, C, recovered.neg(), { jobId, memo: `${claim.claimNo} deductions recovered` }),
+    ...[...feeBack].flatMap(([accountId, amt]) => lineFor(accountId, C, amt.neg(), { jobId, memo: `${claim.claimNo} fees taken back from the carrier` })),
+    ...(customerCredit.isZero() ? [] : lineFor((await acct("customer_fee_credits")).id, C, customerCredit.neg(), { partnerId: job.customerId, jobId, memo: `${claim.claimNo} fees the customer paid, taken back from the carrier: owed to the customer` })),
     ...[...cuts].flatMap(([partnerId, amt]) => lineFor(transporterPayable.id, C, amt.neg(), { partnerId, jobId, memo: `${claim.claimNo} transporter's cut` })),
     ...[...clearedAdvances].flatMap(([partnerId, amt]) => lineFor(advances.id, C, amt.neg(), { partnerId: partnerId || null, jobId, memo: `${claim.claimNo} advances cleared` })),
     ...lineFor(payable.id, C, final.neg(), { partnerId: claim.claimantId, jobId, memo: `${claim.claimNo} net to claimant` }),

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { Icon } from "@/components/icons";
+import { ActionForm } from "@/components/ActionForm";
+import { Modal } from "@/components/Modal";
 import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@/components/ui";
 import { summarize } from "@/domain/management/history";
 import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
-import { claimCheck, formOptions, jobClaims, jobHistoryView, jobRuleCard, jobTripsLive, jobWorkspace, tripDetail } from "@/server/queries";
+import { claimCheck, formOptions, jobClaims, jobHistoryView, jobRuleCard, jobTripsLive, jobUnpaidFees, jobWorkspace, tripDetail } from "@/server/queries";
 import { parseTripFilters } from "@/lib/trip-filters";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
@@ -18,6 +20,7 @@ import { DeliveriesSection, WorkOrdersSection } from "./operations";
 import { RuleCardSection } from "./rules";
 import { SettlementSection } from "./settlement";
 import { TripsSection } from "./trips";
+import { FeeTools } from "./fee-tools";
 import { TripDialog } from "./trip-dialog";
 import { ClaimsSection } from "./claims";
 
@@ -129,11 +132,23 @@ export default async function JobPage({ params, searchParams }: { params: Promis
       {tab === "overview" && (
         <div className="grid side">
           <div>
-            <Card title={t("details")} icon="briefcase">
+            <Card title={t("details")} icon="briefcase" actions={manage && (
+              <Modal label={t("editTeam")} title={t("editTeam")} variant="ghost" size="sm" small>
+                <p className="muted">{t("teamHelp")}</p>
+                <ActionForm command="jobs.set_team" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("saveTeam")}>
+                  <input type="hidden" name="jobId" value={w.job.id} />
+                  <label>{t("responsible")}<select name="responsibleUserId" required defaultValue={w.job.responsibleUserId}>{options.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
+                  <fieldset className="checks"><legend>{t("team")}</legend>
+                    {options.users.map((u) => <label key={u.id} className="check"><input type="checkbox" name="memberUserIds[]" value={u.id} defaultChecked={w.team.some((x) => x.id === u.id)} />{u.name}</label>)}
+                  </fieldset>
+                </ActionForm>
+              </Modal>
+            )}>
               <Facts cols items={[
                 [t("customer"), w.customer],
                 [t("type"), w.meta.type],
                 [t("responsible"), w.meta.responsible],
+                [t("team"), w.team.length ? w.team.map((x) => x.name).join(", ") : null],
                 [t("started"), w.job.startDate],
                 [t("project"), w.meta.projectCode && `${w.meta.projectCode} · ${w.meta.project}`],
                 [t("contract"), w.meta.contract && `${w.meta.contract} · ${w.meta.contractTitle}`],
@@ -191,7 +206,10 @@ export default async function JobPage({ params, searchParams }: { params: Promis
             advancesEnabled={caps.includes("advances")}
             currency={card?.terms.at(-1)?.currency ?? null}
             canImport={open && can(actor, "trips.manage")}
-            actions={open && can(actor, "trips.manage") && <Link href={`${base}?tab=trips&trip=new`} className="btn primary"><Icon name="plus" size={16} />{t("newTrip")}</Link>}
+            actions={<>
+              {open && <FeeTools locale={locale} jobId={w.job.id} feeTypes={options.feeTypes} unpaid={await jobUnpaidFees(db, actor, w.job.id)} moneyAccounts={options.moneyAccounts} canAdd={can(actor, "trips.manage")} canPay={can(actor, "payments.create")} />}
+              {open && can(actor, "trips.manage") && <Link href={`${base}?tab=trips&trip=new`} className="btn primary"><Icon name="plus" size={16} />{t("newTrip")}</Link>}
+            </>}
           />
           {(tripParam === "new" || detail) && (
             <TripDialog locale={locale} jobId={w.job.id} detail={detail} closeHref={`${base}?tab=trips`} options={options} routes={card?.routes ?? []} advancesEnabled={caps.includes("advances")} canEdit={open && can(actor, "trips.manage") && !detail?.line?.claim} />
@@ -264,13 +282,27 @@ export default async function JobPage({ params, searchParams }: { params: Promis
         <Card title={t("documents")} icon="file" flush actions={open && can(actor, "documents.record") && <DocumentAction locale={locale} jobId={w.job.id} tripList={w.trips.map((x) => x.trip)} options={options} />}>
           {w.documents.length === 0 ? <EmptyState icon="file" title={t("noDocumentsRequired")} /> : (
             <div className="table-wrap"><table>
-              <thead><tr><th>{t("document")}</th><th>{t("for")}</th><th>{t("state")}</th></tr></thead>
-              <tbody>{w.documents.map((d) => (
+              <thead><tr><th>{t("document")}</th><th>{t("for")}</th><th>{t("state")}</th><th /></tr></thead>
+              <tbody>{w.documents.map((d) => {
+                const pending = w.papersPending.includes(`${d.documentTypeId}:${d.target.id}`);
+                const excusable = open && can(actor, "documents.record") && ["missing", "rejected", "expired"].includes(d.state);
+                return (
                 <tr key={`${d.documentTypeId}-${d.target.id}`}>
                   <td><strong>{d.documentType}</strong></td><td className="ltr">{d.target.label}</td>
                   <td><StatusBadge status={d.state} label={ds(d.state)} /></td>
+                  <td className="actions-cell">{pending ? <Badge tone="warning">{t("paperNotComingPending")}</Badge> : excusable && (
+                    <Modal label={t("paperNotComing")} title={<>{t("paperNotComing")} · {d.documentType} · <span className="ltr">{d.target.label}</span></>} variant="ghost" size="sm" small>
+                      <p className="muted">{t("paperNotComingHelp")}</p>
+                      <ActionForm approvalOnly command="documents.waive" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("paperNotComingSubmit")} summary={`${d.documentType} · ${d.target.label} · ${w.job.jobNo}`}>
+                        <input type="hidden" name="documentTypeId" value={d.documentTypeId} />
+                        <input type="hidden" name="entityType" value={d.target.type} />
+                        <input type="hidden" name="entityId" value={d.target.id} />
+                        <label>{t("paperNotComingReason")}<input name="reason" required minLength={3} /></label>
+                      </ActionForm>
+                    </Modal>
+                  )}</td>
                 </tr>
-              ))}</tbody>
+              );})}</tbody>
             </table></div>
           )}
         </Card>

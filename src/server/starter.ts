@@ -19,7 +19,7 @@ import { setSetting } from "./settings";
 export const STARTER_ACCOUNTS = [
   ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"],
   ["1300", "Advances to drivers/transporters", "asset"], ["1900", "Currency exchange", "asset"], ["2100", "Supplier payables", "liability"],
-  ["2200", "Payables to transporters", "liability"], ["2300", "Payables to drivers", "liability"], ["3000", "Capital", "equity"],
+  ["2200", "Payables to transporters", "liability"], ["2300", "Payables to drivers", "liability"], ["2400", "Fees to return to customers", "liability"], ["3000", "Capital", "equity"],
   ["4000", "Transport revenue", "income"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"], ["4300", "Product sales", "income"],
   ["5000", "Transport costs", "expense"], ["5010", "Transporter costs", "expense"], ["5100", "Field expenses", "expense"], ["5200", "Fuel and vehicle costs", "expense"],
   ["5300", "Permits and fees", "expense"], ["5400", "Cost of goods purchased", "expense"], ["5500", "Labour and contractors", "expense"],
@@ -29,7 +29,7 @@ export const STARTER_ACCOUNTS = [
 export const STARTER_POSTING_ACCOUNTS = {
   advances: "1300", customer_receivables: "1100", supplier_payables: "2100", payables_to_transporters: "2200", payables_to_drivers: "2300",
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
-  demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300",
+  demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300", trip_fees: "5300", customer_fee_credits: "2400",
 };
 
 /** Fees the company meets on its jobs (from the diesel-to-Syria sheet); more are added in Setup. */

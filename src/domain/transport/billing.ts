@@ -11,7 +11,8 @@ import { getJob } from "../jobs/commands";
 import { convertQuantity } from "../masterdata/catalog";
 import { toStr } from "../money";
 import { resolveRate } from "./rates";
-import { billedTripIds, demurrageDays, postedSettlement, tripQuantities } from "./settlement";
+import { billedTripIds, demurrageDays, tripQuantities } from "./settlement";
+import { isSettled } from "./trips";
 
 const uuid = z.string().uuid();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -89,7 +90,8 @@ registerCapabilityModule({
   async blockers(tx: Db, job: Job) {
     const out = [];
     for (const t of await dischargedTrips(tx, job.id))
-      if (!(await postedSettlement(tx, t.id)))
+      // Paid through a claim (or the older per-trip settlement): the carrier's money is settled.
+      if (!(await isSettled(tx, t.id)))
         out.push({ code: "transport.awaiting_settlement", action: `Settle ${t.tripNo}`, params: { trip: t.tripNo }, blocks: "financially_closed" as const });
     return out;
   },

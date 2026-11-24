@@ -11,7 +11,7 @@ import { getJob } from "../jobs/commands";
 import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
-import { feesOn, loadRuleCard, routeByName, type RuleCard, termsOn } from "./terms";
+import { loadRuleCard, routeByName, type RuleCard, termsOn } from "./terms";
 import { findOrCreateTruck, plateKey } from "./trips";
 
 /**
@@ -177,12 +177,11 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
           if (dec(v.advance).gt(dec(terms.advanceMax))) err("advance_above_max", { sheet: v.advance, max: terms.advanceMax });
         } else if (limits[terms.currency] !== undefined && dec(v.advance).gt(dec(String(limits[terms.currency])))) err("advance_needs_approval", { sheet: v.advance, limit: String(limits[terms.currency]) });
       }
-      const ruleFees = feesOn(card, routeId, v.loadingDate!);
+      // Fee columns become that trip's fees; a column that is no known kind of fee is reported, never guessed.
       for (const [feeKey, value] of Object.entries(r.fees)) {
         const ft = sheetFeeType(card, feeKey);
-        const rule = ft ? ruleFees.find((f) => f.feeTypeId === ft.id) : undefined;
-        if (!dec(value).isZero() && !rule) warn("fee_not_on_rule_card", { fee: feeKey, sheet: value });
-        else if (rule && !dec(value).eq(dec(rule.amount))) warn("fee_differs", { fee: rule.name, sheet: value, rule: rule.amount });
+        if (!dec(value).isZero() && !ft) warn("fee_not_on_rule_card", { fee: feeKey, sheet: value });
+        else if (ft && ft.defaultAmount !== null && !dec(value).isZero() && !dec(value).eq(dec(ft.defaultAmount))) warn("fee_differs", { fee: ft.name, sheet: value, rule: ft.defaultAmount });
       }
     }
     if (v.advance && dec(v.advance).gt(0) && !caps.includes("advances")) err("advances_not_enabled");
@@ -371,28 +370,21 @@ export async function applyImportRows(ctx: CommandContext, imp: typeof tripImpor
         })
         .returning();
 
-      // Fees: the sheet's own figures where it has the column, otherwise the rule card's.
-      const ruleFees = terms ? feesOn(card, routeId, val.loadingDate!) : [];
+      // Fees: only the fee columns the sheet has, each following its kind of fee (never added automatically).
       const lines = new Map<string, typeof tripFees.$inferInsert>();
-      for (const f of ruleFees)
-        lines.set(f.feeTypeId, { companyId: actor.companyId, tripId: trip.id, feeTypeId: f.feeTypeId, rate: f.amount, basis: f.basis, currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: f.billedToCustomer, source: "rule" });
       for (const [feeKey, value] of Object.entries(v.fees)) {
         const ft = sheetFeeType(card, feeKey);
-        if (!ft) continue;
-        if (dec(value).isZero()) {
-          lines.delete(ft.id);
-          continue;
-        }
-        const rule = lines.get(ft.id);
+        if (!ft || dec(value).isZero()) continue;
         lines.set(ft.id, {
           companyId: actor.companyId,
           tripId: trip.id,
           feeTypeId: ft.id,
           rate: value,
-          basis: rule?.basis ?? ft.defaultBasis,
-          currency: rule?.currency ?? terms?.currency ?? money?.currency ?? "USD",
-          deductFromCarrier: rule?.deductFromCarrier ?? ft.deductFromCarrier,
-          billedToCustomer: rule?.billedToCustomer ?? ft.billedToCustomer,
+          basis: ft.defaultBasis,
+          currency: ft.defaultCurrency ?? terms?.currency ?? money?.currency ?? "USD",
+          deductFromCarrier: ft.deductFromCarrier,
+          billedToCustomer: ft.paidBy === "company" && ft.billedToCustomer,
+          paidBy: ft.paidBy,
           source: "entered",
         });
       }

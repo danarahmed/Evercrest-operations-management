@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { feeTypes, tripFees, contractFiles, jobMembers, journalLines, customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
+import { deductionTypes, tripDeductions, feeTypes, tripFees, contractFiles, jobMembers, journalLines, customFields, roles, rolePermissions, userRoles, accounts, approvalRequests, catalogItems, contracts, invoiceLines, invoices, projects, rates, businessPartners, documentRequirements, documents, documentTypes, jobs, jobTypes, moneyAccounts, partnerRoles, payStatements, trips, trucks, units, users } from "@/db/schema";
 import { documentChecklist, pendingPaperWaivers } from "@/domain/documents/documents";
 import { unpaidFees } from "@/domain/transport/fees";
 import { invoiceDetail, jobProfitability } from "@/domain/finance/invoices";
@@ -23,6 +23,7 @@ import { carrierClaims, claimDetail, listClaims, previewClaim, tripWaivers } fro
 import { compareRemoteSettlement, getRemoteSettlement, listRemoteSettlements, type RemoteRow } from "@/domain/transport/remote";
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
+import { cutReleaseList, heldCuts } from "@/domain/transport/held-cuts";
 import { getSetting } from "./settings";
 import { balanceSheet, profitAndLoss } from "@/domain/accounting/statements";
 import { trialBalance } from "@/domain/accounting/ledger";
@@ -149,6 +150,8 @@ export async function formOptions(db: Db, actor: Actor) {
     users: await db.select({ id: users.id, name: users.displayName }).from(users).where(and(eq(users.companyId, actor.companyId), eq(users.active, true))).orderBy(users.displayName),
     /** The kinds of fees operations tick on a trip (set up in Setup → Accounting & money). */
     feeTypes: await db.select({ id: feeTypes.id, name: feeTypes.name, defaultAmount: feeTypes.defaultAmount, defaultCurrency: feeTypes.defaultCurrency, defaultBasis: feeTypes.defaultBasis, paidBy: feeTypes.paidBy, deductFromCarrier: feeTypes.deductFromCarrier, billedToCustomer: feeTypes.billedToCustomer }).from(feeTypes).where(and(eq(feeTypes.companyId, actor.companyId), eq(feeTypes.active, true))).orderBy(feeTypes.name),
+    /** The kinds of deduction the company keeps as income, ticked on a trip. */
+    deductionTypes: await db.select({ id: deductionTypes.id, name: deductionTypes.name, defaultAmount: deductionTypes.defaultAmount, defaultCurrency: deductionTypes.defaultCurrency }).from(deductionTypes).where(and(eq(deductionTypes.companyId, actor.companyId), eq(deductionTypes.active, true))).orderBy(deductionTypes.name),
   };
 }
 export type FormOptions = Awaited<ReturnType<typeof formOptions>>;
@@ -242,6 +245,8 @@ export async function setupData(db: Db, actor: Actor) {
     postableAccounts: accountList.filter((a) => a.postable && a.active),
     /** The kinds of fees (set up here; ticked on each trip). */
     feeTypes: has("job_terms.manage") ? await db.select().from(feeTypes).where(eq(feeTypes.companyId, c)).orderBy(feeTypes.name) : null,
+    deductionTypes: has("job_terms.manage") ? await db.select().from(deductionTypes).where(eq(deductionTypes.companyId, c)).orderBy(deductionTypes.name) : null,
+    incomeAccounts: accountList.filter((a) => a.type === "income" && a.postable && a.active),
     expenseAccounts: accountList.filter((a) => a.type === "expense" && a.postable && a.active),
     settings: has("settings.manage")
       ? {
@@ -444,6 +449,13 @@ export async function jobClaims(db: Db, actor: Actor, jobId: string) {
 export async function claimCheck(db: Db, actor: Actor, input: { jobId: string; manifests: string[]; bringing: string[] }) {
   requirePermission(actor, "claims.manage");
   return previewClaim(db, actor.companyId, input);
+}
+
+/** Cuts held for transporters, and the releases (give-backs and closes) so far. */
+export async function heldCutsPage(db: Db, actor: Actor, f: { manifests?: string[]; olderThanDays?: number }) {
+  requirePermission(actor, "claims.manage");
+  const [held, releases] = await Promise.all([heldCuts(db, actor.companyId, f), cutReleaseList(db, actor.companyId)]);
+  return { held, releases, canReverse: can(actor, "payments.reverse") };
 }
 
 export async function claimsOverview(db: Db, actor: Actor, f: { status?: string[]; claimantId?: string } = {}) {
@@ -708,7 +720,8 @@ export async function tripDetail(db: Db, actor: Actor, tripId: string) {
   const [transporter] = trip.transporterId ? await db.select({ name: businessPartners.name }).from(businessPartners).where(eq(businessPartners.id, trip.transporterId)) : [];
   const waivers = await tripWaivers(db, tripId);
   const fees = await db.select().from(tripFees).where(eq(tripFees.tripId, tripId));
-  return { trip, line, history, waivers, fees, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canReverse: can(actor, "payments.reverse"), canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
+  const deductions = await db.select().from(tripDeductions).where(eq(tripDeductions.tripId, tripId));
+  return { trip, line, history, waivers, fees, deductions, transporterName: transporter?.name ?? null, showProfit: view.showProfit, canEdit: view.canEdit && !line?.claim, canReverse: can(actor, "payments.reverse"), canWaive: can(actor, "fines.waive") && !line?.claim && line?.calc?.state === "confirmed" && line.calc.carrier.fine !== "0" };
 }
 
 /** A staged sheet with what applying it would do. */

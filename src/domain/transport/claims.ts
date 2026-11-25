@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { approvalRequests, businessPartners, claimItems, claims, feeTypes, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
+import { approvalRequests, businessPartners, claimItems, claims, cutReleaseLines, cutReleases, deductionTypes, feeTypes, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand, type CommandContext } from "@/server/command";
 import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -188,7 +188,8 @@ function lineFor(accountId: string, currency: string, signed: Dec, extra: { part
 
 /**
  * Book a posted claim: the trips' gross earnings as job cost, fines and
- * recoveries against it, the transporter's cut to the transporter at loading,
+ * recoveries against it, the cuts held for transporters (per trip; nobody is owed them
+ * yet), the deductions the company keeps as income,
  * the advances cleared from whoever received them, and the net to the
  * claimant's account. Rounding differences go to their own account.
  */
@@ -201,7 +202,9 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
   const costs = await acct("driver_costs");
   const fines = await acct("shortage_fines");
   const advances = await acct("advances");
-  const transporterPayable = await acct("payables_to_transporters");
+  const dedAccounts = new Map((await tx.select({ id: deductionTypes.id, accountId: deductionTypes.incomeAccountId }).from(deductionTypes).where(eq(deductionTypes.companyId, actor.companyId))).map((t) => [t.id, t.accountId]));
+  let claimDeductionsAccount: string | null = null;
+  const kept = new Map<string, Dec>();
   const jobId = claim.jobId;
   const [job] = await tx.select({ customerId: jobs.customerId }).from(jobs).where(eq(jobs.id, jobId));
   const types = new Map((await tx.select({ id: feeTypes.id, accountId: feeTypes.expenseAccountId }).from(feeTypes).where(eq(feeTypes.companyId, actor.companyId))).map((t) => [t.id, t.accountId]));
@@ -214,7 +217,8 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
   let gross = new D(0);
   let fine = new D(0);
   let recovered = new D(0);
-  const cuts = new Map<string, Dec>();
+  let held = new D(0);
+  const heldMemo: string[] = [];
   const clearedAdvances = new Map<string, Dec>();
   for (const { trip, live } of items) {
     const c = live.calc!.carrier;
@@ -229,10 +233,17 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
         feeBack.set(account, (feeBack.get(account) ?? new D(0)).plus(dec(f.amount)));
       }
     }
+    // Cut from the driver and held for whichever transporter later asks for it (owner's rule, 2026-11).
     const cut = dec(c.transporterCut);
     if (cut.gt(0)) {
-      if (trip.transporterId) cuts.set(trip.transporterId, (cuts.get(trip.transporterId) ?? new D(0)).plus(cut));
-      else recovered = recovered.plus(cut);
+      held = held.plus(cut);
+      heldMemo.push(`${trip.manifestNo ?? trip.tripNo} ${toStr(cut)}`);
+    }
+    // Deductions the company keeps as its income: its kind's own account, or the shared "Claim deductions".
+    for (const d of live.calc!.deductions) {
+      if (d.currency !== C || dec(d.amount).isZero()) continue;
+      const account = dedAccounts.get(d.deductionTypeId) ?? (claimDeductionsAccount ??= (await acct("claim_deductions")).id);
+      kept.set(account, (kept.get(account) ?? new D(0)).plus(dec(d.amount)));
     }
     for (const [payee, amt] of Object.entries(live.advancesByPayee)) clearedAdvances.set(payee, (clearedAdvances.get(payee) ?? new D(0)).plus(dec(amt)));
   }
@@ -244,7 +255,8 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
     ...lineFor(costs.id, C, recovered.neg(), { jobId, memo: `${claim.claimNo} deductions recovered` }),
     ...[...feeBack].flatMap(([accountId, amt]) => lineFor(accountId, C, amt.neg(), { jobId, memo: `${claim.claimNo} fees taken back from the carrier` })),
     ...(customerCredit.isZero() ? [] : lineFor((await acct("customer_fee_credits")).id, C, customerCredit.neg(), { partnerId: job.customerId, jobId, memo: `${claim.claimNo} fees the customer paid, taken back from the carrier: owed to the customer` })),
-    ...[...cuts].flatMap(([partnerId, amt]) => lineFor(transporterPayable.id, C, amt.neg(), { partnerId, jobId, memo: `${claim.claimNo} transporter's cut` })),
+    ...(held.isZero() ? [] : lineFor((await acct("transporter_cuts_held")).id, C, held.neg(), { jobId, memo: `${claim.claimNo} cuts held for transporters: ${heldMemo.join(", ")}`.slice(0, 500) })),
+    ...[...kept].flatMap(([accountId, amt]) => lineFor(accountId, C, amt.neg(), { jobId, memo: `${claim.claimNo} deductions kept by the company` })),
     ...[...clearedAdvances].flatMap(([partnerId, amt]) => lineFor(advances.id, C, amt.neg(), { partnerId: partnerId || null, jobId, memo: `${claim.claimNo} advances cleared` })),
     ...lineFor(payable.id, C, final.neg(), { partnerId: claim.claimantId, jobId, memo: `${claim.claimNo} net to claimant` }),
     ...lineFor((await acct("rounding_differences")).id, C, total.minus(final).neg(), { jobId, memo: "rounding" }),
@@ -382,6 +394,15 @@ export const cancelClaim = defineCommand({
     if (claim.status === "cancelled") throw new Conflict(`${claim.claimNo} is already cancelled`);
     const [paid] = await tx.select({ no: payments.paymentNo }).from(payments).where(and(eq(payments.claimId, claimId), eq(payments.status, "posted"))).limit(1);
     if (paid) throw new Conflict(`${claim.claimNo} has payment ${paid.no}; reverse the payments first`);
+    // A held cut on one of its trips was given back or closed: that release must be reversed first.
+    const [released] = await tx
+      .select({ releaseNo: cutReleases.releaseNo })
+      .from(cutReleaseLines)
+      .innerJoin(cutReleases, eq(cutReleases.id, cutReleaseLines.releaseId))
+      .innerJoin(claimItems, and(eq(claimItems.tripId, cutReleaseLines.tripId), eq(claimItems.claimId, claimId), eq(claimItems.active, true)))
+      .where(eq(cutReleaseLines.active, true))
+      .limit(1);
+    if (released) throw new Conflict(`${claim.claimNo} has held cuts released by ${released.releaseNo}; reverse that first`);
     let reversalEntryId: string | null = null;
     if (claim.journalEntryId) reversalEntryId = (await reverseEntry(ctx, claim.journalEntryId, cancelDate ?? new Date().toISOString().slice(0, 10), `${claim.claimNo}: ${reason}`)).id;
     await tx.update(claims).set({ status: "cancelled", reversalEntryId }).where(eq(claims.id, claimId));

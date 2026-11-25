@@ -43,6 +43,10 @@ The words the system uses, in the three languages, exactly as they appear on the
 | Direct | مباشر | ڕاستەوخۆ | A driver working with the company with no transporter. |
 | Estimated | تقديرية | خەمڵێنراو | A trip not yet discharged: its figures assume no shortage. |
 | Confirmed | مؤكدة | دڵنیاکراو | A discharged trip: its figures are final. |
+| Cut held for the transporter | مقتطع محتجز للناقل | بڕاوی گیراو بۆ ناقل | An amount cut from a driver on a trip and held until a transporter asks for it. Given back (all or part, after approval) or closed into income. |
+| Held cuts | المقتطعات المحتجزة | بڕاوە گیراوەکان | The list of trips with a cut still held, under Claims. |
+| Give back | إعادة | گەڕاندنەوە | Paying a transporter part or all of the held cuts he asks for, in cash or to his account; the rest of each trip's cut becomes the company's income. |
+| Deduction kept by the company | خصم تحتفظ به الشركة | لێبڕینی کۆمپانیا | An amount taken from the carrier on a trip as the company's own income, e.g. claim handling. |
 | Claim | مطالبة | مطالەبە | The list of trips a carrier brings papers for, and the money owed for them. |
 | Claimant | صاحب المطالبة | داواکار | Whoever brought the papers. The trips' money goes to the claimant, whoever the transporter at loading was. |
 | Site settlement | تسوية موقع | حیسابی شوێن | Drivers paid at a site with the site's own figures, sent back as a sheet and compared with the system. |

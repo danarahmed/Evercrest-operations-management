@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, claims, invoiceLines, invoices, journalLines, moneyAccounts, partnerRoles, payments, payStatementItems, payStatements, tripFees } from "@/db/schema";
+import { accounts, claims, cutReleaseLines, cutReleases, invoiceLines, invoices, journalLines, moneyAccounts, partnerRoles, payments, payStatementItems, payStatements, tripFees } from "@/db/schema";
 import { invoiceOutstanding } from "./invoices";
 import { PAYMENT_PURPOSES } from "@/db/schema/finance";
 import { defineCommand } from "@/server/command";
@@ -392,6 +392,9 @@ export const reversePayment = defineCommand({
     if (p.claimId) await tx.update(claims).set({ status: "posted" }).where(and(eq(claims.id, p.claimId), eq(claims.status, "paid")));
     // A reversed "Pay fees" payment: those fees are unpaid again and can be paid properly.
     await tx.update(tripFees).set({ paymentId: null }).where(eq(tripFees.paymentId, paymentId));
+    // A cash give-back of held cuts: the release is reversed with it and the cuts are held again.
+    const released = await tx.update(cutReleases).set({ status: "reversed", reversalEntryId: rev.id }).where(and(eq(cutReleases.paymentId, paymentId), eq(cutReleases.status, "posted"))).returning({ id: cutReleases.id });
+    if (released.length) await tx.update(cutReleaseLines).set({ active: false }).where(inArray(cutReleaseLines.releaseId, released.map((r) => r.id)));
     await audit({ action: "payments.reverse", entityType: "payment", entityId: paymentId, before: { status: "posted" }, after: { status: "reversed", reversalEntryId: rev.id }, reason });
     return { paymentId, reversalEntryId: rev.id };
   },

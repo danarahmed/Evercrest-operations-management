@@ -8,6 +8,8 @@ import "./transport/billing";
 import "./transport/statements";
 import "./transport/claims";
 import "./transport/remote";
+import "./transport/held-cuts";
+import "./transport/deductions";
 import "./jobs/activities";
 import "./jobs/custom-fields";
 import "./field/work-orders";

@@ -17,6 +17,7 @@ import { createPartner } from "@/domain/masterdata/partners";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { defineRate } from "@/domain/transport/rates";
 import { defineFeeType, setTerms } from "@/domain/transport/terms";
+import { defineDeductionType } from "@/domain/transport/deductions";
 import { createTrip, recordDischarge, recordLoading } from "@/domain/transport/trips";
 import { createWorkOrder } from "@/domain/field/work-orders";
 import { recordDelivery } from "@/domain/supply/deliveries";
@@ -75,6 +76,8 @@ for (const [name, amount, basis, deduct] of [["Visa", "50", "per_trip", true], [
   const ft = (await db.select().from(feeTypes).where(and(eq(feeTypes.companyId, companyId), eq(feeTypes.name, name))))[0];
   if (ft) await run(defineFeeType, { id: ft.id, name, defaultBasis: basis, defaultAmount: amount, defaultCurrency: "USD", paidBy: "company", deductFromCarrier: deduct, billedToCustomer: false, expenseAccountId: ft.expenseAccountId });
 }
+// A kind of deduction the company keeps from carriers as its income (ticked on the trips that have it).
+await run(defineDeductionType, { name: "Claim handling", defaultAmount: "25", defaultCurrency: "USD" });
 const t1 = await run<{ id: string }>(createTrip, { jobId: job.id, newDriverName: "Ahmed Karim", truckPlate: "12 B 34567", transporterId: zagros, productId: diesel });
 await run(recordLoading, { tripId: t1.id, loadingDate: d(9), loadedQty: "30", loadedUnit: "MT" });
 await run(recordDischarge, { tripId: t1.id, dischargeDate: d(7), dischargedQty: "29750", dischargedUnit: "KG" });

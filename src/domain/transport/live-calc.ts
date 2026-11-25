@@ -1,9 +1,9 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { claimItems, claims, fineWaivers, payments, tripFees, trips } from "@/db/schema";
+import { claimItems, claims, cutReleaseLines, deductionTypes, fineWaivers, payments, tripDeductions, tripFees, trips } from "@/db/schema";
 import { dec } from "../money";
 import { loadRuleCard, type RuleCard, termsOn } from "./terms";
-import { calculateTrip, type FeeForCalc, type TripCalc } from "./trip-calc";
+import { calculateTrip, type DeductionForCalc, type FeeForCalc, type TripCalc } from "./trip-calc";
 
 type Trip = typeof trips.$inferSelect;
 
@@ -69,6 +69,32 @@ export async function waiversByTrip(db: Db, tripIds: string[]) {
   return out;
 }
 
+/** Deductions the company keeps on each trip (its income), with their kind's name. */
+export async function deductionsByTrip(db: Db, tripIds: string[]) {
+  const out = new Map<string, DeductionForCalc[]>();
+  if (!tripIds.length) return out;
+  const rows = await db
+    .select({ tripId: tripDeductions.tripId, deductionTypeId: tripDeductions.deductionTypeId, name: deductionTypes.name, amount: tripDeductions.amount, currency: tripDeductions.currency })
+    .from(tripDeductions)
+    .innerJoin(deductionTypes, eq(deductionTypes.id, tripDeductions.deductionTypeId))
+    .where(inArray(tripDeductions.tripId, tripIds));
+  for (const r of rows) {
+    const list = out.get(r.tripId) ?? [];
+    list.push({ deductionTypeId: r.deductionTypeId, name: r.name, amount: dec(r.amount).toFixed(), currency: r.currency });
+    out.set(r.tripId, list);
+  }
+  return out;
+}
+
+/** The part of each trip's held cut the company kept (live releases only). */
+export async function cutKeptByTrip(db: Db, tripIds: string[]) {
+  const out = new Map<string, string>();
+  if (!tripIds.length) return out;
+  const rows = await db.select({ tripId: cutReleaseLines.tripId, kept: cutReleaseLines.kept }).from(cutReleaseLines).where(and(inArray(cutReleaseLines.tripId, tripIds), eq(cutReleaseLines.active, true)));
+  for (const r of rows) out.set(r.tripId, dec(r.kept).toFixed());
+  return out;
+}
+
 /** The live claim (not cancelled) each trip is on, if any. */
 export async function claimsByTrip(db: Db, tripIds: string[]) {
   const out = new Map<string, { id: string; claimNo: string; status: string }>();
@@ -100,7 +126,7 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
     list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: fee.billedToCustomer, paidBy: fee.paidBy });
     feesBy.set(fee.tripId, list);
   }
-  const [advances, waivers, claimed] = await Promise.all([advancesByTrip(db, ids), waiversByTrip(db, ids), claimsByTrip(db, ids)]);
+  const [advances, waivers, claimed, deductions, kept] = await Promise.all([advancesByTrip(db, ids), waiversByTrip(db, ids), claimsByTrip(db, ids), deductionsByTrip(db, ids), cutKeptByTrip(db, ids)]);
   const byPayee = new Map<string, Map<string, Record<string, string>>>();
   for (const trip of rows) {
     const card = cards.get(trip.jobId)!;
@@ -119,6 +145,8 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
               carrierDeduction: trip.carrierDeduction,
               advances: advances.get(trip.id) ?? {},
               fineWaived: waivers.get(trip.id) ?? "0",
+              deductions: deductions.get(trip.id) ?? [],
+              cutKept: kept.get(trip.id) ?? "0",
             },
             terms,
             feesBy.get(trip.id) ?? [],

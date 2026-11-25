@@ -12,6 +12,7 @@ import { getJob } from "../jobs/commands";
 import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
+import { deductionChoice, setTripDeductionsTx } from "./deductions";
 import { feeChoice, setTripFeesTx } from "./fees";
 import { loadRuleCard, routeByName, termsOn } from "./terms";
 import { manifestKey } from "./trip-import";
@@ -55,6 +56,8 @@ const tripInput = z.object({
   advanceMoneyAccountId: uuid.nullish(),
   /** The fees this trip had, ticked by operations (left out = unchanged). Never added automatically. */
   fees: z.array(feeChoice).optional(),
+  /** Deductions the company keeps from the carrier on this trip, as its income (left out = unchanged). */
+  deductions: z.array(deductionChoice).optional(),
   reason: z.string().trim().max(500).nullish(),
 });
 export type TripInput = z.infer<typeof tripInput>;
@@ -208,6 +211,12 @@ export const saveTrip = defineCommand({
       const [saved] = await tx.select().from(trips).where(eq(trips.id, tripId));
       const change = await setTripFeesTx(tx, actor.companyId, saved, input.fees);
       if (change.changed) await audit({ action: "trips.fees", entityType: "trip", entityId: tripId, before: change.before, after: change.after, reason: input.reason ?? null });
+    }
+
+    if (input.deductions !== undefined) {
+      const [saved] = await tx.select().from(trips).where(eq(trips.id, tripId));
+      const change = await setTripDeductionsTx(tx, actor.companyId, saved, input.deductions);
+      if (change.changed) await audit({ action: "trips.deductions", entityType: "trip", entityId: tripId, before: change.before, after: change.after, reason: input.reason ?? null });
     }
 
     if (input.advanceAmount && dec(input.advanceAmount).gt(0)) {

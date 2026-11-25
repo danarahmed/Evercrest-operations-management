@@ -41,6 +41,9 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
   const hasDem = active.some((l) => l.calc.carrier.demurrage !== "0");
   const hasCut = active.some((l) => l.calc.carrier.transporterCut !== "0");
   const hasOther = active.some((l) => l.calc.carrier.otherDeduction !== "0");
+  // Deductions the company keeps as income (claims made before they existed have none).
+  const kept = (l: (typeof active)[number]) => l.calc.carrier.companyDeductions ?? "0";
+  const hasKept = active.some((l) => kept(l) !== "0");
   const hasReward = active.some((l) => l.calc.carrier.reward !== "0");
   const methods = ["cash", "bank_transfer", "cheque", "other"];
   const canReverse = can(actor, "payments.reverse");
@@ -98,7 +101,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
             <th>{t("manifest")}</th><th>{t("driver")}</th><th>{t("transporterAtLoading")}</th><th>{t("loadedOn")}<br />{t("dischargedOn")}</th>
             <th className="num">{t("loaded")}<br />{t("discharged")}</th><th className="num">{t("net")} ({unit})</th><th className="num">{t("freight")}</th>
             {hasReward && <th className="num">{t("reward")}</th>}<th className="num">{t("fine")}</th>{hasWaiver && <th className="num">{t("waived")}</th>}{hasDem && <th className="num">{t("demurrage")}</th>}
-            <th className="num">{t("feesDeducted")}</th>{hasOther && <th className="num">{t("otherDeduction")}</th>}{hasCut && <th className="num">{t("transporterCut")}</th>}
+            <th className="num">{t("feesDeducted")}</th>{hasOther && <th className="num">{t("otherDeduction")}</th>}{hasKept && <th className="num">{t("keptByCompany")}</th>}{hasCut && <th className="num">{t("transporterCut")}</th>}
             <th className="num">{t("earned")}</th><th className="num">{t("advance")}</th><th className="num">{t("toPay")}</th>
           </tr></thead>
           <tbody>{active.map((l) => {
@@ -118,6 +121,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
                 {hasDem && <td className="num">{k.carrier.demurrage !== "0" ? m(k.carrier.demurrage) : "—"}</td>}
                 <td className="num">{k.carrier.feeDeductions !== "0" ? `−${m(k.carrier.feeDeductions)}` : "—"}</td>
                 {hasOther && <td className="num">{k.carrier.otherDeduction !== "0" ? `−${m(k.carrier.otherDeduction)}` : "—"}</td>}
+                {hasKept && <td className="num">{(k.carrier.companyDeductions ?? "0") !== "0" ? `−${m(k.carrier.companyDeductions!)}` : "—"}</td>}
                 {hasCut && <td className="num">{k.carrier.transporterCut !== "0" ? `−${m(k.carrier.transporterCut)}` : "—"}</td>}
                 <td className="num"><strong>{m(k.carrier.total)}</strong></td>
                 <td className="num">{k.carrier.advance !== "0" ? `−${m(k.carrier.advance)}` : "—"}</td>
@@ -135,6 +139,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
             {hasDem && <td className="num"><strong>{m(sum((l) => l.calc.carrier.demurrage))}</strong></td>}
             <td className="num"><strong>{neg(sum((l) => l.calc.carrier.feeDeductions))}</strong></td>
             {hasOther && <td className="num"><strong>{neg(sum((l) => l.calc.carrier.otherDeduction))}</strong></td>}
+            {hasKept && <td className="num"><strong>{neg(sum(kept))}</strong></td>}
             {hasCut && <td className="num"><strong>{neg(sum((l) => l.calc.carrier.transporterCut))}</strong></td>}
             <td className="num"><strong>{m(sum((l) => l.calc.carrier.total))}</strong></td>
             <td className="num"><strong>{neg(sum((l) => l.calc.carrier.advance))}</strong></td>
@@ -157,6 +162,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ locale: 
             {hasDem && <div className="amount-line"><span className="text-slate-600">{t("demurrage")}</span><span>{m(sum((l) => l.calc.carrier.demurrage))}</span></div>}
             <div className="amount-line"><span className="text-slate-600">{t("feesDeducted")}</span><span>{neg(sum((l) => l.calc.carrier.feeDeductions))}</span></div>
             {hasOther && <div className="amount-line"><span className="text-slate-600">{t("otherDeduction")}</span><span>{neg(sum((l) => l.calc.carrier.otherDeduction))}</span></div>}
+            {hasKept && <div className="amount-line"><span className="text-slate-600">{t("keptByCompany")}</span><span>{neg(sum(kept))}</span></div>}
             {hasCut && <div className="amount-line"><span className="text-slate-600">{t("transporterCut")}</span><span>{neg(sum((l) => l.calc.carrier.transporterCut))}</span></div>}
             <div className="amount-line total"><span>{t("earned")}</span><span>{m(sum((l) => l.calc.carrier.total))}</span></div>
             <div className="amount-line"><span className="text-slate-600">{t("advancesTaken")}</span><span>{neg(sum((l) => l.calc.carrier.advance))}</span></div>

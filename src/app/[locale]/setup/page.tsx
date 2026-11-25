@@ -17,7 +17,7 @@ import { Shell } from "../shell";
 export const dynamic = "force-dynamic";
 const POSTING_KEYS = [
   "advances", "customer_receivables", "supplier_payables", "payables_to_transporters", "payables_to_drivers", "currency_exchange",
-  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences", "bad_debts", "product_sales", "trip_fees", "customer_fee_credits",
+  "driver_costs", "transporter_costs", "shortage_fines", "transport_revenue", "demurrage_revenue", "rounding_differences", "bad_debts", "product_sales", "trip_fees", "customer_fee_credits", "transporter_cuts_held", "kept_transporter_cuts", "claim_deductions",
 ] as const;
 const RATE_TYPES = ["driver_pay", "transporter_fee", "customer_price", "shortage_fine", "allowance", "demurrage_pay", "demurrage_bill", "product_price"] as const;
 const BASES = ["actual_qty", "per_trip", "per_day", "quantity", "per_unit"] as const;
@@ -63,6 +63,21 @@ export default async function Setup({ params, searchParams }: { params: Promise<
     const list = scope === "job_type" ? d.targets?.jobTypes : scope === "customer" ? d.targets?.customers : d.targets?.contracts;
     return `${t(`scope_${scope}`)}: ${list?.find((x) => x.id === id)?.name ?? "?"}`;
   };
+
+  const deductionForm = (dt?: NonNullable<typeof d.deductionTypes>[number]) => (
+    <ActionForm command="deduction_types.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
+      {dt && <input type="hidden" name="id" value={dt.id} />}
+      <p className="muted small">{t("deductionFormHelp")}</p>
+      <div className="grid2">
+        <label>{f("name")}<input name="name" required defaultValue={dt?.name} placeholder={t("deductionNameExample")} /></label>
+        <label>{t("deductionAccount")} <span className="hint">{t("deductionAccountHint")}</span><select name="incomeAccountId" defaultValue={dt?.incomeAccountId ?? ""}><option value="">{t("deductionAccountShared")}</option>{d.incomeAccounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</select></label>
+        <label>{t("feeUsualAmount")} <span className="hint">{t("deductionPerTrip")}</span><input name="defaultAmount" inputMode="decimal" dir="ltr" defaultValue={dt?.defaultAmount ? String(Number(dt.defaultAmount)) : ""} /></label>
+        <label>{f("currency")}<select name="defaultCurrency" defaultValue={dt?.defaultCurrency ?? "USD"}><option value="USD">USD</option><option value="IQD">IQD</option></select></label>
+      </div>
+      {dt && <label className="check"><input type="checkbox" name="active" defaultChecked={dt.active} />{t("deductionActive")}</label>}
+      {!dt && <input type="hidden" name="active" value="on" />}
+    </ActionForm>
+  );
 
   const feeForm = (ft?: NonNullable<typeof d.feeTypes>[number]) => (
     <ActionForm command="fee_types.define" locale={locale} idempotencyKey={k()} submitLabel={f("save")}>
@@ -417,6 +432,25 @@ export default async function Setup({ params, searchParams }: { params: Promise<
               {d.moneyAccounts && <Stat label={t("moneyAccounts")} value={d.moneyAccounts.length} icon="wallet" tone="violet" />}
               {d.settings && <Stat label={t("postingAccounts")} value={`${POSTING_KEYS.filter((k) => (d.settings!.posting as Record<string, string>)[k]).length} / ${POSTING_KEYS.length}`} icon="layers" />}
             </div>
+          )}
+          {d.deductionTypes && (
+            <Card flush title={t("deductionTypesTitle")} subtitle={t("deductionTypesHelp")} icon="receipt" actions={
+              <Modal label={t("addDeductionType")} icon={plus}>{deductionForm()}</Modal>
+            }>
+              {d.deductionTypes.length === 0 ? <EmptyState icon="receipt" title={t("noDeductionTypes")} /> : (
+                <div className="table-wrap"><table>
+                  <thead><tr><th>{f("name")}</th><th className="num">{t("feeUsualAmount")}</th><th>{t("deductionAccount")}</th><th /></tr></thead>
+                  <tbody>{d.deductionTypes.map((dt) => (
+                    <tr key={dt.id} className={dt.active ? "" : "muted"}>
+                      <td className="cell-title">{dt.name}{!dt.active && <span className="muted small"> · {t("deductionInactive")}</span>}</td>
+                      <td className="num">{dt.defaultAmount ? <>{formatMoney(dt.defaultAmount, dt.defaultCurrency ?? "USD", locale)} <span className="muted small">{t("feePerTripShort")}</span></> : <span className="muted">—</span>}</td>
+                      <td className="small">{(() => { const a = d.incomeAccounts.find((x) => x.id === dt.incomeAccountId); return a ? <><span className="ltr muted">{a.code}</span> {a.name}</> : <span className="muted">{t("deductionAccountShared")}</span>; })()}</td>
+                      <td className="actions-cell"><Modal label={t("editContract")} title={<>{t("editContract")} · {dt.name}</>} variant="ghost" small>{deductionForm(dt)}</Modal></td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </Card>
           )}
           {d.feeTypes && (
             <Card flush title={t("feeTypesTitle")} subtitle={t("feeTypesHelp")} icon="receipt" actions={

@@ -32,6 +32,8 @@ import { applyTripImport, discardTripImport, saveTripRows } from "@/domain/trans
 import { saveTrip } from "@/domain/transport/trip-edit";
 import { cancelClaim, createClaim, payClaim, waiveFine } from "@/domain/transport/claims";
 import { approveRemoteSettlement, discardRemoteSettlement } from "@/domain/transport/remote";
+import { defineDeductionType } from "@/domain/transport/deductions";
+import { closeHeldCuts, giveBackCuts, reverseCutRelease } from "@/domain/transport/held-cuts";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
 import type { Command } from "./command";
@@ -115,14 +117,27 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
     command: saveTrip,
     prepare: async (_d, _a, i) => {
       const fees = Object.keys(i).filter((k) => k.startsWith("fee_") && i[k] === "on").map((k) => ({ feeTypeId: k.slice(4), amount: (i[`feeAmount_${k.slice(4)}`] as string) || null }));
-      const rest = Object.fromEntries(Object.entries(i).filter(([k]) => !k.startsWith("fee_") && !k.startsWith("feeAmount_") && k !== "feesShown"));
-      return { ...rest, ...(i.feesShown === "1" ? { fees } : {}), ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) };
+      // Deductions the company keeps: ded_<deductionTypeId>=on with dedAmount_<id>; dedShown=1 marks the fieldset was on the form.
+      const deductions = Object.keys(i).filter((k) => k.startsWith("ded_") && i[k] === "on").map((k) => ({ deductionTypeId: k.slice(4), amount: (i[`dedAmount_${k.slice(4)}`] as string) || null }));
+      const rest = Object.fromEntries(Object.entries(i).filter(([k]) => !k.startsWith("fee_") && !k.startsWith("feeAmount_") && k !== "feesShown" && !k.startsWith("ded_") && !k.startsWith("dedAmount_") && k !== "dedShown"));
+      return { ...rest, ...(i.feesShown === "1" ? { fees } : {}), ...(i.dedShown === "1" ? { deductions } : {}), ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) };
     },
   },
   "trip_fees.add_many": {
     command: addFeeToTrips,
     prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || null, manifests: String(i.manifests ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean) }),
   },
+  "deduction_types.define": { command: defineDeductionType, prepare: async (_d, _a, i) => ({ ...i, id: i.id || undefined, active: i.active === "on" }) },
+  // Held cuts: the ticked trips (tripIds[]) with the amount given back on each (give_<tripId>).
+  "held_cuts.give_back": {
+    command: giveBackCuts,
+    prepare: async (_d, _a, i) => {
+      const picked = (i.tripIds as string[] | undefined) ?? [];
+      return { transporterId: i.transporterId || null, transporterName: i.transporterName || null, releaseDate: i.releaseDate, method: i.method, moneyAccountId: i.moneyAccountId || null, reason: i.reason || null, lines: picked.map((id) => ({ tripId: id, given: String(i[`give_${id}`] ?? "").trim() || "0" })) };
+    },
+  },
+  "held_cuts.close": { command: closeHeldCuts, prepare: async (_d, _a, i) => ({ ...i, tripIds: (i.tripIds as string[] | undefined) ?? [] }) },
+  "held_cuts.reverse": { command: reverseCutRelease },
   "fees.pay": { command: payFees, prepare: async (_d, _a, i) => ({ ...i, tripFeeIds: (i.tripFeeIds as string[] | undefined) ?? [] }) },
   // Grid rows arrive as parallel arrays (r_manifest[], r_driver[], …); empty rows are dropped; fee columns as f_<key>[].
   "trips.save_many": {

@@ -16,7 +16,10 @@ export type PostingKey = "advances" | "customer_receivables" | "supplier_payable
   /** Fees the company pays on trips, when the fee type has no account of its own. */
   | "trip_fees"
   /** Fees the customer paid directly and the company took back from the carrier: owed back to the customer. */
-  | "customer_fee_credits";
+  | "customer_fee_credits"
+  | "transporter_cuts_held"
+  | "kept_transporter_cuts"
+  | "claim_deductions";
 
 /** Resolve a configured posting account. Never falls back to a guess. */
 export async function postingAccount(tx: Db, companyId: string, key: PostingKey) {

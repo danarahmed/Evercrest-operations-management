@@ -315,6 +315,18 @@ Who carries the fee in the end:
 
 ---
 
+### 5.6 Kinds of deduction kept by the company
+
+Setup → **Accounting & money** → **Kinds of deduction kept by the company**.
+
+![Kinds of deduction](img/c-01-setup-deductions.jpg)
+
+A deduction is an amount taken from the carrier on a trip as the company's **own income**, for example a claim handling charge of $25. Nobody is ever paid this money. **Add a kind of deduction** → name, usual amount per trip and currency, and optionally its own income account (empty = the shared 4500 "Claim deductions").
+
+![Adding a kind of deduction](img/c-02-add-deduction-kind.jpg)
+
+Like fees, a deduction is never added by itself: operations tick it on the trips that have it (7.1). Untick **In use** on a kind to stop offering it on new trips.
+
 ## 6. A job and its rule card
 
 ### 6.1 Create the job
@@ -388,7 +400,15 @@ There are three ways to enter trips. They all end in the same trips.
 
 ### 7.1 The trip form — one trip with everything
 
-**New trip** opens one screen with every field: manifest, route (or a new route's name), dates, quantities, driver, transporter, plate, a price or reward for this trip only, the transporter's cut, other deductions, notes, an advance with its cash box, and the fees.
+**New trip** opens one screen with every field: manifest, route (or a new route's name), dates, quantities, driver, transporter, plate, a price or reward for this trip only, the cut held for the transporter, other deductions, notes, an advance with its cash box, the fees, and the deductions kept by the company.
+
+- **Cut held for the transporter.** The amount the site cut from the driver for the transporter (for example $75). The driver gets that much less; the money is held until a transporter asks for it (12.6). Typed per trip; nothing is filled in.
+
+![The cut on a trip](img/c-03-trip-cut.jpg)
+
+- **Deductions kept by the company.** Tick the kinds this trip has; the usual amount is filled in and can be changed. They come off whoever brings the papers, transporter or driver, also in a site settlement.
+
+![A deduction on a trip](img/c-04-trip-deduction.jpg)
 
 ![Trip form](img/13-trip-form-filled.jpg)
 
@@ -654,6 +674,49 @@ A claimed trip shows a green "Claimed" notice in its form and is locked.
 
 ---
 
+### 12.6 Cuts held for transporters
+
+When the claim posts, each trip's cut leaves the driver's pay and goes to **Cuts held for transporters** (account 2500), held against the **trip**: at that moment nobody knows yet which transporter will ask for it. The claim shows it in its own column, next to the deductions the company keeps.
+
+![A claim with a cut and a deduction](img/c-05-claim-page.jpg)
+
+**Where:** Claims → **Held cuts**.
+
+![Held cuts button](img/c-06-claims-held-button.jpg)
+
+The list shows every trip with money held: manifest, job, driver, the transporter at loading, the claim, how many days it has been held, and the amount.
+
+![Held cuts](img/c-07-held-list.jpg)
+
+**A transporter asks for his cuts** → **Give back to a transporter**:
+
+1. Paste the manifests he asks for and click **Show**; those trips are ticked.
+2. On each trip, type what is given back (the full cut is filled in). Whatever is not given back on a ticked trip **becomes the company's income at once** and that trip is closed.
+3. Choose the transporter, and how:
+   - **Cash from a cash box** — one payment out of the box;
+   - **To his account** — he is owed it in his partner account; it is paid with his claims or set against what he owes.
+4. **Send for approval.** Every give-back waits for your approval; nothing moves before.
+
+![Giving back held cuts](img/c-08-give-back.jpg)
+
+**Cuts nobody asks for** → **Close old cuts to income**: the list narrows to cuts held more than a year. Tick the trips, write why, **Send for approval**. After approval they become the company's income (account 4400 "Kept from transporter cuts"). Each stays in the history with its trip, date and reason, so if a transporter comes back later the release can be reversed and the cut given back.
+
+![Closing old cuts](img/c-09-close-old.jpg)
+
+In Approvals the request shows what is given back and what is kept:
+
+![The give-back in Approvals](img/c-10-approvals.jpg)
+
+After approval the trip leaves the list, and **Give-backs and closes** shows the release: what was given back, what was kept, and from which box.
+
+![After the give-back](img/c-11-after-give-back.jpg)
+
+**Correcting a release:** **Reverse** on its row (wrong trips, amount, transporter or box). The booking is reversed, its cash payment too, and the cuts are held again. A claim whose cut was given back or closed cannot be cancelled until that release is reversed.
+
+### 12.7 Deductions kept by the company
+
+A deduction ticked on a trip (5.6, 7.1) comes off the claim like a fine and goes to the company's income (4500 "Claim deductions", or the kind's own account). It shows in the claim's **Kept by the company** column and counts in the job's margin. Nobody is ever paid it.
+
 ## 13. Site settlements
 
 When a site paid the drivers with its own figures and sends back a sheet.
@@ -688,6 +751,7 @@ Side menu → **Approvals**. Everything waiting for a second person:
 - payments above the payment limit;
 - fine waivers;
 - papers not coming;
+- every give-back of held cuts, and every close of old cuts into income;
 - fee payments above the payment limit;
 - site settlements above the limit;
 - write-offs.
@@ -708,6 +772,10 @@ The books hold only real events. While trips are loading, the system calculates 
 | Fees paid ("Pay fees") | Cash box down; each fee as a cost of its job, on the fee's account (or the shared 5300 Permits and fees) |
 | Claim posted | Trips' earnings as a job cost; fines against it; fees taken back from the carrier back to the fee's account; fees the customer paid and the carrier gave back owed to the customer (2400 Fees to return to customers); advances cleared; the claimant is owed the net |
 | Claim payment | Cash box down; the claimant is owed less |
+| Cut on a trip, claim posted | The driver's pay is lower; the cut is held in 2500 "Cuts held for transporters" |
+| Held cut given back (after approval) | 2500 down; cash box down (cash) or the transporter's account up (to his account); what is not given back goes to 4400 "Kept from transporter cuts" |
+| Old held cut closed (after approval) | 2500 down; 4400 "Kept from transporter cuts" up |
+| Deduction kept by the company, claim posted | The claimant is owed less; 4500 "Claim deductions" (or the kind's own account) up |
 | Fine waiver | No entry of its own; the claim is smaller |
 | Paper not coming | No entry; the paper counts as complete |
 | Site settlement approved | A claim and a payment per driver, as above |
@@ -742,6 +810,8 @@ Where to see it:
 | Every booking | Journal |
 | Cash boxes, limits, papers, kinds of fees, contracts | Setup |
 | Fees still to pay | Job → Trips → Pay fees |
+| Cuts held for transporters, give back, close old | Claims → Held cuts |
+| Kinds of deduction | Setup → Accounting & money |
 | Your own jobs | Jobs → My jobs |
 | People and permissions | Users & roles |
 
@@ -757,6 +827,8 @@ The side menu is a strip of icons; move the mouse onto it to open it, or pin it 
 |---|---|
 | A quantity or date was typed wrong | Open the trip, correct it, write the reason. If the trip is claimed, cancel the claim first, correct, claim again. |
 | The same manifest typed twice | The system refuses it. Check which trip is right. |
+| A held cut was given back to the wrong transporter, amount or box | Claims → Held cuts → Give-backs and closes → **Reverse**, then give back again. |
+| A cut or deduction was typed wrong on a trip | Before the claim: correct it in the trip form. After the claim: cancel the claim (reverse any give-back first), correct, claim again. |
 | The preview says a cash box is not known | Write the box's name in the sheet exactly as in Setup, or remove the cell and choose the box when applying. |
 | The preview warns that an advance does not match the trip | Nothing was paid. Check the paper: add the missing advance in the trip's form, or reverse a wrong one from the trip's History. |
 | A trip shows "no rule" | Add a rule card version whose date covers the trip's loading date. |
@@ -810,7 +882,9 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 14. Open the carrier's account and the journal and follow each entry back to its claim.
 15. Mark one manifest "Paper not coming" and approve it as a second user.
 16. Attach a contract's signed file in Setup and set its payment terms.
-17. Switch the language to Kurdish and Arabic and repeat one claim.
+17. Add a kind of deduction in Setup; tick it on a trip with a $75 cut; claim it and read the claim's columns.
+18. Claims → Held cuts: give back $60 of that cut in cash; approve as a second user; check the $15 kept, the cash box and the journal; then reverse it.
+19. Switch the language to Kurdish and Arabic and repeat one claim.
 
 ---
 

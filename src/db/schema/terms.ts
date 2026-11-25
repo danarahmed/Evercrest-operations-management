@@ -183,3 +183,23 @@ export const jobFees = pgTable(
     check("job_fee_non_negative", sql`${t.amount} >= 0`),
   ],
 );
+
+/**
+ * A kind of deduction the company keeps from the carrier as its own income (owner's rule, 2026-11), e.g.
+ * "Claim handling". Ticked per trip by operations; it comes off whoever brings the trip's papers.
+ */
+export const deductionTypes = pgTable(
+  "deduction_types",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    name: text("name").notNull(),
+    defaultAmount: numeric("default_amount", { precision: 20, scale: 6 }),
+    defaultCurrency: char("default_currency", { length: 3 }).references(() => currencies.code),
+    /** Income account; empty = the shared "Claim deductions" account. */
+    incomeAccountId: uuid("income_account_id").references(() => accounts.id),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.companyId, t.name)],
+);

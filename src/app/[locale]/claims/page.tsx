@@ -24,7 +24,7 @@ export default async function ClaimsPage({ params, searchParams }: { params: Pro
   const t = await getTranslations({ locale, namespace: "Claims" });
   const f = await getTranslations({ locale, namespace: "Forms" });
   const status = ["posted", "paid", "cancelled", "draft"].includes(sp.status ?? "") ? sp.status! : "";
-  const { list } = await claimsOverview(db, actor, status ? { status: [status] } : {});
+  const { list, canManage } = await claimsOverview(db, actor, status ? { status: [status] } : {});
   const base = `/${locale}/claims`;
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const openByCurrency = new Map<string, InstanceType<typeof D>>();
@@ -32,7 +32,7 @@ export default async function ClaimsPage({ params, searchParams }: { params: Pro
 
   return (
     <Shell wide permissions={actor.permissions} locale={locale} userName={user.displayName} path="/claims">
-      <PageHeader title={t("pageTitle")} subtitle={t("pageIntro")} actions={<ExportButton label={f("export")} filename="evercrest-claims" />} />
+      <PageHeader title={t("pageTitle")} subtitle={t("pageIntro")} actions={<>{canManage && <Link href={`${base}/held`} className="btn">{t("heldCuts")}</Link>}<ExportButton label={f("export")} filename="evercrest-claims" /></>} />
       <div className="stats">
         <Stat icon="clipboard" label={t("status_posted")} value={list.filter((c) => c.status === "posted").length} href={`${base}?status=posted`} tone="warning" hint={[...openByCurrency].map(([c, a]) => m(a.toString(), c)).join(" · ") || undefined} />
         <Stat icon="checkCircle" label={t("status_paid")} value={list.filter((c) => c.status === "paid").length} href={`${base}?status=paid`} tone="success" />

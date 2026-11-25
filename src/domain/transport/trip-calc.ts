@@ -59,6 +59,17 @@ export interface TripForCalc {
   advances: Record<string, string>;
   /** Approved fine waivers on this trip (job currency), if any. */
   fineWaived?: string;
+  /** Deductions the company keeps from the carrier as its income (owner's rule, 2026-11). */
+  deductions?: DeductionForCalc[];
+  /** Part of the transporter's cut the company kept (given back for less, or closed): no longer a cost. */
+  cutKept?: string;
+}
+
+export interface DeductionForCalc {
+  deductionTypeId: string;
+  name: string;
+  amount: string;
+  currency: string;
 }
 
 export interface FeeLine {
@@ -95,7 +106,12 @@ export interface TripCalc {
     demurrage: string;
     feeDeductions: string;
     otherDeduction: string;
+    /** Deductions kept by the company as income (job currency). */
+    companyDeductions: string;
+    /** Cut from the driver and held for the transporter. */
     transporterCut: string;
+    /** Part of the cut the company kept (its income). */
+    cutKept: string;
     /** What the carrier earned on this trip (before the advance). */
     total: string;
     advance: string;
@@ -103,6 +119,7 @@ export interface TripCalc {
     toPay: string;
   };
   fees: FeeLine[];
+  deductions: DeductionForCalc[];
   /** All fees in the job currency that the company pays on this trip. */
   feesTotal: string;
   /** Fees the customer paid directly and the carrier gives back: owed back to the customer. */
@@ -186,12 +203,17 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   const billedFees = sum(inCurrency.filter((f) => f.billedToCustomer));
 
   const transporterCut = dec(trip.transporterCut);
+  const cutKept = D.min(dec(trip.cutKept ?? "0"), transporterCut);
   const otherDeduction = dec(trip.carrierDeduction);
-  const carrierTotal = freight.plus(reward).plus(commission).plus(fine).plus(carrierDemurrage).minus(feeDeductions).minus(otherDeduction).minus(transporterCut);
+  const deductions = trip.deductions ?? [];
+  if (deductions.some((d) => d.currency !== terms.currency)) flags.push("deduction_other_currency");
+  const companyDeductions = deductions.filter((d) => d.currency === terms.currency).reduce((a, d) => a.plus(dec(d.amount)), new D(0));
+  const carrierTotal = freight.plus(reward).plus(commission).plus(fine).plus(carrierDemurrage).minus(feeDeductions).minus(otherDeduction).minus(companyDeductions).minus(transporterCut);
   const advance = dec(trip.advances[terms.currency] ?? "0");
   if (Object.keys(trip.advances).some((c) => c !== terms.currency && !dec(trip.advances[c]).isZero())) flags.push("advance_other_currency");
   if (terms.advanceMax !== null && advance.gt(dec(terms.advanceMax))) flags.push("advance_above_max");
-  const cost = carrierTotal.plus(transporterCut).plus(feesTotal).plus(customerFeeCredit);
+  // The cut is a cost while it is held or given back; the part the company keeps is not.
+  const cost = carrierTotal.plus(transporterCut).minus(cutKept).plus(feesTotal).plus(customerFeeCredit);
 
   // Customer side
   const custQty = terms.customerQtyBasis === "loaded" ? loaded : net;
@@ -225,12 +247,15 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
       demurrage: toStr(carrierDemurrage),
       feeDeductions: toStr(feeDeductions),
       otherDeduction: toStr(otherDeduction),
+      companyDeductions: toStr(companyDeductions),
       transporterCut: toStr(transporterCut),
+      cutKept: toStr(cutKept),
       total: toStr(carrierTotal),
       advance: toStr(advance),
       toPay: toStr(carrierTotal.minus(advance)),
     },
     fees: feeLines,
+    deductions,
     feesTotal: toStr(feesTotal),
     customerFeeCredit: toStr(customerFeeCredit),
     cost: toStr(cost),

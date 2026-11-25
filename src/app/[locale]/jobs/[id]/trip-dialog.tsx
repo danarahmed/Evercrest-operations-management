@@ -107,6 +107,24 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                 </div>
               </fieldset>
             )}
+            {options.deductionTypes.length > 0 && (
+              <fieldset disabled={locked}>
+                <legend>{t("deductionsLegend")}</legend>
+                <input type="hidden" name="dedShown" value="1" />
+                <p className="muted small !m-0 basis-full">{t("deductionsHelp")}</p>
+                <div className="grid2 basis-full">
+                  {options.deductionTypes.map((dt) => {
+                    const has = detail?.deductions.find((x) => x.deductionTypeId === dt.id);
+                    return (
+                      <div key={dt.id} className="flex items-end gap-2">
+                        <label className="check min-w-0 flex-1 pb-2"><input type="checkbox" name={`ded_${dt.id}`} defaultChecked={!!has} /><span className="min-w-0">{dt.name}</span></label>
+                        <label className="w-28 flex-none">{t("feeAmount")}<input name={`dedAmount_${dt.id}`} inputMode="decimal" dir="ltr" defaultValue={has ? String(Number(has.amount)) : dt.defaultAmount ? String(Number(dt.defaultAmount)) : ""} /></label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
             <fieldset disabled={locked}>
               <legend>{t("later")}</legend>
               <div className="grid2">
@@ -139,11 +157,13 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   {c.carrier.feeDeductions !== "0" && <div className="amount-line"><span>{t("feeDeductions")}</span><span className="num">−{m(c.carrier.feeDeductions, c.currency)}</span></div>}
                   {c.carrier.transporterCut !== "0" && <div className="amount-line"><span>{t("transporterCut")}</span><span className="num">−{m(c.carrier.transporterCut, c.currency)}</span></div>}
                   {c.carrier.otherDeduction !== "0" && <div className="amount-line"><span>{t("carrierDeduction")}</span><span className="num">−{m(c.carrier.otherDeduction, c.currency)}</span></div>}
+                  {c.deductions.map((dd) => <div key={dd.deductionTypeId} className="amount-line"><span>{dd.name} <span className="muted small">· {t("keptByCompany")}</span></span><span className="num">−{formatMoney(dd.amount, dd.currency, locale)}</span></div>)}
                   <div className="amount-line total"><span>{tr("carrierPay")}</span><span className="num">{m(c.carrier.total, c.currency)}</span></div>
                   <div className="amount-line"><span>{tr("advance")}</span><span className="num">−{m(c.carrier.advance, c.currency)}</span></div>
                   <div className="amount-line total"><span>{tr("toPay")}</span><span className="num">{m(c.carrier.toPay, c.currency)}</span></div>
                   {c.fees.length > 0 && <div className="divider" />}
                   {c.fees.map((fee) => <div key={fee.feeTypeId} className="amount-line muted"><span>{fee.name}</span><span className="num">{formatMoney(fee.amount, fee.currency, locale)}</span></div>)}
+                  {c.carrier.cutKept !== "0" && <div className="amount-line muted"><span>{t("cutKept")}</span><span className="num">−{m(c.carrier.cutKept, c.currency)}</span></div>}
                   <div className="amount-line total"><span>{tr("cost")}</span><span className="num">{m(c.cost, c.currency)}</span></div>
                   {detail.showProfit && <><div className="amount-line"><span>{tr("billed")}</span><span className="num">{m(c.customer.total, c.currency)}</span></div><div className="amount-line total"><span>{tr("margin")}</span><span className="num">{m(c.margin, c.currency)}</span></div></>}
                 </div>

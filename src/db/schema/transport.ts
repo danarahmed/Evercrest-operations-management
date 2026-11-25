@@ -3,7 +3,7 @@ import { boolean, char, check, date, index, jsonb, numeric, pgTable, text, times
 import { companies, currencies, users } from "./core";
 import { jobs } from "./jobs";
 import { businessPartners, catalogItems, units } from "./masterdata";
-import { FEE_BASES, feeTypes, jobRoutes } from "./terms";
+import { deductionTypes, FEE_BASES, feeTypes, jobRoutes } from "./terms";
 
 /**
  * A truck identified by its plate. Not a company asset: the owner may be a
@@ -114,6 +114,21 @@ export const tripFees = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.tripId, t.feeTypeId), check("trip_fee_non_negative", sql`${t.rate} >= 0`)],
+);
+
+/** A deduction the company keeps from the carrier on one trip, as its income. */
+export const tripDeductions = pgTable(
+  "trip_deductions",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    tripId: uuid("trip_id").notNull().references(() => trips.id),
+    deductionTypeId: uuid("deduction_type_id").notNull().references(() => deductionTypes.id),
+    amount: numeric("amount", { precision: 20, scale: 4 }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().references(() => currencies.code),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.tripId, t.deductionTypeId), check("trip_deduction_positive", sql`${t.amount} > 0`)],
 );
 
 /**

@@ -25,7 +25,7 @@ await page.goto(`${base}/en/finance/partners`);
 const partnerHref = await page.locator("a[href*='/finance/partners/']").first().getAttribute("href").catch(() => null);
 
 const paths = [
-  "", "/jobs", "/jobs/new", "/trips", "/claims", "/statements", "/documents", "/approvals", "/reports",
+  "", "/jobs", "/jobs/new", "/trips", "/claims", "/claims/held", "/claims/held?do=give", "/claims/held?do=close&old=1", "/statements", "/documents", "/approvals", "/reports",
   "/finance", "/finance/accounts", "/finance/journal", "/finance/partners", "/finance/exchange",
   "/setup", "/setup?tab=catalog", "/setup?tab=operations", "/setup?tab=accounting", "/setup?tab=settings", "/admin",
   ...["", "?tab=trips", "?tab=rules", "?tab=claims", "?tab=documents", "?tab=money", "?tab=steps", "?tab=history"].map((t) => `${jobHref.replace(/^\/en/, "")}${t}`),

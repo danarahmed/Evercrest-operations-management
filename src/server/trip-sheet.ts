@@ -19,6 +19,7 @@ export const SHEET_FIELDS = [
   "reward",
   "transporterCommission",
   "advance",
+  "cashBox",
   "transporter",
   "driver",
   "plate",
@@ -46,6 +47,8 @@ const FIELD_ALIASES: Record<SheetField, string[]> = {
   reward: ["بخشیش", "مكافأة", "reward"],
   transporterCommission: ["عمولە ناقل", "عمولة الناقل", "transporter commission"],
   advance: ["سلف", "سلفة", "advance"],
+  // The cash box the site paid the advance from, by its name in Setup (one sheet can mix boxes).
+  cashBox: ["سندووق", "سندوق", "سندوقی سلف", "صندوق", "الصندوق", "صندوق السلفة", "cash box", "paid from"],
   transporter: ["ناقل", "الناقل", "transporter"],
   driver: ["ناو سایەق", "اسم السائق", "driver"],
   plate: ["ژ. سەیارە", "رقم السيارة", "plate"],

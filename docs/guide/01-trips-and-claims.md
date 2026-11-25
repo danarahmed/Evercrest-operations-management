@@ -422,7 +422,7 @@ At the bottom of the trip form, **Fees this trip had** lists every kind of fee. 
 
 ![Choosing the sheet](img/17-import-choose.jpg)
 
-The sheet is read as the site keeps it. Headers in Kurdish, Arabic or English are recognised: load date, route, transporter, driver, plate, manifest, loaded, advance, discharge date, discharged, fees and deductions. Columns with formulas are ignored, because the system calculates them itself.
+The sheet is read as the site keeps it. Headers in Kurdish, Arabic or English are recognised: load date, route, transporter, driver, plate, manifest, loaded, advance, cash box (سندووق / الصندوق / Cash box), discharge date, discharged, fees and deductions. Columns with formulas are ignored, because the system calculates them itself.
 
 ![Import preview](img/18-import-preview.jpg)
 
@@ -445,7 +445,15 @@ An advance paid when the trip is entered comes out of the chosen cash box straig
 - No limit on the card: the general payment limit applies.
 - An advance in another currency than the job's is shown separately and never mixed into the job's currency.
 
+**Advances in an imported sheet.** The advance column records money the site already gave the driver; nothing is sent. Each advance is booked to the **driver** on that row (even when he drives for a transporter), dated on the loading date, with the manifest as its reference, out of a cash box:
+
+- **The cash box column.** If the sheet has a column *سندووق* / *الصندوق* / *Cash box*, each row's advance comes out of the box it names. Write the box's name as it is in Setup (capitals and extra spaces do not matter). An unknown name stops that row, and the preview says so. One sheet can mix boxes and currencies; the preview shows the total per box.
+- **Rows without a box** use the box you choose when applying. The choice is asked only when such rows exist.
+- An advance from a box in another currency than the job's is checked against the payment limit of that currency, since the rule card's limit is in the job's currency.
+
 A sheet import refuses advances above the card's limit; enter that one trip in the full form and send it for approval.
+
+**Importing the same sheet again never pays an advance a second time.** Only missing discharge data is filled in. If the sheet's advance for a trip that already exists does not match what is recorded (or none is recorded), the preview shows a warning on that row and changes nothing: correct the trip in its form.
 
 ### 7.6 What the cards above the grid tell you
 
@@ -749,6 +757,8 @@ The side menu is a strip of icons; move the mouse onto it to open it, or pin it 
 |---|---|
 | A quantity or date was typed wrong | Open the trip, correct it, write the reason. If the trip is claimed, cancel the claim first, correct, claim again. |
 | The same manifest typed twice | The system refuses it. Check which trip is right. |
+| The preview says a cash box is not known | Write the box's name in the sheet exactly as in Setup, or remove the cell and choose the box when applying. |
+| The preview warns that an advance does not match the trip | Nothing was paid. Check the paper: add the missing advance in the trip's form, or reverse a wrong one from the trip's History. |
 | A trip shows "no rule" | Add a rule card version whose date covers the trip's loading date. |
 | A fee was ticked on the wrong trip | Untick it in the trip form. If it was already paid, reverse the fees payment first (on the payment), then untick. |
 | A fee was paid from the wrong box | Reverse the payment; the fees become unpaid again; pay them from the right box. |

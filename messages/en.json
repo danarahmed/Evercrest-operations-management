@@ -1484,7 +1484,13 @@
     "note_differs_loaded": "Recorded loaded {recorded}, sheet says {sheet} — not changed",
     "note_adds_discharge": "Adds the discharge data",
     "note_adds_discharge_date": "Adds the discharge date",
-    "note_advance_needs_approval": "Advance {sheet} is above the company's payment limit ({limit}) and the rule card sets no advance limit — set one on the rule card or approve it separately"
+    "note_advance_needs_approval": "Advance {sheet} is above the company's payment limit ({limit}) and the rule card sets no advance limit — set one on the rule card or approve it separately",
+    "paidFromHintNoBox": "for the rows that do not name their own cash box",
+    "boxesInSheet": "Paid from the cash boxes named in the sheet",
+    "boxLine": "{box}: {amount} on {count, plural, one {# trip} other {# trips}}",
+    "note_cash_box_unknown": "Cash box \"{name}\" is not known — write its name exactly as in Setup",
+    "note_advance_not_recorded": "The sheet shows an advance of {sheet}, but this trip has none recorded. A re-import never pays advances: enter it in the trip's form",
+    "note_advance_differs": "The sheet shows an advance of {sheet}, but {recorded} is recorded on this trip. Nothing is changed: check which is right and correct it in the trip's form"
   },
   "TripForm": {
     "newTrip": "New trip",

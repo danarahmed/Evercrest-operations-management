@@ -12,6 +12,7 @@ import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
 import { loadRuleCard, routeByName, type RuleCard, termsOn } from "./terms";
+import { advancesByTrip } from "./live-calc";
 import { findOrCreateTruck, plateKey } from "./trips";
 
 /**
@@ -48,6 +49,7 @@ function sheetFeeType(card: RuleCard, feeKey: string) {
   const word = SHEET_FEE_NAMES[feeKey] ?? feeKey;
   return card.allFeeTypes.find((t) => t.active && normalizeName(t.name).includes(word));
 }
+const boxKey = (name: string) => normalizeName(name).replace(/[.\-–—_:()،,/\\]/g, " ").replace(/\s+/g, " ").trim();
 const partnerKey = (name: string) => normalizeName(name).replace(/[.\-–—_:()،,/\\]/g, "").replace(/\s+/g, "");
 
 export type RowStatus = "new" | "update" | "same" | "error";
@@ -59,6 +61,16 @@ export interface RowPlan {
   notes: { code: string; level: "error" | "warning" | "info"; params?: Record<string, string> }[];
   tripId?: string;
   fill?: { dischargeDate?: string; dischargedQty?: string };
+  /** The cash box named in the row's cash-box column, when there is one. */
+  moneyAccountId?: string;
+}
+/** Advances a sheet will record, per cash box (null = the box chosen when applying). */
+export interface AdvanceGroup {
+  moneyAccountId: string | null;
+  boxName: string | null;
+  currency: string | null;
+  total: string;
+  rows: number;
 }
 export interface ImportPlan {
   rows: RowPlan[];
@@ -68,6 +80,9 @@ export interface ImportPlan {
   newRoutes: string[];
   advanceTotal: string;
   advanceRows: number;
+  /** Advance rows with no cash box of their own: they need the box chosen when applying. */
+  advanceRowsNoBox: number;
+  advances: AdvanceGroup[];
 }
 
 async function partnersByRole(tx: Db, companyId: string, role: "driver" | "transporter") {
@@ -96,6 +111,11 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
   const looseTransporter = new Map(transporters.map((p) => [partnerKey(p.name), p.name]));
   const routeKeys = new Set(card.routes.map((r) => r.nameKey));
   const limits = ((await getSetting(db, companyId, "approvals.payment_out_limits")) ?? {}) as Record<string, string | number>;
+  const boxes = await db.select().from(moneyAccounts).where(and(eq(moneyAccounts.companyId, companyId), eq(moneyAccounts.active, true)));
+  const boxByName = new Map(boxes.map((b) => [boxKey(b.name), b]));
+  // Advances already recorded on the trips the sheet mentions: a re-import never pays them, but says when they differ.
+  const recorded = await advancesByTrip(db, existing.map((t) => t.id));
+  const groups = new Map<string, AdvanceGroup>();
 
   const seen = new Set<string>();
   const newDrivers = new Set<string>();
@@ -103,6 +123,7 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
   const newRoutes = new Set<string>();
   let advanceTotal = dec("0");
   let advanceRows = 0;
+  let advanceRowsNoBox = 0;
   const out: RowPlan[] = [];
 
   for (const r of rows) {
@@ -117,8 +138,21 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
     if (key && seen.has(key)) err("manifest_twice_in_file");
     if (key) seen.add(key);
     const trip = key ? byKey.get(key) : undefined;
+    const box = v.cashBox ? boxByName.get(boxKey(v.cashBox)) : undefined;
+    if (v.cashBox && dec(v.advance ?? "0").gt(0) && !trip) {
+      if (box) plan.moneyAccountId = box.id;
+      else err("cash_box_unknown", { name: v.cashBox });
+    }
 
     if (trip) {
+      // The advance column on a trip that already exists: never paid again; reported when it does not match.
+      if (v.advance && dec(v.advance).gt(0)) {
+        const have = recorded.get(trip.id) ?? {};
+        const parts = Object.entries(have).filter(([, a]) => !dec(a).isZero());
+        if (!parts.length) warn("advance_not_recorded", { sheet: v.advance });
+        else if (!(parts.length === 1 && dec(parts[0][1]).eq(dec(v.advance))))
+          warn("advance_differs", { sheet: v.advance, recorded: parts.map(([c, a]) => `${dec(a).toFixed()} ${c}`).join(" + ") });
+      }
       plan.tripId = trip.id;
       const fill: RowPlan["fill"] = {};
       if (v.dischargedQty) {
@@ -172,7 +206,11 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
         warn("commission_differs", { sheet: v.transporterCommission, rule: terms.transporterCommission });
       // Advances within the rule card's limit are paid without approval (owner's rule). Above it, or with no limit on the
       // card and above the company's payment limit, the row is not imported: raise the limit on the rule card or approve separately.
-      if (v.advance && dec(v.advance).gt(0)) {
+      if (v.advance && dec(v.advance).gt(0) && box && box.currency !== terms.currency) {
+        // Paid from a box in another currency: the rule card's limit (in the job's currency) cannot be compared; the payment limit applies.
+        const lim = limits[box.currency];
+        if (lim !== undefined && dec(v.advance).gt(dec(String(lim)))) err("advance_needs_approval", { sheet: v.advance, limit: `${lim} ${box.currency}` });
+      } else if (v.advance && dec(v.advance).gt(0)) {
         if (terms.advanceMax !== null) {
           if (dec(v.advance).gt(dec(terms.advanceMax))) err("advance_above_max", { sheet: v.advance, max: terms.advanceMax });
         } else if (limits[terms.currency] !== undefined && dec(v.advance).gt(dec(String(limits[terms.currency])))) err("advance_needs_approval", { sheet: v.advance, limit: String(limits[terms.currency]) });
@@ -189,13 +227,18 @@ export async function planImport(db: Db, companyId: string, jobId: string, rows:
     if (plan.status === "new" && v.advance && dec(v.advance).gt(0)) {
       advanceTotal = advanceTotal.plus(dec(v.advance));
       advanceRows++;
+      if (!box) advanceRowsNoBox++;
+      const g = groups.get(box?.id ?? "") ?? { moneyAccountId: box?.id ?? null, boxName: box?.name ?? null, currency: box?.currency ?? null, total: "0", rows: 0 };
+      g.total = dec(g.total).plus(dec(v.advance)).toFixed();
+      g.rows++;
+      groups.set(box?.id ?? "", g);
     }
     out.push(plan);
   }
 
   const counts = { new: 0, update: 0, same: 0, error: 0 } as Record<RowStatus, number>;
   for (const p of out) counts[p.status]++;
-  return { rows: out, counts, newDrivers: [...newDrivers], newTransporters: [...newTransporters], newRoutes: [...newRoutes], advanceTotal: advanceTotal.toFixed(), advanceRows };
+  return { rows: out, counts, newDrivers: [...newDrivers], newTransporters: [...newTransporters], newRoutes: [...newRoutes], advanceTotal: advanceTotal.toFixed(), advanceRows, advanceRowsNoBox, advances: [...groups.values()] };
 }
 
 export const stageTripImport = defineCommand({
@@ -300,7 +343,8 @@ export async function applyImportRows(ctx: CommandContext, imp: typeof tripImpor
       ? (await tx.select().from(moneyAccounts).where(and(eq(moneyAccounts.id, moneyAccountId), eq(moneyAccounts.companyId, actor.companyId))))[0]
       : undefined;
     if (moneyAccountId && !money) throw new NotFound("money_account", moneyAccountId);
-    if (plan.advanceRows > 0 && !money) throw new ValidationError("Choose the cash box the advances were paid from");
+    if (plan.advanceRowsNoBox > 0 && !money) throw new ValidationError("Choose the cash box the advances were paid from");
+    const boxes = new Map((await tx.select().from(moneyAccounts).where(eq(moneyAccounts.companyId, actor.companyId))).map((b) => [b.id, b]));
 
     const cache = new Map<string, string>();
     const routeIds = new Map(card.routes.map((r) => [r.nameKey, r.id]));
@@ -392,12 +436,14 @@ export async function applyImportRows(ctx: CommandContext, imp: typeof tripImpor
       await audit({ action: "trips.import_create", entityType: "trip", entityId: trip.id, after: { tripNo, manifestNo: trip.manifestNo, jobId: job.id, fees: lines.size }, reason: `import ${imp.fileName} row ${p.rowNo}` });
 
       if (val.advance && dec(val.advance).gt(0)) {
+        // The row's own cash box (cash-box column) wins over the one chosen for the whole sheet.
+        const box = (p.moneyAccountId ? boxes.get(p.moneyAccountId) : undefined) ?? money!;
         await recordPayment.handler(ctx, {
           direction: "out",
           purpose: "advance",
-          moneyAccountId: money!.id,
+          moneyAccountId: box.id,
           amount: val.advance,
-          currency: money!.currency,
+          currency: box.currency,
           paymentDate: val.loadingDate!,
           method: "cash",
           partnerId: driverId,

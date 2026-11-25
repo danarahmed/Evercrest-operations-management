@@ -7,7 +7,7 @@ import { defineFeeType, defineRoute, setJobFee, setTerms } from "@/domain/transp
 import { calculateTrip, demurrageDays } from "@/domain/transport/trip-calc";
 import { applyTripImport, type ImportRow, planImport, stageTripImport } from "@/domain/transport/trip-import";
 import { jobTripLines } from "@/domain/transport/trip-view";
-import { feeTypes, trips } from "@/db/schema";
+import { feeTypes, payments, trips } from "@/db/schema";
 import { runCommand } from "@/server/command";
 import { applyStarterConfiguration } from "@/server/starter";
 import { freshDb } from "./helpers";
@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 let env: Awaited<ReturnType<typeof freshDb>>;
 let jobId: string;
 let cashUsd: string;
+let cashIqd: string;
 const run = <T = { id: string }>(cmd: unknown, input: unknown) => runCommand(env.db, env.admin, cmd as never, input) as Promise<T>;
 
 /** The owner's diesel-to-Syria rules (docs/business/example-diesel-syria.md). */
@@ -32,6 +33,7 @@ beforeAll(async () => {
   env = await freshDb();
   const starter = await applyStarterConfiguration(env.db, env.admin);
   cashUsd = starter.moneyAccounts.usd;
+  cashIqd = starter.moneyAccounts.iqd;
   const customer = await run(createPartner, { kind: "organization", name: "Syria Fuel Co", roles: ["customer"] });
   const type = await run(defineJobType, { code: "PTR", name: "Petroleum transportation", defaultCapabilities: ["transportation", "advances", "documents", "billing", "expenses"] });
   jobId = (await run(createJob, { customerId: customer.id, jobTypeId: type.id, name: "Diesel Kawergosk → Banias", startDate: "2026-10-13", responsibleUserId: env.admin.userId })).id;
@@ -262,5 +264,52 @@ describe("rule card and sheet import", () => {
       run(recordPayment, { direction: "out", purpose: "advance", moneyAccountId: cashUsd, amount: "800", currency: "USD", paymentDate: "2026-10-15", method: "cash", tripId: t.id }),
     ).rejects.toMatchObject({ code: "approval_required" });
     await run(setSetting, { key: "approvals.payment_out_limits", value: {}, reason: "test" });
+  });
+
+  it("a re-imported sheet never pays an advance, and says when its advance does not match the trip's", async () => {
+    // A trip imported with no advance.
+    const first = await run(stageTripImport, { jobId, fileName: "DIESEL-4.xlsx", columns: [], rows: [sheetRow(20, { manifest: "H-400", driver: "هێمن عەزیز", plate: "30 A 30400", advance: "0" })] });
+    await run(applyTripImport, { importId: first.id });
+    const rows = [
+      sheetRow(21, { manifest: "H-400", driver: "هێمن عەزیز", plate: "30 A 30400", advance: "500" }), // none recorded
+      sheetRow(22, { manifest: "H-185", driver: "بارزان حمدامین", plate: "22 B 16403", advance: "600" }), // 900 recorded
+      sheetRow(23, { manifest: "H-186", driver: "شوان عمر", plate: "22 C 17827", advance: "900" }), // matches: quiet
+    ];
+    const plan = await planImport(env.db, env.companyId, jobId, rows);
+    const notes = (i: number) => plan.rows[i].notes.map((n) => n.code);
+    expect(notes(0)).toContain("advance_not_recorded");
+    expect(plan.rows[1].notes.find((n) => n.code === "advance_differs")?.params).toEqual({ sheet: "600", recorded: "900 USD" });
+    expect(notes(2)).not.toContain("advance_differs");
+    expect(plan.advanceRows).toBe(0);
+    const [t] = await env.db.select().from(trips).where(eq(trips.manifestKey, "H400"));
+    const staged = await run(stageTripImport, { jobId, fileName: "DIESEL-5.xlsx", columns: [], rows });
+    await run(applyTripImport, { importId: staged.id });
+    expect(await env.db.select().from(payments).where(eq(payments.tripId, t.id))).toHaveLength(0);
+  });
+
+  it("a cash-box column pays each row's advance from the box it names; rows without one use the box chosen for the sheet", async () => {
+    const rows = [
+      sheetRow(30, { manifest: "H-500", driver: "کاروان", plate: "30 B 30500", advance: "900", cashBox: "main  safe usd" }),
+      sheetRow(31, { manifest: "H-501", driver: "ئارام", plate: "30 B 30501", advance: "500000", cashBox: "Main safe IQD" }),
+      sheetRow(32, { manifest: "H-502", driver: "دلێر", plate: "30 B 30502", advance: "800", cashBox: "Rabia box" }),
+      sheetRow(33, { manifest: "H-503", driver: "سیروان", plate: "30 B 30503", advance: "700" }),
+    ];
+    const plan = await planImport(env.db, env.companyId, jobId, rows);
+    expect(plan.rows.map((r) => r.status)).toEqual(["new", "new", "error", "new"]);
+    expect(plan.rows[2].notes.find((n) => n.code === "cash_box_unknown")?.params).toEqual({ name: "Rabia box" });
+    expect(plan.advanceRowsNoBox).toBe(1);
+    expect(plan.advances.map((g) => [g.boxName, g.currency, g.total, g.rows])).toEqual([["Main safe USD", "USD", "900", 1], ["Main safe IQD", "IQD", "500000", 1], [null, null, "700", 1]]);
+
+    const staged = await run(stageTripImport, { jobId, fileName: "DIESEL-6.xlsx", columns: [], rows });
+    // Row 33 names no box: the sheet's box must be chosen.
+    await expect(run(applyTripImport, { importId: staged.id })).rejects.toThrow(/Choose the cash box/);
+    await run(applyTripImport, { importId: staged.id, moneyAccountId: cashUsd });
+    const paid = async (m: string) => {
+      const [t] = await env.db.select().from(trips).where(eq(trips.manifestKey, m));
+      return (await env.db.select().from(payments).where(eq(payments.tripId, t.id))).map((p) => [p.moneyAccountId, p.currency, p.amount]);
+    };
+    expect(await paid("H500")).toEqual([[cashUsd, "USD", "900.0000"]]);
+    expect(await paid("H501")).toEqual([[cashIqd, "IQD", "500000.0000"]]);
+    expect(await paid("H503")).toEqual([[cashUsd, "USD", "700.0000"]]);
   });
 });

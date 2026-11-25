@@ -18,6 +18,13 @@ describe("reading sheets", () => {
     ]);
   });
 
+  it("reads the cash box an advance was paid from, in Kurdish, Arabic or English headers", async () => {
+    for (const header of ["سندووق", "الصندوق", "Cash box"]) {
+      const parsed = await parseTripSheet(await sheet([["رقم منفیست", "ناو سایەق", "ژ. سەیارە", "بڕی بارکراو", "سلف", header], ["H-1", "Hemin", "22 C 1", 30, 500, "Site box Rabia"]]));
+      expect(parsed.rows[0].values).toMatchObject({ advance: "500", cashBox: "Site box Rabia" });
+    }
+  });
+
   it("still refuses a table it cannot recognise", async () => {
     await expect(parseTripSheet(await sheet([["name", "phone"], ["a", "1"]]))).rejects.toThrow(/No trip table found/);
   });

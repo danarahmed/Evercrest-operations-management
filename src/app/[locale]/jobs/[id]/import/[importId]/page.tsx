@@ -44,7 +44,7 @@ export default async function ImportPreviewPage({ params }: { params: Promise<{ 
             <Stat icon="refresh" label={t("updates")} value={plan.counts.update} tone={plan.counts.update ? "warning" : undefined} hint={t("updatesHint")} />
             <Stat icon="checkCircle" label={t("unchanged")} value={plan.counts.same} />
             <Stat icon="alert" label={t("errors")} value={plan.counts.error} tone={plan.counts.error ? "danger" : undefined} hint={t("errorsHint")} />
-            <Stat icon="wallet" label={t("advances")} value={plan.advanceRows ? (currency ? formatMoney(plan.advanceTotal, currency, locale) : plan.advanceTotal) : "—"} hint={t("advanceRows", { count: plan.advanceRows })} />
+            <Stat icon="wallet" label={t("advances")} value={!plan.advanceRows ? "—" : plan.advances.length === 1 && (plan.advances[0].currency ?? currency) ? formatMoney(plan.advanceTotal, (plan.advances[0].currency ?? currency)!, locale) : plan.advanceRows} hint={t("advanceRows", { count: plan.advanceRows })} />
           </div>
 
           {(plan.newDrivers.length + plan.newTransporters.length + plan.newRoutes.length > 0) && (
@@ -61,8 +61,14 @@ export default async function ImportPreviewPage({ params }: { params: Promise<{ 
             <div className="grid side">
               <ActionForm command="trip_imports.apply" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("applyButton", { count: plan.counts.new + plan.counts.update })} redirectTo={`${base}?tab=trips`} confirm={t("applyConfirm")}>
                 <input type="hidden" name="importId" value={imp.id} />
-                {plan.advanceRows > 0 && (
-                  <label>{t("paidFrom")} <span className="hint">{t("paidFromHint")}</span>
+                {plan.advances.some((g) => g.moneyAccountId) && (
+                  <div className="small">
+                    <div className="muted">{t("boxesInSheet")}</div>
+                    {plan.advances.filter((g) => g.moneyAccountId).map((g) => <div key={g.moneyAccountId}>{t("boxLine", { box: g.boxName!, amount: formatMoney(g.total, g.currency!, locale), count: g.rows })}</div>)}
+                  </div>
+                )}
+                {plan.advanceRowsNoBox > 0 && (
+                  <label>{t("paidFrom")} <span className="hint">{plan.advanceRowsNoBox < plan.advanceRows ? t("paidFromHintNoBox") : t("paidFromHint")}</span>
                     <select name="moneyAccountId" required defaultValue="">
                       <option value="">{t("chooseBox")}</option>
                       {options.moneyAccounts.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.currency})</option>)}
@@ -91,7 +97,7 @@ export default async function ImportPreviewPage({ params }: { params: Promise<{ 
                     <td className="ltr">{r.values.loadingDate ?? "—"}</td>
                     <td className="num">{r.values.loadedQty ?? "—"}</td>
                     <td className="num">{r.values.dischargedQty ?? "—"}</td>
-                    <td className="num">{r.values.advance ?? "—"}</td>
+                    <td className="num">{r.values.advance ?? "—"}{r.values.advance && r.values.cashBox ? <div className="cell-sub">{r.values.cashBox}</div> : null}</td>
                     <td><Badge tone={tone[p.status]}>{t(`row_${p.status}`)}</Badge></td>
                     <td className="wrap small">{p.notes.map((n, i) => <div key={i} className={n.level === "error" ? "neg" : n.level === "warning" ? "warn" : "muted"}><Icon name={n.level === "info" ? "info" : "alert"} size={12} /> {note(n)}</div>)}</td>
                   </tr>

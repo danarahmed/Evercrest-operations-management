@@ -25,14 +25,14 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
   options: FormOptions;
   /** The check of the manifests typed in the New claim step, if any. */
   check: ClaimPreview | null;
-  draft: { claimantId: string; claimantName: string; manifests: string; bringing: string[]; claimDate: string } | null;
+  draft: { claimantId: string; claimantName: string; manifests: string; bringing: string[]; claimDate: string; feeReceipts: boolean } | null;
 }) {
   const t = await getTranslations({ locale, namespace: "Claims" });
   const f = await getTranslations({ locale, namespace: "Forms" });
   const today = new Date().toISOString().slice(0, 10);
   const m = (a: string, c: string) => formatMoney(a, c, locale);
   const claimants = [...options.transporters.map((x) => ({ ...x, role: "transporter" })), ...options.drivers.map((x) => ({ ...x, role: "driver" }))];
-  const statusTone: Record<string, "success" | "warning" | "danger" | "neutral"> = { ok: "success", not_discharged: "warning", papers_missing: "warning", already_claimed: "danger", settled_old_way: "danger", waiver_pending: "warning", not_found: "danger", duplicate: "danger", cancelled: "neutral", no_rule: "danger", other_currency: "danger" };
+  const statusTone: Record<string, "success" | "warning" | "danger" | "neutral"> = { ok: "success", not_discharged: "warning", papers_missing: "warning", already_claimed: "danger", settled_old_way: "danger", waiver_pending: "warning", fee_receipt_missing: "warning", not_found: "danger", duplicate: "danger", cancelled: "neutral", no_rule: "danger", other_currency: "danger" };
 
   const newClaimForm = (
     <form method="get" className="form" action={basePath}>
@@ -55,6 +55,7 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
           </div>
         </div>
       )}
+      <label className="check"><input type="checkbox" name="rc" value="1" defaultChecked={draft?.feeReceipts ?? false} />{t("feeReceiptsCame")}</label>
       <div className="form-actions"><button type="submit" className="primary"><Icon name="search" size={16} />{t("checkManifests")}</button></div>
     </form>
   );
@@ -84,6 +85,8 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
                     {l.missingPapers && <div className="small warn">{t("waitingFor", { papers: l.missingPapers.join(", ") })}</div>}
                     {l.unverifiedPapers && <div className="small muted">{t("unverified", { papers: l.unverifiedPapers.join(", ") })}</div>}
                     {l.broughtNow && <div className="small muted">{t("broughtNow", { papers: l.broughtNow.map((b) => b.name).join(", ") })}</div>}
+                    {l.missingReceipts && <div className="small warn">{t("receiptsMissing", { fees: l.missingReceipts.join(", ") })}</div>}
+                    {l.receiptsNow && <div className="small muted">{t("receiptsNow")}</div>}
                   </td>
                 </tr>
               );
@@ -100,6 +103,7 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
                 <input type="hidden" name="claimDate" value={draft.claimDate} />
                 {check.ok.map((l) => <input key={l.manifest} type="hidden" name="manifests[]" value={l.manifest} />)}
                 {draft.bringing.map((b) => <input key={b} type="hidden" name="bringing[]" value={b} />)}
+                {draft.feeReceipts && <input type="hidden" name="feeReceipts" value="on" />}
                 <label>{t("notes")}<input name="notes" /></label>
                 <p className="muted small">{t("postHelp", { claimant: draft.claimantName })}</p>
               </ActionForm>
@@ -108,6 +112,7 @@ export async function ClaimsSection({ locale, basePath, data, options, check, dr
                 <form method="get" action={basePath} style={{ marginTop: 8 }}>
                   <input type="hidden" name="tab" value="claims" /><input type="hidden" name="claimant" value={draft.claimantName} /><input type="hidden" name="claimDate" value={draft.claimDate} />
                   {draft.bringing.map((b) => <input key={b} type="hidden" name="bring" value={b} />)}
+                  {draft.feeReceipts && <input type="hidden" name="rc" value="1" />}
                   <input type="hidden" name="m" value={check.ok.map((l) => l.manifest).join("\n")} />
                   <button type="submit" className="sm">{t("keepOnlyOk", { count: check.ok.length })}</button>
                 </form>

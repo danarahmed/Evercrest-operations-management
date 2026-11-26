@@ -297,9 +297,9 @@ Each kind of fee (visa, insurance, guarantee, entry slip, declaration, border co
 | **Name** | As people say it, e.g. Visa. |
 | **Usual amount and currency** | Filled in when the fee is ticked on a trip; it can be changed on that trip. Leave it empty if it changes every time. |
 | **Per trip or per ton** | A fixed amount per truck, or an amount per ton loaded. |
-| **Who pays it at the time** | **The company** (from a cash box, through "Pay fees") or **the customer directly** (the company pays nothing). |
+| **Who pays it at the time** | The usual payer: **the company** (from a cash box, through "Pay fees") or **the customer directly** (the company pays nothing). On each trip it can be changed, also to **the driver** (7.2). |
 | **Taken back from the carrier** | The carrier gives it back: it comes off the carrier's pay in the claim. |
-| **Billed to the customer** | The customer pays the company back for it on the invoice (step 5). |
+| **Usually on the customer's invoice** | The starting point for jobs. Each job decides on its rule card which fees go on the customer's invoice, from a date (6.4). |
 | **Account in the books** | Optional. Empty = the shared "Trip fees" account (5300 Permits and fees). Give a fee its own account only if the accountant wants it reported apart. |
 
 Who carries the fee in the end:
@@ -308,8 +308,12 @@ Who carries the fee in the end:
 |---|---|---|---|
 | The company | No | The company | A job cost. |
 | The company | Yes | The carrier | Comes off the claim. |
-| The company | No, but billed to customer | The customer | On the customer's invoice (step 5). |
+| The company | No, on the customer's invoice | The customer | Pass-through: not a job cost, not job revenue; owed by the customer (1150 "Fees to bill customers") until the invoice (step 5). |
+| The driver | — | The company | Paid back to the driver on the trip; a job cost. |
+| The driver | — | The customer (on the invoice) | Paid back to the driver on the trip; pass-through, owed by the customer (1150). |
 | The customer directly | Yes | Back to the customer | Comes off the carrier's claim and is **owed back to the customer** automatically (account 2400 "Fees to return to customers"). |
+
+**Pass-through.** A fee on the customer's invoice is the customer's money that the company or the driver laid out. It is never counted as a job cost or as job revenue, so the job's margin shows only the company's real work. It waits in 1150 "Fees to bill customers" under the customer's name until it is invoiced.
 
 **Fees are never added to trips automatically.** A kind of fee only becomes a cost when someone ticks it on a trip (section 7).
 
@@ -386,6 +390,16 @@ Most of the time only the price and the reward differ between routes, sometimes 
 
 Fees are no longer on the rule card: they are set up once in Setup (5.5) and ticked on each trip (7.2).
 
+### 6.4 Fees on the customer's invoice
+
+Same tab, **Fees on the customer's invoice**: which kinds of fee the customer pays back on this job. Set it at the start of the job; when the customer's terms change, **Change from a date**. Trips loaded from that date follow the new list; earlier trips keep how they were.
+
+![Changing the fees on the invoice](img/f-01-invoice-fees-change.jpg)
+
+![Fees on the customer's invoice](img/f-02-invoice-fees-card.jpg)
+
+Before any line is set, each kind's usual setting from Setup applies. Fees not on the list are costs of the job.
+
 Tip from the owner's seat: fill in the rule card before the first truck loads. A trip loaded before any version exists shows "no rule" until one covers its date.
 
 ---
@@ -424,6 +438,18 @@ At the bottom of the trip form, **Fees this trip had** lists every kind of fee. 
 
 ![Fees on a trip](img/14-trip-form-fees.jpg)
 
+![Fees the driver paid](img/f-03-trip-driver-paid.jpg)
+
+The trip's figures show what is paid back to the driver, and for each fee who paid it, whether it is on the customer's invoice, and whether its receipt is missing:
+
+![The trip's figures](img/f-04-trip-figures.jpg)
+
+**No receipt?** Only as an exception: in the trip window, **Pay back without the receipt** → the fee and the reason → **Send for approval**. A second person decides; after approval the trip can be claimed.
+
+![Pay back without the receipt](img/f-05-pay-without-receipt.jpg)
+
+- **Paid by**: the company (the usual), **the driver**, or the customer. Choose it per trip; the same visa is sometimes paid by the company and sometimes by the driver.
+- **Paid by the driver**: the amount is **added back to the trip's balance**, so whoever brings the papers gets it back (in a claim), or the site includes it when it pays the driver (site settlement). It never appears in "Pay fees". It is paid back only when its **receipt** is brought: tick **Receipt brought** on the trip, or tick the receipts box on the claim (12.1).
 - A fee marked "paid by the customer" costs the company nothing; if it is taken back from the carrier it is owed back to the customer.
 - A fee already paid (see "Pay fees") cannot be changed on the trip. Reverse its payment first.
 - An imported sheet can carry fee columns; they are ticked the same way.
@@ -615,6 +641,7 @@ Every manifest gets a result before anything is created:
 | No such manifest in this job | Wrong number, or another job's trip | Check the paper |
 | No discharge data yet | Not discharged | Import or enter discharge |
 | Papers missing | A required paper is not there | Tick it if it came with the claim, record it, or ask for "Paper not coming" |
+| Fee receipt missing | The driver paid a fee and its receipt is not in | Tick "The receipts of fees the drivers paid came with this claim", tick it on the trip, or ask for "Pay back without the receipt" |
 | Waiver waiting for approval | A fine waiver is undecided | Decide it in Approvals |
 | Already claimed | On another claim (number shown) | Nothing: it cannot be paid twice |
 | Already paid by settlement | Paid the old way, before claims existed | Nothing |
@@ -673,6 +700,24 @@ A claimed trip shows a green "Claimed" notice in its form and is locked.
 **Cancel this claim** with a reason. The trips become claimable again and the booking is reversed. A claim with payments cannot be cancelled: reverse its payments first, with **Reverse** next to each payment on the claim page. Reversing needs the "reverse payments" permission.
 
 ---
+
+### 12.5a Fees the driver paid, on the claim
+
+The claim pays back the fees the drivers paid on its trips, to whoever brings the papers. Without the receipt the line says **Fee receipt missing**:
+
+![Fee receipt missing](img/f-06-claim-receipt-missing.jpg)
+
+When the receipts come with the papers, tick **The receipts of fees the drivers paid came with this claim** before **Check the manifests**; they are recorded on the trips.
+
+![Receipts came with the claim](img/f-07-claim-receipts-came.jpg)
+
+The claim shows the amount in **Fees the driver paid, paid back**. In the books, a fee on the customer's invoice goes to 1150 "Fees to bill customers" (the customer owes it); any other goes to the fee's cost account.
+
+![The claim and its books](img/f-08-claim-books.jpg)
+
+The job's trips show the fees waiting to be billed to the customer next to the fee cost:
+
+![Fees to bill on the trips](img/f-09-trips-to-bill.jpg)
 
 ### 12.6 Cuts held for transporters
 
@@ -751,6 +796,7 @@ Side menu → **Approvals**. Everything waiting for a second person:
 - payments above the payment limit;
 - fine waivers;
 - papers not coming;
+- fees the driver paid, paid back without the receipt;
 - every give-back of held cuts, and every close of old cuts into income;
 - fee payments above the payment limit;
 - site settlements above the limit;
@@ -769,7 +815,9 @@ The books hold only real events. While trips are loading, the system calculates 
 | Event | What the books record |
 |---|---|
 | Advance paid | Cash box down; advance owed by that driver or transporter |
-| Fees paid ("Pay fees") | Cash box down; each fee as a cost of its job, on the fee's account (or the shared 5300 Permits and fees) |
+| Fees paid ("Pay fees") | Cash box down; each fee as a cost of its job on the fee's account (or the shared 5300 Permits and fees) — or, for a fee on the customer's invoice, owed by the customer in 1150 "Fees to bill customers" |
+| Claim pays back fees the driver paid | Claimant owed more; the fee's cost account — or 1150 "Fees to bill customers" when it is on the customer's invoice |
+| Invoice of fees to the customer (step 5) | 1150 down; customer receivable up |
 | Claim posted | Trips' earnings as a job cost; fines against it; fees taken back from the carrier back to the fee's account; fees the customer paid and the carrier gave back owed to the customer (2400 Fees to return to customers); advances cleared; the claimant is owed the net |
 | Claim payment | Cash box down; the claimant is owed less |
 | Cut on a trip, claim posted | The driver's pay is lower; the cut is held in 2500 "Cuts held for transporters" |
@@ -833,6 +881,8 @@ The side menu is a strip of icons; move the mouse onto it to open it, or pin it 
 | The preview warns that an advance does not match the trip | Nothing was paid. Check the paper: add the missing advance in the trip's form, or reverse a wrong one from the trip's History. |
 | A trip shows "no rule" | Add a rule card version whose date covers the trip's loading date. |
 | A fee was ticked on the wrong trip | Untick it in the trip form. If it was already paid, reverse the fees payment first (on the payment), then untick. |
+| A fee the driver paid was entered as paid by the company (or the other way) | Before the claim: change **Paid by** on the trip. A fee already paid with "Pay fees" must have that payment reversed first. |
+| The fees on the customer's invoice were wrong from a date | Rule card → **Change from a date** with the right list and the same date: it replaces that line. Trips already claimed or fees already paid keep how they were booked. |
 | A fee was paid from the wrong box | Reverse the payment; the fees become unpaid again; pay them from the right box. |
 | A paper will never come | Paper not coming, with the reason, and approve it. |
 | A sheet is refused or columns are not read | The preview lists the columns it recognised. Rename the header to one of the recognised names, or ask for it to be added. |
@@ -884,7 +934,9 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 16. Attach a contract's signed file in Setup and set its payment terms.
 17. Add a kind of deduction in Setup; tick it on a trip with a $75 cut; claim it and read the claim's columns.
 18. Claims → Held cuts: give back $60 of that cut in cash; approve as a second user; check the $15 kept, the cash box and the journal; then reverse it.
-19. Switch the language to Kurdish and Arabic and repeat one claim.
+19. On a job's rule card put the visa on the customer's invoice from today. Enter a trip whose visa the driver paid; try to claim it without the receipt, then with the receipts box ticked; read the claim's books (1150).
+20. On another trip, ask for "Pay back without the receipt" and approve it as a second user.
+21. Switch the language to Kurdish and Arabic and repeat one claim.
 
 ---
 
@@ -894,7 +946,7 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 |---|---|
 | Counting cash boxes; site differences landing on the site's box; daily rate; exchangers; paying in the other currency | Step 3 |
 | The accountant's review queue; the month-end accrual for trips waiting for papers | Step 4 |
-| Customer invoicing from the rule card, with the fees billed to the customer and the fees owed back to the customer as invoice lines; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card | Step 5 |
+| Customer invoicing from the rule card, with the fees waiting in 1150 "Fees to bill customers" and the fees owed back to the customer (2400) as invoice lines; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card | Step 5 |
 | Roles rebuilt around your staff; "my work" lists; your owner board and phone view | Step 6 |
 | Storage, shared overheads, staff and payroll, several companies | Step 7 |
 | Accident or contamination recovery charged to a carrier | To be scheduled |

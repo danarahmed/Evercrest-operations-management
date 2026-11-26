@@ -65,10 +65,10 @@ export default async function JobPage({ params, searchParams }: { params: Promis
     ? (() => {
         const name = sp.claimant.trim();
         const known = [...options.transporters, ...options.drivers].find((x) => x.name === name);
-        return { claimantId: known?.id ?? "", claimantName: name, manifests: draftManifests, bringing: (Array.isArray(sp.bring) ? sp.bring : sp.bring ? [sp.bring] : []) as string[], claimDate: typeof sp.claimDate === "string" && sp.claimDate ? sp.claimDate : new Date().toISOString().slice(0, 10) };
+        return { claimantId: known?.id ?? "", claimantName: name, manifests: draftManifests, bringing: (Array.isArray(sp.bring) ? sp.bring : sp.bring ? [sp.bring] : []) as string[], claimDate: typeof sp.claimDate === "string" && sp.claimDate ? sp.claimDate : new Date().toISOString().slice(0, 10), feeReceipts: sp.rc === "1" };
       })()
     : null;
-  const check = claimDraft && claimsData ? await claimCheck(db, actor, { jobId: id, manifests: claimDraft.manifests.split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean), bringing: claimDraft.bringing }) : null;
+  const check = claimDraft && claimsData ? await claimCheck(db, actor, { jobId: id, manifests: claimDraft.manifests.split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean), bringing: claimDraft.bringing, feeReceipts: claimDraft.feeReceipts }) : null;
   const tripParam = typeof sp.trip === "string" ? sp.trip : null;
   const detail = tripParam && tripParam !== "new" ? await tripDetail(db, actor, tripParam) : null;
 

@@ -43,6 +43,10 @@ The words the system uses, in the three languages, exactly as they appear on the
 | Direct | مباشر | ڕاستەوخۆ | A driver working with the company with no transporter. |
 | Estimated | تقديرية | خەمڵێنراو | A trip not yet discharged: its figures assume no shortage. |
 | Confirmed | مؤكدة | دڵنیاکراو | A discharged trip: its figures are final. |
+| Paid by the driver | دفعه السائق | سایەق دایە | A fee the driver paid himself; it is added back to the trip's balance and paid back with its receipt. |
+| Fee receipt | إيصال الرسم | پسوولەی خەرجی | The paper that proves the driver paid a fee. Without it the fee is paid back only after an approved exception. |
+| Fees on the customer's invoice | رسوم على فاتورة الزبون | خەرجییەکانی سەر پسوولەی کڕیار | The kinds of fee the customer pays back on a job, set on its rule card from a date. |
+| Fees to bill customers | رسوم تُفوتر للزبائن | خەرجی بۆ فاتورەکردنی کڕیاران | Account 1150: fees on the customer's invoice, waiting to be invoiced. Pass-through money, not a cost and not revenue. |
 | Cut held for the transporter | مقتطع محتجز للناقل | بڕاوی گیراو بۆ ناقل | An amount cut from a driver on a trip and held until a transporter asks for it. Given back (all or part, after approval) or closed into income. |
 | Held cuts | المقتطعات المحتجزة | بڕاوە گیراوەکان | The list of trips with a cut still held, under Claims. |
 | Give back | إعادة | گەڕاندنەوە | Paying a transporter part or all of the held cuts he asks for, in cash or to his account; the rest of each trip's cut becomes the company's income. |

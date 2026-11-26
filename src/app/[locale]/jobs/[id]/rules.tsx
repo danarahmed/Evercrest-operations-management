@@ -36,6 +36,11 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
   // Route lines, newest first per route; the first one of each route is the price in force today.
   const byRoute = card.routes.map((r) => ({ route: r, lines: card.routePrices.filter((p) => p.routeId === r.id).sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom)) }));
   const nowIso = today();
+  // Fees on the customer's invoice, from a date (newest first); before any line, each kind's own setting.
+  const billedVersions = [...card.billedFees].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+  const inForce = billedVersions.find((v) => v.effectiveFrom <= nowIso) ?? null;
+  const activeKinds = card.allFeeTypes.filter((k) => k.active);
+  const billedNow = new Set(inForce ? inForce.feeTypeIds : activeKinds.filter((k) => k.billedToCustomer && k.paidBy !== "customer").map((k) => k.id));
   const currencySelect = (
     <label>{f("currency")}<select name="currency" defaultValue="USD"><option value="USD">USD</option><option value="IQD">IQD</option></select></label>
   );
@@ -145,6 +150,35 @@ export async function RuleCardSection({ locale, jobId, card, units, expenseAccou
                 {card.showProfit && <td className="num">{m(v.customerPrice, v.currency)}{v.customerPrice !== null && v.customerPriceBasis === "per_trip" ? ` ${t("perTripShort")}` : ""}</td>}
                 <td>{v.demurrageMethod === "none" ? <span className="muted">—</span> : `${t("dem_arrival_to_discharge")} · ${v.demurrageFreeDays} ${t("daysFree")} · ${formatMoney(v.carrierDemurrageRate, v.currency, locale)}`}</td>
                 <td className="num">{v.advanceMax ? m(v.advanceMax, v.currency) : <span className="muted">—</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+      </Card>
+
+      <Card title={t("billedTitle")} subtitle={t("billedHelp")} icon="receipt" flush actions={card.canManage && (
+        <Modal label={t("billedChange")} icon={plus} small>
+          <ActionForm command="job_billed_fees.set" locale={locale} idempotencyKey={key()} submitLabel={f("save")}>
+            <input type="hidden" name="jobId" value={jobId} />
+            <p className="muted small">{t("billedChangeHelp")}</p>
+            <label>{t("from")}<input type="date" name="effectiveFrom" required defaultValue={nowIso} /></label>
+            <fieldset className="checks"><legend>{t("billedKinds")}</legend>
+              {activeKinds.map((ft) => <label key={ft.id} className="check"><input type="checkbox" name="feeTypeIds[]" value={ft.id} defaultChecked={billedNow.has(ft.id)} />{ft.name}</label>)}
+            </fieldset>
+            <label>{t("note")} <span className="hint">{f("optional")}</span><input name="note" /></label>
+          </ActionForm>
+        </Modal>
+      )}>
+        {!billedVersions.length ? (
+          <div className="card-body"><p className="muted !m-0">{billedNow.size ? t("billedDefault", { kinds: activeKinds.filter((k) => billedNow.has(k.id)).map((k) => k.name).join(", ") }) : t("billedNone")}</p></div>
+        ) : (
+          <div className="table-wrap"><table className="dense">
+            <thead><tr><th>{t("from")}</th><th>{t("billedKinds")}</th><th>{t("note")}</th></tr></thead>
+            <tbody>{billedVersions.map((v) => (
+              <tr key={v.id} className={v === inForce || v.effectiveFrom > nowIso ? "" : "muted"}>
+                <td className="ltr">{v.effectiveFrom}{v.effectiveFrom > nowIso ? <> <Badge tone="info">{t("upcoming")}</Badge></> : v === inForce ? <> <Badge tone="success">{t("inForce")}</Badge></> : null}</td>
+                <td className="wrap">{v.feeTypeIds.length ? v.feeTypeIds.map((id) => feeName(id)).join(", ") : <span className="muted">{t("billedNoneShort")}</span>}</td>
+                <td className="wrap muted">{v.note ?? ""}</td>
               </tr>
             ))}</tbody>
           </table></div>

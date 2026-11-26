@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { approvalRequests, businessPartners, claimItems, claims, cutReleaseLines, cutReleases, deductionTypes, feeTypes, fineWaivers, jobs, partnerRoles, payments, trips, tripSettlements, trucks } from "@/db/schema";
+import { approvalRequests, businessPartners, claimItems, claims, cutReleaseLines, cutReleases, deductionTypes, feeTypes, fineWaivers, jobs, partnerRoles, payments, tripFees, trips, tripSettlements, trucks } from "@/db/schema";
 import { defineCommand, type CommandContext } from "@/server/command";
 import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { getSetting } from "@/server/settings";
@@ -35,7 +35,7 @@ type Trip = typeof trips.$inferSelect;
  * first entry of the trip's money in the books (method D).
  */
 
-export type ClaimLineStatus = "ok" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "papers_missing" | "duplicate" | "other_currency";
+export type ClaimLineStatus = "ok" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "papers_missing" | "fee_receipt_missing" | "duplicate" | "other_currency";
 
 export interface ClaimPreviewLine {
   manifest: string;
@@ -54,6 +54,10 @@ export interface ClaimPreviewLine {
   unverifiedPapers?: string[];
   /** Required papers this claim brings with it (recorded on the trip when the claim is created). */
   broughtNow?: { documentTypeId: string; name: string }[];
+  /** Fees the driver paid whose receipts are still missing (names). */
+  missingReceipts?: string[];
+  /** The receipts came with this claim: they are marked on the trip when it is created. */
+  receiptsNow?: boolean;
   calc?: TripCalc;
   /** Net for the claimant (carrier total − advances). */
   amount?: string;
@@ -80,7 +84,7 @@ async function finalRounding(db: Db, companyId: string, currency: string, precis
  * Check a list of manifest numbers against a job: pulls each trip with its
  * live calculation and says exactly why a trip cannot be claimed yet.
  */
-export async function previewClaim(db: Db, companyId: string, input: { jobId: string; manifests: string[]; bringing?: string[] }): Promise<ClaimPreview> {
+export async function previewClaim(db: Db, companyId: string, input: { jobId: string; manifests: string[]; bringing?: string[]; feeReceipts?: boolean }): Promise<ClaimPreview> {
   const job = await getJob(db, companyId, input.jobId);
   const wanted = input.manifests.map((m) => m.trim()).filter(Boolean);
   const keys = wanted.map(manifestKey);
@@ -131,9 +135,13 @@ export async function previewClaim(db: Db, companyId: string, input: { jobId: st
     const missing = absent.filter((p) => !bringing.has(p.documentTypeId)).map((p) => p.documentType);
     const unverified = mine.filter((p) => p.state === "awaiting_verification").map((p) => p.documentType);
     if (missing.length) return { ...base, status: "papers_missing", missingPapers: missing, calc: l.calc, broughtNow: broughtNow.length ? broughtNow : undefined };
+    // A fee the driver paid is paid back only with its receipt (or an approved exception, owner's rule).
+    const noReceipt = l.calc.fees.filter((f) => !f.receiptOk).map((f) => f.name);
+    if (noReceipt.length && !input.feeReceipts) return { ...base, status: "fee_receipt_missing", missingReceipts: noReceipt, calc: l.calc };
+    const receiptsNow = noReceipt.length > 0;
     currency ??= l.calc.currency;
     if (l.calc.currency !== currency) return { ...base, status: "other_currency", calc: l.calc };
-    return { ...base, status: "ok", calc: l.calc, amount: l.calc.carrier.toPay, unverifiedPapers: unverified.length ? unverified : undefined, broughtNow: broughtNow.length ? broughtNow : undefined };
+    return { ...base, status: "ok", calc: l.calc, amount: l.calc.carrier.toPay, unverifiedPapers: unverified.length ? unverified : undefined, broughtNow: broughtNow.length ? broughtNow : undefined, receiptsNow: receiptsNow || undefined };
   });
   const ok = lines.filter((l) => l.status === "ok");
   const total = ok.reduce((a, l) => a.plus(dec(l.amount!)), new D(0));
@@ -162,6 +170,7 @@ export function claimProblems(p: ClaimPreview): string[] {
     settled_old_way: (l) => `${l.manifest}: already paid by settlement ${l.claimNo}`,
     waiver_pending: (l) => `${l.manifest}: a fine waiver is waiting for approval`,
     papers_missing: (l) => `${l.manifest}: waiting for ${l.missingPapers!.join(", ")}`,
+    fee_receipt_missing: (l) => `${l.manifest}: the receipt of ${l.missingReceipts!.join(", ")} (paid by the driver) is missing`,
     duplicate: (l) => `${l.manifest}: listed twice`,
     other_currency: (l) => `${l.manifest}: its rule card is in ${l.calc!.currency}; claim it separately`,
   };
@@ -213,6 +222,8 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
   const feeBack = new Map<string, Dec>();
   let customerCredit = new D(0);
   let tripFeesAccount: string | null = null;
+  let feesToBillAccount: string | null = null;
+  const reimbursed = new Map<string, { accountId: string; billed: boolean; amount: Dec }>();
 
   let gross = new D(0);
   let fine = new D(0);
@@ -226,6 +237,13 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
     fine = fine.plus(dec(c.fine)); // ≤ 0
     recovered = recovered.plus(dec(c.otherDeduction));
     for (const f of live.calc!.fees) {
+      // A fee the driver paid, paid back on the claim: a job cost on its account, or owed by the customer when on the invoice.
+      if (f.paidBy === "carrier" && f.currency === C && !dec(f.amount).isZero()) {
+        const account = f.billedToCustomer ? (feesToBillAccount ??= (await acct("fees_to_bill")).id) : (types.get(f.feeTypeId) ?? (tripFeesAccount ??= (await acct("trip_fees")).id));
+        const k = `${account}:${f.billedToCustomer ? "bill" : ""}`;
+        reimbursed.set(k, { accountId: account, billed: f.billedToCustomer, amount: (reimbursed.get(k)?.amount ?? new D(0)).plus(dec(f.amount)) });
+        continue;
+      }
       if (!f.deductFromCarrier || f.currency !== C || dec(f.amount).isZero()) continue;
       if (f.paidBy === "customer") customerCredit = customerCredit.plus(dec(f.amount));
       else {
@@ -254,6 +272,7 @@ async function postClaimEntry(ctx: CommandContext, claim: typeof claims.$inferSe
     ...lineFor(fines.id, C, fine, { jobId, memo: `${claim.claimNo} shortage fines` }),
     ...lineFor(costs.id, C, recovered.neg(), { jobId, memo: `${claim.claimNo} deductions recovered` }),
     ...[...feeBack].flatMap(([accountId, amt]) => lineFor(accountId, C, amt.neg(), { jobId, memo: `${claim.claimNo} fees taken back from the carrier` })),
+    ...[...reimbursed.values()].flatMap((r) => lineFor(r.accountId, C, r.amount, { jobId, partnerId: r.billed ? job.customerId : null, memo: `${claim.claimNo} fees the driver paid, paid back${r.billed ? ": to bill the customer" : ""}` })),
     ...(customerCredit.isZero() ? [] : lineFor((await acct("customer_fee_credits")).id, C, customerCredit.neg(), { partnerId: job.customerId, jobId, memo: `${claim.claimNo} fees the customer paid, taken back from the carrier: owed to the customer` })),
     ...(held.isZero() ? [] : lineFor((await acct("transporter_cuts_held")).id, C, held.neg(), { jobId, memo: `${claim.claimNo} cuts held for transporters: ${heldMemo.join(", ")}`.slice(0, 500) })),
     ...[...kept].flatMap(([accountId, amt]) => lineFor(accountId, C, amt.neg(), { jobId, memo: `${claim.claimNo} deductions kept by the company` })),
@@ -281,6 +300,8 @@ export const createClaim = defineCommand({
     manifests: z.array(z.string().trim().min(1)).min(1).max(500),
     /** Document types brought with the claim for every trip on it (the manifests themselves, discharge papers …). */
     bringing: z.array(uuid).max(20).nullish(),
+    /** The receipts of the fees the drivers paid came with this claim. */
+    feeReceipts: z.boolean().nullish(),
     notes: z.string().max(2000).nullish(),
     post: z.boolean().default(true),
     source: z.enum(["manual", "remote"]).default("manual"),
@@ -307,7 +328,7 @@ export const createClaim = defineCommand({
     // Serialize claims on the same trips: lock the job's trips with these manifests.
     const keys = [...new Set(input.manifests.map(manifestKey))];
     const locked = await tx.select({ id: trips.id }).from(trips).where(and(eq(trips.jobId, job.id), inArray(trips.manifestKey, keys))).for("update");
-    const preview = await previewClaim(tx, actor.companyId, { jobId: job.id, manifests: input.manifests, bringing: input.bringing ?? [] });
+    const preview = await previewClaim(tx, actor.companyId, { jobId: job.id, manifests: input.manifests, bringing: input.bringing ?? [], feeReceipts: input.feeReceipts ?? false });
     const problems = claimProblems(preview);
     if (problems.length) throw new ValidationError("These manifests cannot be claimed yet", { missing: problems });
     if (!preview.ok.length) throw new ValidationError("No trips to claim");
@@ -343,6 +364,8 @@ export const createClaim = defineCommand({
     }
     void locked;
     // The papers that came with the claim are recorded on each trip, referenced to the claim.
+    const withReceipts = preview.ok.filter((l) => l.receiptsNow).map((l) => l.tripId!);
+    if (withReceipts.length) await tx.update(tripFees).set({ receiptReceived: true }).where(and(inArray(tripFees.tripId, withReceipts), eq(tripFees.paidBy, "carrier"), eq(tripFees.receiptReceived, false), eq(tripFees.receiptWaived, false)));
     for (const l of preview.ok) for (const b of l.broughtNow ?? []) await recordDocument.handler(ctx, { documentTypeId: b.documentTypeId, entityType: "trip", entityId: l.tripId!, reference: `${claimNo} ${l.manifest}`, issuedDate: null, expiryDate: null, fileKey: null, fileName: null, notes: null });
     await audit({
       action: "claims.create",

@@ -593,8 +593,8 @@
     "feeAccountShared": "Shared: Trip fees",
     "feeCarriedBy": "Who carries it in the end",
     "feeDeduct": "Taken back from the driver or transporter (comes off their pay)",
-    "feeBilled": "Billed to the customer (added to their invoice)",
-    "feeCarriedHelp": "Tick neither: the company carries the fee as a job cost. A fee the customer paid directly and that is taken back from the carrier is owed back to the customer.",
+    "feeBilled": "Usually on the customer's invoice (each job can change it on its rule card)",
+    "feeCarriedHelp": "Tick neither: the fee is a job cost. On the customer's invoice: it is pass-through money, not a cost and not revenue. A fee the customer paid directly and that is taken back from the carrier is owed back to the customer.",
     "feeCarriedCompany": "company cost",
     "feeCarriedCarrier": "from carrier",
     "feeCarriedCustomer": "to customer",
@@ -612,7 +612,8 @@
     "deductionAccountShared": "Shared: 4500 Claim deductions",
     "deductionPerTrip": "per trip",
     "deductionActive": "In use (untick to stop offering it on trips)",
-    "deductionInactive": "not in use"
+    "deductionInactive": "not in use",
+    "posting_fees_to_bill": "Fees to bill customers"
   },
   "Finance": {
     "title": "Invoices & payments",
@@ -1309,7 +1310,15 @@
     "inForce": "in force",
     "noRoutesHint": "Add the first route with \"Set a route price\". Routes are also created from imported sheets.",
     "jobWidePriceHint": "used when a route has no price of its own",
-    "feesMoved": "Fees are no longer set on the rule card. The kinds of fees, with their usual amount and who pays them, are set up once in Setup → Accounting & money. Operations tick the fees each trip had on the trip itself."
+    "feesMoved": "Fees are no longer set on the rule card. The kinds of fees, with their usual amount and who pays them, are set up once in Setup → Accounting & money. Operations tick the fees each trip had on the trip itself.",
+    "billedTitle": "Fees on the customer's invoice",
+    "billedHelp": "The kinds of fee the customer pays back on this job. They are pass-through money: not a job cost and not job revenue. All other fees are costs of the job.",
+    "billedChange": "Change from a date",
+    "billedChangeHelp": "Trips loaded from this date follow the new list; earlier trips keep how they were.",
+    "billedKinds": "On the customer's invoice",
+    "billedDefault": "No line yet: each kind's usual setting applies — on the invoice: {kinds}.",
+    "billedNone": "No line yet: no fee goes on the customer's invoice; every fee is a cost of the job.",
+    "billedNoneShort": "none: every fee is a job cost"
   },
   "Trips": {
     "title": "Trips",
@@ -1425,7 +1434,8 @@
     "entrySave": "Save",
     "entrySaved": "Saved this session ({count})",
     "enterManyRows": "Enter many rows at once",
-    "flag_fine_waived": "fine partly waived"
+    "flag_fine_waived": "fine partly waived",
+    "feesAndToBill": "{amount} fees · {bill} to bill the customer"
   },
   "Import": {
     "title": "Import trip sheet",
@@ -1580,7 +1590,21 @@
     "deductionsLegend": "Deductions kept by the company",
     "deductionsHelp": "Tick only what is taken from this trip as the company's own income. The usual amount is filled in; change it if needed.",
     "keptByCompany": "kept by the company",
-    "cutKept": "Of the cut, kept by the company"
+    "cutKept": "Of the cut, kept by the company",
+    "feePaidBy": "Paid by",
+    "payer_company": "the company",
+    "payer_carrier": "the driver",
+    "payer_customer": "the customer",
+    "feeReceipt": "Receipt brought",
+    "feeReceiptHint": "A fee the driver paid is paid back only with its receipt",
+    "feePayerHelp": "Paid by the driver: it is paid back on this trip to whoever brings the papers, once the receipt is brought (or an exception is approved).",
+    "feeReimbursed": "Fees the driver paid, paid back",
+    "onInvoice": "on the customer's invoice",
+    "receiptMissing": "receipt missing",
+    "noReceiptTitle": "Pay back without the receipt",
+    "noReceiptHelp": "Only as an exception: a second person approves it. Until then the trip cannot be claimed.",
+    "noReceiptSummary": "Fee paid back without receipt · {trip}",
+    "feeLabel": "Fee"
   },
   "Claims": {
     "title": "Claims",
@@ -1758,7 +1782,13 @@
     "account": "Account",
     "howHelp": "Each trip is paid on the smaller of the loaded and discharged quantity. A fine applies only to a shortage beyond the allowance. Fees and advances are taken off before payment.",
     "keptByCompany": "Kept by the company",
-    "heldCuts": "Held cuts"
+    "heldCuts": "Held cuts",
+    "line_fee_receipt_missing": "Fee receipt missing (paid by the driver)",
+    "remote_line_fee_receipt_missing": "Fee receipt missing (paid by the driver)",
+    "feeReceiptsCame": "The receipts of fees the drivers paid came with this claim",
+    "receiptsMissing": "Receipt missing: {fees}",
+    "receiptsNow": "Fee receipts came with this claim",
+    "feesPaidBack": "Fees the driver paid, paid back"
   },
   "Fees": {
     "addToTrips": "Add a fee to trips",

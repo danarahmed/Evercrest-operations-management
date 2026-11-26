@@ -75,7 +75,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
           <Stat icon="clock" label={t("onTheWay")} value={s.onTheWay} tone={s.onTheWay ? "warning" : undefined} hint={t("estimatedHint")} />
           <Stat icon="checkCircle" label={t("dischargedCount")} value={s.discharged} tone="success" hint={t("netTons", { qty: formatQty(s.net, unit, locale) })} />
           <Stat icon="wallet" label={t("carriersToPay")} value={formatMoney(s.carrierToPay, s.currency, locale)} hint={t("advancesPaid", { amount: formatMoney(s.advances, s.currency, locale) })} />
-          <Stat icon="receipt" label={t("feesAndCost")} value={formatMoney(s.cost, s.currency, locale)} hint={t("feesOnly", { amount: formatMoney(s.fees, s.currency, locale) })} />
+          <Stat icon="receipt" label={t("feesAndCost")} value={formatMoney(s.cost, s.currency, locale)} hint={s.feesToBill !== "0" ? t("feesAndToBill", { amount: formatMoney(s.fees, s.currency, locale), bill: formatMoney(s.feesToBill, s.currency, locale) }) : t("feesOnly", { amount: formatMoney(s.fees, s.currency, locale) })} />
           {showProfit && (
             <Stat icon="trendingUp" label={t("margin")} value={formatMoney(s.margin, s.currency, locale)} tone={s.margin.startsWith("-") ? "danger" : "success"}
               hint={s.priceTbd ? t("priceTbdCount", { count: s.priceTbd }) : t("billedTotal", { amount: formatMoney(s.customerTotal, s.currency, locale) })} />

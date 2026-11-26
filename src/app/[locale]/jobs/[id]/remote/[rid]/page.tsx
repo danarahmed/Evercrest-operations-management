@@ -30,7 +30,7 @@ export default async function RemoteSettlementPage({ params }: { params: Promise
   const base = `/${locale}/jobs/${id}`;
   const cur = cmp?.currency ?? money.currency;
   const m = (a: string | null | undefined) => (a === null || a === undefined ? "—" : formatMoney(a, cur, locale));
-  const tone: Record<string, "success" | "warning" | "danger" | "neutral"> = { match: "success", amount_differs: "warning", not_found: "danger", duplicate: "danger", already_claimed: "danger", settled_old_way: "danger", waiver_pending: "warning", not_discharged: "warning", no_rule: "danger", cancelled: "neutral", no_amount: "danger" };
+  const tone: Record<string, "success" | "warning" | "danger" | "neutral"> = { match: "success", amount_differs: "warning", not_found: "danger", duplicate: "danger", already_claimed: "danger", settled_old_way: "danger", waiver_pending: "warning", fee_receipt_missing: "warning", not_discharged: "warning", no_rule: "danger", cancelled: "neutral", no_amount: "danger" };
   const result = rs.result as null | { claims: { driver: string; claimId: string; claimNo: string; trips: number; system: string; sitePaid: string; recorded: string; difference: string; paymentNo: string | null }[]; skipped: { manifest: string; status: string; claimNo: string | null }[]; totals: { system: string; paid: string; difference: string } };
 
   return (

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Db } from "@/db/client";
 import { feeTypes, moneyAccounts, payments, tripFees, trips } from "@/db/schema";
 import { defineCommand, type CommandContext } from "@/server/command";
-import { Conflict, NotFound, ValidationError } from "@/server/errors";
+import { ApprovalRequired, Conflict, NotFound, ValidationError } from "@/server/errors";
 import { postEntry } from "../accounting/ledger";
 import { postingAccount } from "../accounting/posting";
 import { registerApprovable } from "../approvals/approvals";
@@ -28,7 +28,14 @@ const manifestKey = (m: string) => plateKey(m);
 
 const uuid = z.string().uuid();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-export const feeChoice = z.object({ feeTypeId: uuid, amount: amountString.nullish() });
+export const feeChoice = z.object({
+  feeTypeId: uuid,
+  amount: amountString.nullish(),
+  /** Who paid it on this trip (empty = the kind's usual payer). "carrier": the driver paid it and gets it back. */
+  paidBy: z.enum(["company", "customer", "carrier"]).nullish(),
+  /** A fee the driver paid: its receipt was brought. */
+  receipt: z.boolean().nullish(),
+});
 export type FeeChoice = z.infer<typeof feeChoice>;
 
 /** The trip fee row for a fee type: the usual amount unless one is typed; the fee type's own rules. */
@@ -53,7 +60,8 @@ async function feeRow(tx: Db, companyId: string, trip: typeof trips.$inferSelect
     currency,
     deductFromCarrier: ft.deductFromCarrier,
     billedToCustomer: ft.paidBy === "company" && ft.billedToCustomer,
-    paidBy: ft.paidBy,
+    paidBy: choice.paidBy ?? ft.paidBy,
+    receiptReceived: (choice.paidBy ?? ft.paidBy) === "carrier" && !!choice.receipt,
     source: "entered" as const,
     name: ft.name,
   };
@@ -70,11 +78,16 @@ export async function setTripFeesTx(tx: Db, companyId: string, trip: typeof trip
   const after: Record<string, string> = {};
   for (const f of current) {
     const c = wanted.get(f.feeTypeId);
-    const same = c && (c.amount === null || c.amount === undefined || dec(c.amount).eq(dec(f.rate)));
+    const same = c && (c.amount === null || c.amount === undefined || dec(c.amount).eq(dec(f.rate))) && (!c.paidBy || c.paidBy === f.paidBy);
     if (f.paymentId && !same) throw new Conflict("A fee that is already paid cannot be changed or removed; reverse its payment first");
     if (!same) {
-      before[f.feeTypeId] = toStr(dec(f.rate));
+      before[f.feeTypeId] = `${toStr(dec(f.rate))}${f.paidBy === "carrier" ? " (driver paid)" : ""}`;
       await tx.delete(tripFees).where(eq(tripFees.id, f.id));
+    } else if (f.paidBy === "carrier" && c.receipt !== undefined && c.receipt !== null && c.receipt !== f.receiptReceived) {
+      // Only the receipt changed: keep the fee (and any approved exception).
+      await tx.update(tripFees).set({ receiptReceived: c.receipt }).where(eq(tripFees.id, f.id));
+      before[`${f.feeTypeId}:receipt`] = String(f.receiptReceived);
+      after[`${f.feeTypeId}:receipt`] = String(c.receipt);
     }
   }
   const kept = new Set((await tx.select({ feeTypeId: tripFees.feeTypeId }).from(tripFees).where(eq(tripFees.tripId, trip.id))).map((r) => r.feeTypeId));
@@ -83,7 +96,7 @@ export async function setTripFeesTx(tx: Db, companyId: string, trip: typeof trip
     const { name, ...row } = await feeRow(tx, companyId, trip, c);
     void name;
     await tx.insert(tripFees).values(row);
-    after[c.feeTypeId] = row.rate;
+    after[c.feeTypeId] = `${row.rate}${row.paidBy === "carrier" ? " (driver paid)" : ""}`;
   }
   return { before, after, changed: Object.keys(before).length + Object.keys(after).length > 0 };
 }
@@ -164,7 +177,8 @@ export const payFees = defineCommand({
     const [money] = await tx.select().from(moneyAccounts).where(and(eq(moneyAccounts.id, input.moneyAccountId), eq(moneyAccounts.companyId, actor.companyId)));
     if (!money?.active) throw new NotFound("money_account", input.moneyAccountId);
     for (const r of rows) {
-      if (r.fee.paidBy !== "company") throw new ValidationError(`${r.ft.name} on ${r.trip.manifestNo ?? r.trip.tripNo} was paid by the customer; the company does not pay it`);
+      if (r.fee.paidBy !== "company")
+        throw new ValidationError(`${r.ft.name} on ${r.trip.manifestNo ?? r.trip.tripNo} was paid by the ${r.fee.paidBy === "carrier" ? "driver (it is paid back on the trip's claim)" : "customer"}; the company does not pay it`);
       if (r.fee.paymentId) throw new Conflict(`${r.ft.name} on ${r.trip.manifestNo ?? r.trip.tripNo} is already paid`);
       if (r.trip.status === "cancelled") throw new Conflict(`${r.trip.tripNo} is cancelled`);
       if (r.fee.currency !== money.currency) throw new ValidationError(`${r.ft.name} on ${r.trip.manifestNo ?? r.trip.tripNo} is in ${r.fee.currency}; ${money.name} holds ${money.currency}`);
@@ -176,17 +190,22 @@ export const payFees = defineCommand({
     }
     const live = await liveTrips(tx, actor.companyId, [...new Map(rows.map((r) => [r.trip.id, r.trip])).values()]);
     const fallback = await postingAccount(tx, actor.companyId, "trip_fees");
+    // A fee on the customer's invoice is pass-through: owed by the customer until invoiced, never a job cost.
+    let toBill: string | null = null;
+    const customerOf = new Map<string, string>();
     // Group the debits per account and job, so the entry stays short but every fee is traceable.
-    const debits = new Map<string, { accountId: string; jobId: string; amount: InstanceType<typeof D>; memo: string[] }>();
+    const debits = new Map<string, { accountId: string; jobId: string; partnerId: string | null; amount: InstanceType<typeof D>; memo: string[] }>();
     let total = new D(0);
     for (const r of rows) {
       const line = live.get(r.trip.id)?.calc?.fees.find((f) => f.feeTypeId === r.fee.feeTypeId);
       const amount = dec(line?.amount ?? (r.fee.basis === "per_trip" ? r.fee.rate : "NaN"));
       if (amount.isNaN()) throw new ValidationError(`${r.ft.name} on ${r.trip.manifestNo ?? r.trip.tripNo} is per ton and the trip has no rule card yet`);
       if (amount.isZero()) continue;
-      const accountId = r.ft.expenseAccountId ?? fallback.id;
+      const billed = line?.billedToCustomer ?? false;
+      const accountId = billed ? (toBill ??= (await postingAccount(tx, actor.companyId, "fees_to_bill")).id) : (r.ft.expenseAccountId ?? fallback.id);
+      if (billed && !customerOf.has(r.trip.jobId)) customerOf.set(r.trip.jobId, (await getJob(tx, actor.companyId, r.trip.jobId)).customerId);
       const k = `${accountId}:${r.trip.jobId}`;
-      const d = debits.get(k) ?? { accountId, jobId: r.trip.jobId, amount: new D(0), memo: [] };
+      const d = debits.get(k) ?? { accountId, jobId: r.trip.jobId, partnerId: billed ? customerOf.get(r.trip.jobId)! : null, amount: new D(0), memo: [] };
       d.amount = d.amount.plus(amount);
       d.memo.push(`${r.trip.manifestNo ?? r.trip.tripNo} ${r.ft.name}`);
       debits.set(k, d);
@@ -201,7 +220,7 @@ export const payFees = defineCommand({
       sourceType: "payment",
       sourceId: paymentNo,
       lines: [
-        ...[...debits.values()].map((d) => ({ accountId: d.accountId, currency: money.currency, jobId: d.jobId, debit: toStr(d.amount), memo: d.memo.join(", ").slice(0, 500) })),
+        ...[...debits.values()].map((d) => ({ accountId: d.accountId, currency: money.currency, jobId: d.jobId, partnerId: d.partnerId, debit: toStr(d.amount), memo: d.memo.join(", ").slice(0, 500) })),
         { accountId: money.ledgerAccountId, currency: money.currency, credit: toStr(total) },
       ],
     });
@@ -236,3 +255,33 @@ registerApprovable(payFees);
 export async function companyFeeTypes(db: Db, companyId: string) {
   return db.select().from(feeTypes).where(eq(feeTypes.companyId, companyId)).orderBy(feeTypes.name);
 }
+
+/**
+ * A fee the driver paid, paid back without its receipt (owner's rule: an exception, always approved by a second
+ * person, with a reason). After approval the trip can be claimed or settled by the site.
+ */
+export const waiveFeeReceipt = defineCommand({
+  name: "trip_fees.receipt_waive",
+  permission: "trips.manage",
+  input: z.object({ tripFeeId: uuid, reason: z.string().trim().min(1, "Say why it is paid without its receipt").max(500) }),
+  async handler(ctx: CommandContext, input) {
+    const { tx, actor, audit } = ctx;
+    const [row] = await tx
+      .select({ fee: tripFees, trip: trips, name: feeTypes.name })
+      .from(tripFees)
+      .innerJoin(trips, eq(trips.id, tripFees.tripId))
+      .innerJoin(feeTypes, eq(feeTypes.id, tripFees.feeTypeId))
+      .where(and(eq(tripFees.id, input.tripFeeId), eq(tripFees.companyId, actor.companyId)))
+      .for("update", { of: tripFees });
+    if (!row) throw new NotFound("trip_fee", input.tripFeeId);
+    const label = `${row.name} on ${row.trip.manifestNo ?? row.trip.tripNo}`;
+    if (row.fee.paidBy !== "carrier") throw new ValidationError(`${label} was not paid by the driver`);
+    if (row.fee.receiptReceived || row.fee.receiptWaived) throw new Conflict(`${label} needs nothing: its receipt is already in`);
+    if (await isSettled(tx, row.trip.id)) throw new Conflict(`${row.trip.manifestNo ?? row.trip.tripNo} is already claimed`);
+    if (!ctx.approval) throw new ApprovalRequired(`${label}: pay it back without its receipt — this needs approval`, { fee: row.name, trip: row.trip.manifestNo ?? row.trip.tripNo, reason: input.reason });
+    await tx.update(tripFees).set({ receiptWaived: true, receiptWaiveReason: input.reason, receiptWaivedBy: ctx.approval.approvedBy }).where(eq(tripFees.id, row.fee.id));
+    await audit({ action: "trip_fees.receipt_waive", entityType: "trip", entityId: row.trip.id, after: { fee: row.name, receiptWaived: true }, reason: input.reason });
+    return { id: row.fee.id };
+  },
+});
+registerApprovable(waiveFeeReceipt);

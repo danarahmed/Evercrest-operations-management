@@ -446,7 +446,7 @@ export async function jobClaims(db: Db, actor: Actor, jobId: string) {
 }
 
 /** The check before a claim: every manifest with its status and figures. */
-export async function claimCheck(db: Db, actor: Actor, input: { jobId: string; manifests: string[]; bringing: string[] }) {
+export async function claimCheck(db: Db, actor: Actor, input: { jobId: string; manifests: string[]; bringing: string[]; feeReceipts?: boolean }) {
   requirePermission(actor, "claims.manage");
   return previewClaim(db, actor.companyId, input);
 }

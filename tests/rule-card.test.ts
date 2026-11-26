@@ -149,13 +149,36 @@ describe("trip calculation reproduces the owner's diesel sheet", () => {
   });
 
   it("fees marked as deducted come out of the carrier's pay and still count as cost", () => {
-    const fees = [{ feeTypeId: "v", name: "Visa", rate: "50", basis: "per_trip" as const, currency: "USD", deductFromCarrier: true, billedToCustomer: true }];
+    const fees = [{ feeTypeId: "v", name: "Visa", rate: "50", basis: "per_trip" as const, currency: "USD", deductFromCarrier: true, billedToCustomer: false }];
     const c = calculateTrip(trip(), terms(), fees);
     expect(c.carrier.feeDeductions).toBe("50");
     expect(c.carrier.total).toBe("2064");
     expect(c.cost).toBe("2114"); // carrier 2064 + fee 50
+    expect(c.customer.total).toBe("3624");
+  });
+
+  it("a fee on the customer's invoice is pass-through: not taken from the carrier, not a job cost, not job revenue", () => {
+    const fees = [{ feeTypeId: "v", name: "Visa", rate: "50", basis: "per_trip" as const, currency: "USD", deductFromCarrier: true, billedToCustomer: true }];
+    const c = calculateTrip(trip(), terms(), fees);
+    expect(c.carrier.feeDeductions).toBe("0");
+    expect(c.carrier.total).toBe("2114");
+    expect(c.feesTotal).toBe("0");
+    expect(c.feesToBill).toBe("50");
+    expect(c.cost).toBe("2114");
     expect(c.customer.billedFees).toBe("50");
-    expect(c.customer.total).toBe("3674");
+    expect(c.customer.total).toBe("3624"); // the 50 is owed by the customer separately, not revenue
+  });
+
+  it("a fee the driver paid is paid back on the trip: a job cost, or pass-through when on the invoice", () => {
+    const cost = calculateTrip(trip(), terms(), [{ feeTypeId: "v", name: "Visa", rate: "50", basis: "per_trip" as const, currency: "USD", deductFromCarrier: false, billedToCustomer: false, paidBy: "carrier" as const, receiptOk: true }]);
+    expect(cost.carrier).toMatchObject({ feeReimbursed: "50", total: "2164" });
+    expect(cost.feesTotal).toBe("50");
+    expect(cost.cost).toBe("2164");
+    const billed = calculateTrip(trip(), terms(), [{ feeTypeId: "v", name: "Visa", rate: "50", basis: "per_trip" as const, currency: "USD", deductFromCarrier: true, billedToCustomer: true, paidBy: "carrier" as const }]);
+    expect(billed.carrier).toMatchObject({ feeReimbursed: "50", feeDeductions: "0", total: "2164" });
+    expect(billed.cost).toBe("2114"); // the driver's 50 is owed by the customer, not a job cost
+    expect(billed.feesToBill).toBe("50");
+    expect(billed.flags).toContain("fee_receipt_missing");
   });
 });
 

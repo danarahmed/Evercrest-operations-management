@@ -107,8 +107,16 @@ export const tripFees = pgTable(
     billedToCustomer: boolean("billed_to_customer").notNull(),
     /** rule = from the rule card (older trips); entered = ticked by operations or imported from the papers. */
     source: text("source", { enum: ["rule", "entered"] }).notNull(),
-    /** Who paid it at the time: the company (then it is paid from a cash box with "Pay fees") or the customer directly. */
-    paidBy: text("paid_by", { enum: ["company", "customer"] }).notNull().default("company"),
+    /**
+     * Who paid it at the time: the company (then it is paid from a cash box with "Pay fees"), the customer directly,
+     * or the carrier (the driver paid it; the trip's balance pays it back to whoever brings the papers).
+     */
+    paidBy: text("paid_by", { enum: ["company", "customer", "carrier"] }).notNull().default("company"),
+    /** A fee the carrier paid is paid back only once its receipt is brought, or after an approved exception. */
+    receiptReceived: boolean("receipt_received").notNull().default(false),
+    receiptWaived: boolean("receipt_waived").notNull().default(false),
+    receiptWaiveReason: text("receipt_waive_reason"),
+    receiptWaivedBy: uuid("receipt_waived_by").references(() => users.id),
     /** The "Pay fees" payment that paid this fee (company-paid fees only). */
     paymentId: uuid("payment_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

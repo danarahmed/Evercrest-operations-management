@@ -41,7 +41,7 @@ export const remoteRow = z.object({
 });
 export type RemoteRow = z.infer<typeof remoteRow>;
 
-export type RemoteLineStatus = "match" | "amount_differs" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "duplicate" | "no_amount";
+export type RemoteLineStatus = "match" | "amount_differs" | "not_found" | "cancelled" | "not_discharged" | "no_rule" | "already_claimed" | "settled_old_way" | "waiver_pending" | "fee_receipt_missing" | "duplicate" | "no_amount";
 
 export interface RemoteLine {
   rowNo: number;
@@ -141,13 +141,15 @@ export async function compareRemoteSettlement(db: Db, companyId: string, jobId: 
     if (waiting.has(t.id)) return { ...base, ...info, status: "waiver_pending" };
     if (!l.calc) return { ...base, ...info, status: "no_rule" };
     if (l.calc.state !== "confirmed") return { ...base, ...info, status: "not_discharged" };
+    // A fee the driver paid needs its receipt (or an approved exception) before the trip is paid back.
+    if (l.calc.fees.some((f) => !f.receiptOk)) return { ...base, ...info, status: "fee_receipt_missing" };
     if (paid === null) return { ...base, ...info, status: "no_amount", system: l.calc.carrier.toPay };
     currency ??= l.calc.currency;
     const system = dec(l.calc.carrier.toPay);
     const difference = dec(paid).minus(system);
     return { ...base, ...info, status: difference.isZero() ? "match" : "amount_differs", system: toStr(system), difference: toStr(difference) };
   });
-  const counts = Object.fromEntries((["match", "amount_differs", "not_found", "cancelled", "not_discharged", "no_rule", "already_claimed", "settled_old_way", "waiver_pending", "duplicate", "no_amount"] as RemoteLineStatus[]).map((s) => [s, lines.filter((l) => l.status === s).length])) as Record<RemoteLineStatus, number>;
+  const counts = Object.fromEntries((["match", "amount_differs", "not_found", "cancelled", "not_discharged", "no_rule", "already_claimed", "settled_old_way", "waiver_pending", "fee_receipt_missing", "duplicate", "no_amount"] as RemoteLineStatus[]).map((s) => [s, lines.filter((l) => l.status === s).length])) as Record<RemoteLineStatus, number>;
   const claimable = lines.filter((l) => l.status === "match" || l.status === "amount_differs");
   const byDriverMap = new Map<string, { driverId: string; driver: string; trips: number; system: Dec; paid: Dec }>();
   for (const l of claimable) {

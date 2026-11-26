@@ -19,7 +19,8 @@ export type PostingKey = "advances" | "customer_receivables" | "supplier_payable
   | "customer_fee_credits"
   | "transporter_cuts_held"
   | "kept_transporter_cuts"
-  | "claim_deductions";
+  | "claim_deductions"
+  | "fees_to_bill";
 
 /** Resolve a configured posting account. Never falls back to a guess. */
 export async function postingAccount(tx: Db, companyId: string, key: PostingKey) {

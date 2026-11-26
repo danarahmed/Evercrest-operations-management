@@ -91,20 +91,30 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                 <legend>{t("feesLegend")}</legend>
                 <input type="hidden" name="feesShown" value="1" />
                 <p className="muted small !m-0 basis-full">{t("feesHelp")}</p>
-                <div className="grid2 basis-full">
+                <div className="fee-rows basis-full">
                   {options.feeTypes.map((ft) => {
                     const has = detail?.fees.find((x) => x.feeTypeId === ft.id);
+                    const payer = has?.paidBy ?? ft.paidBy;
                     return (
-                      <div key={ft.id} className="flex items-end gap-2">
-                        <label className="check min-w-0 flex-1 pb-2"><input type="checkbox" name={`fee_${ft.id}`} defaultChecked={!!has} disabled={!!has?.paymentId} />
-                          <span className="min-w-0">{ft.name}{has?.paymentId ? <span className="muted small"> · {t("feePaid")}</span> : ft.paidBy === "customer" ? <span className="muted small"> · {t("feeByCustomer")}</span> : null}</span>
+                      <div key={ft.id} className="fee-row">
+                        <label className="check min-w-0 flex-1"><input type="checkbox" name={`fee_${ft.id}`} defaultChecked={!!has} disabled={!!has?.paymentId} />
+                          <span className="min-w-0">{ft.name}{has?.paymentId ? <span className="muted small"> · {t("feePaid")}</span> : null}</span>
                         </label>
                         {has?.paymentId && <input type="hidden" name={`fee_${ft.id}`} value="on" />}
-                        <label className="w-28 flex-none">{ft.defaultBasis === "per_trip" ? t("feeAmount") : t("feePerUnit")}<input name={`feeAmount_${ft.id}`} inputMode="decimal" dir="ltr" readOnly={!!has?.paymentId} defaultValue={has ? String(Number(has.rate)) : ft.defaultAmount ? String(Number(ft.defaultAmount)) : ""} /></label>
+                        <label className="w-36 flex-none">{t("feePaidBy")}
+                          <select name={`feePaidBy_${ft.id}`} defaultValue={payer} disabled={!!has?.paymentId}>
+                            <option value="company">{t("payer_company")}</option>
+                            <option value="carrier">{t("payer_carrier")}</option>
+                            <option value="customer">{t("payer_customer")}</option>
+                          </select>
+                        </label>
+                        <label className="w-24 flex-none">{ft.defaultBasis === "per_trip" ? t("feeAmount") : t("feePerUnit")}<input name={`feeAmount_${ft.id}`} inputMode="decimal" dir="ltr" readOnly={!!has?.paymentId} defaultValue={has ? String(Number(has.rate)) : ft.defaultAmount ? String(Number(ft.defaultAmount)) : ""} /></label>
+                        <label className="check w-36 flex-none whitespace-nowrap" title={t("feeReceiptHint")}><input type="checkbox" name={`feeReceipt_${ft.id}`} defaultChecked={!!has?.receiptReceived} />{t("feeReceipt")}</label>
                       </div>
                     );
                   })}
                 </div>
+                <p className="muted small !m-0 basis-full">{t("feePayerHelp")}</p>
               </fieldset>
             )}
             {options.deductionTypes.length > 0 && (
@@ -155,6 +165,7 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   {c.carrier.fineWaived !== "0" && <div className="amount-line"><span>{t("fineWaived")}</span><span className="num">{m(c.carrier.fineWaived, c.currency)}</span></div>}
                   {c.carrier.fine !== "0" && <div className="amount-line"><span>{tr("fine")}</span><span className="num neg">{m(c.carrier.fine, c.currency)}</span></div>}
                   {c.carrier.feeDeductions !== "0" && <div className="amount-line"><span>{t("feeDeductions")}</span><span className="num">−{m(c.carrier.feeDeductions, c.currency)}</span></div>}
+                  {(c.carrier.feeReimbursed ?? "0") !== "0" && <div className="amount-line"><span>{t("feeReimbursed")}</span><span className="num">+{m(c.carrier.feeReimbursed, c.currency)}</span></div>}
                   {c.carrier.transporterCut !== "0" && <div className="amount-line"><span>{t("transporterCut")}</span><span className="num">−{m(c.carrier.transporterCut, c.currency)}</span></div>}
                   {c.carrier.otherDeduction !== "0" && <div className="amount-line"><span>{t("carrierDeduction")}</span><span className="num">−{m(c.carrier.otherDeduction, c.currency)}</span></div>}
                   {c.deductions.map((dd) => <div key={dd.deductionTypeId} className="amount-line"><span>{dd.name} <span className="muted small">· {t("keptByCompany")}</span></span><span className="num">−{formatMoney(dd.amount, dd.currency, locale)}</span></div>)}
@@ -162,10 +173,31 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   <div className="amount-line"><span>{tr("advance")}</span><span className="num">−{m(c.carrier.advance, c.currency)}</span></div>
                   <div className="amount-line total"><span>{tr("toPay")}</span><span className="num">{m(c.carrier.toPay, c.currency)}</span></div>
                   {c.fees.length > 0 && <div className="divider" />}
-                  {c.fees.map((fee) => <div key={fee.feeTypeId} className="amount-line muted"><span>{fee.name}</span><span className="num">{formatMoney(fee.amount, fee.currency, locale)}</span></div>)}
+                  {c.fees.map((fee) => (
+                    <div key={fee.feeTypeId} className="amount-line muted">
+                      <span>{fee.name}
+                        {fee.paidBy === "carrier" && <span className="small"> · {t("payer_carrier")}</span>}
+                        {fee.billedToCustomer && <span className="small"> · {t("onInvoice")}</span>}
+                        {!fee.receiptOk && <span className="small warn"> · {t("receiptMissing")}</span>}
+                      </span>
+                      <span className="num">{formatMoney(fee.amount, fee.currency, locale)}</span>
+                    </div>
+                  ))}
                   {c.carrier.cutKept !== "0" && <div className="amount-line muted"><span>{t("cutKept")}</span><span className="num">−{m(c.carrier.cutKept, c.currency)}</span></div>}
                   <div className="amount-line total"><span>{tr("cost")}</span><span className="num">{m(c.cost, c.currency)}</span></div>
                   {detail.showProfit && <><div className="amount-line"><span>{tr("billed")}</span><span className="num">{m(c.customer.total, c.currency)}</span></div><div className="amount-line total"><span>{tr("margin")}</span><span className="num">{m(c.margin, c.currency)}</span></div></>}
+                </div>
+              </div>
+            )}
+            {detail.canEdit && detail.fees.some((x) => x.paidBy === "carrier" && !x.receiptReceived && !x.receiptWaived) && (
+              <div className="card" style={{ margin: 0, boxShadow: "none" }}>
+                <div className="card-head"><div className="card-title">{t("noReceiptTitle")}</div></div>
+                <div className="card-body stack" style={{ gap: 10 }}>
+                  <p className="muted small !m-0">{t("noReceiptHelp")}</p>
+                  <ActionForm approvalOnly command="trip_fees.receipt_waive" locale={locale} idempotencyKey={crypto.randomUUID()} submitLabel={t("waiverSubmit")} summary={t("noReceiptSummary", { trip: trip?.manifestNo ?? trip?.tripNo ?? "" })} variant="secondary">
+                    <label>{t("feeLabel")}<select name="tripFeeId">{detail.fees.filter((x) => x.paidBy === "carrier" && !x.receiptReceived && !x.receiptWaived).map((x) => <option key={x.id} value={x.id}>{options.feeTypes.find((ft) => ft.id === x.feeTypeId)?.name ?? "?"}</option>)}</select></label>
+                    <label>{t("reason")}<input name="reason" required /></label>
+                  </ActionForm>
                 </div>
               </div>
             )}

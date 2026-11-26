@@ -22,12 +22,12 @@ import { defineCustomField, setJobBudget, setJobCustomValues } from "@/domain/jo
 import { setDocumentRequirement } from "@/domain/documents/documents";
 import { createCatalogItem } from "@/domain/masterdata/catalog";
 import { billTrips } from "@/domain/transport/billing";
-import { addFeeToTrips, payFees } from "@/domain/transport/fees";
+import { addFeeToTrips, payFees, waiveFeeReceipt } from "@/domain/transport/fees";
 import { defineRate, endRate } from "@/domain/transport/rates";
 import { reverseSettlement, settleTrip } from "@/domain/transport/settlement";
 import { cancelPayStatement, collectStatementDebt, createPayStatement, payStatement, writeOffStatementDebt } from "@/domain/transport/statements";
 import { recordArrival } from "@/domain/transport/trips";
-import { defineFeeType, defineRoute, setJobFee, setTerms, setRoutePrice } from "@/domain/transport/terms";
+import { defineFeeType, defineRoute, setJobBilledFees, setJobFee, setTerms, setRoutePrice } from "@/domain/transport/terms";
 import { applyTripImport, discardTripImport, saveTripRows } from "@/domain/transport/trip-import";
 import { saveTrip } from "@/domain/transport/trip-edit";
 import { cancelClaim, createClaim, payClaim, waiveFine } from "@/domain/transport/claims";
@@ -116,10 +116,17 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
   "trips.save": {
     command: saveTrip,
     prepare: async (_d, _a, i) => {
-      const fees = Object.keys(i).filter((k) => k.startsWith("fee_") && i[k] === "on").map((k) => ({ feeTypeId: k.slice(4), amount: (i[`feeAmount_${k.slice(4)}`] as string) || null }));
+      // Each ticked fee: its amount, who paid it on this trip, and (when the driver paid it) whether the receipt came.
+      const fees = Object.keys(i)
+        .filter((k) => k.startsWith("fee_") && i[k] === "on")
+        .map((k) => {
+          const id = k.slice(4);
+          const paidBy = (i[`feePaidBy_${id}`] as string) || null;
+          return { feeTypeId: id, amount: (i[`feeAmount_${id}`] as string) || null, paidBy: paidBy as "company" | "customer" | "carrier" | null, receipt: i[`feeReceipt_${id}`] === "on" };
+        });
       // Deductions the company keeps: ded_<deductionTypeId>=on with dedAmount_<id>; dedShown=1 marks the fieldset was on the form.
       const deductions = Object.keys(i).filter((k) => k.startsWith("ded_") && i[k] === "on").map((k) => ({ deductionTypeId: k.slice(4), amount: (i[`dedAmount_${k.slice(4)}`] as string) || null }));
-      const rest = Object.fromEntries(Object.entries(i).filter(([k]) => !k.startsWith("fee_") && !k.startsWith("feeAmount_") && k !== "feesShown" && !k.startsWith("ded_") && !k.startsWith("dedAmount_") && k !== "dedShown"));
+      const rest = Object.fromEntries(Object.entries(i).filter(([k]) => !k.startsWith("fee_") && !k.startsWith("feeAmount_") && !k.startsWith("feePaidBy_") && !k.startsWith("feeReceipt_") && k !== "feesShown" && !k.startsWith("ded_") && !k.startsWith("dedAmount_") && k !== "dedShown"));
       return { ...rest, ...(i.feesShown === "1" ? { fees } : {}), ...(i.dedShown === "1" ? { deductions } : {}), ...(i.transporterId === undefined && i.transporterName === undefined && i.transporterClear === "1" ? { transporterId: null } : {}) };
     },
   },
@@ -127,6 +134,8 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
     command: addFeeToTrips,
     prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || null, manifests: String(i.manifests ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean) }),
   },
+  "job_billed_fees.set": { command: setJobBilledFees, prepare: async (_d, _a, i) => ({ ...i, feeTypeIds: (i.feeTypeIds as string[] | undefined) ?? [], note: i.note || null }) },
+  "trip_fees.receipt_waive": { command: waiveFeeReceipt },
   "deduction_types.define": { command: defineDeductionType, prepare: async (_d, _a, i) => ({ ...i, id: i.id || undefined, active: i.active === "on" }) },
   // Held cuts: the ticked trips (tripIds[]) with the amount given back on each (give_<tripId>).
   "held_cuts.give_back": {
@@ -165,7 +174,7 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
       const raw = i.manifests;
       const manifests = Array.isArray(raw) ? (raw as string[]) : String(raw ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean);
       const bringing = Array.isArray(i.bringing) ? (i.bringing as string[]) : i.bringing ? [String(i.bringing)] : [];
-      return { ...i, manifests, bringing, post: i.post !== "0", claimantId: i.claimantId || undefined, claimantName: i.claimantName || undefined };
+      return { ...i, manifests, bringing, feeReceipts: i.feeReceipts === "on", post: i.post !== "0", claimantId: i.claimantId || undefined, claimantName: i.claimantName || undefined };
     },
   },
   "claims.cancel": { command: cancelClaim },

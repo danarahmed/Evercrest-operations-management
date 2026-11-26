@@ -17,7 +17,7 @@ import { setSetting } from "./settings";
  * development seed, so both start from the same configuration.
  */
 export const STARTER_ACCOUNTS = [
-  ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"],
+  ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"], ["1150", "Fees to bill customers", "asset"],
   ["1300", "Advances to drivers/transporters", "asset"], ["1900", "Currency exchange", "asset"], ["2100", "Supplier payables", "liability"],
   ["2200", "Payables to transporters", "liability"], ["2300", "Payables to drivers", "liability"], ["2400", "Fees to return to customers", "liability"], ["2500", "Cuts held for transporters", "liability"], ["3000", "Capital", "equity"],
   ["4000", "Transport revenue", "income"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"], ["4300", "Product sales", "income"], ["4400", "Kept from transporter cuts", "income"], ["4500", "Claim deductions", "income"],
@@ -30,7 +30,7 @@ export const STARTER_POSTING_ACCOUNTS = {
   advances: "1300", customer_receivables: "1100", supplier_payables: "2100", payables_to_transporters: "2200", payables_to_drivers: "2300",
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
   demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300", trip_fees: "5300", customer_fee_credits: "2400",
-  transporter_cuts_held: "2500", kept_transporter_cuts: "4400", claim_deductions: "4500",
+  transporter_cuts_held: "2500", kept_transporter_cuts: "4400", claim_deductions: "4500", fees_to_bill: "1150",
 };
 
 /** Fees the company meets on its jobs (from the diesel-to-Syria sheet); more are added in Setup. */

@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { claimItems, claims, cutReleaseLines, deductionTypes, fineWaivers, payments, tripDeductions, tripFees, trips } from "@/db/schema";
 import { dec } from "../money";
-import { loadRuleCard, type RuleCard, termsOn } from "./terms";
+import { billedOn, loadRuleCard, type RuleCard, termsOn } from "./terms";
 import { calculateTrip, type DeductionForCalc, type FeeForCalc, type TripCalc } from "./trip-calc";
 
 type Trip = typeof trips.$inferSelect;
@@ -123,7 +123,10 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
   const feesBy = new Map<string, FeeForCalc[]>();
   for (const fee of feeRows) {
     const list = feesBy.get(fee.tripId) ?? [];
-    list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: fee.billedToCustomer, paidBy: fee.paidBy });
+    const trip = rows.find((r) => r.id === fee.tripId)!;
+    // On the customer's invoice or not: the job's setting on the trip's loading date (owner's rule), not what was stored at ticking.
+    const billed = billedOn(cards.get(trip.jobId)!, fee.feeTypeId, trip.loadingDate);
+    list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: billed, paidBy: fee.paidBy, receiptOk: fee.receiptReceived || fee.receiptWaived });
     feesBy.set(fee.tripId, list);
   }
   const [advances, waivers, claimed, deductions, kept] = await Promise.all([advancesByTrip(db, ids), waiversByTrip(db, ids), claimsByTrip(db, ids), deductionsByTrip(db, ids), cutKeptByTrip(db, ids)]);

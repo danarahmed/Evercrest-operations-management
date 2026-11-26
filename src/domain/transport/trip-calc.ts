@@ -42,8 +42,13 @@ export interface FeeForCalc {
   currency: string;
   deductFromCarrier: boolean;
   billedToCustomer: boolean;
-  /** Who paid it at the time; a fee the customer paid directly is not a company cost (default: the company). */
-  paidBy?: "company" | "customer";
+  /**
+   * Who paid it at the time (default: the company). The customer directly: not a company cost. The carrier (the
+   * driver paid it): added back to the trip's balance, so whoever brings the papers gets it back.
+   */
+  paidBy?: "company" | "customer" | "carrier";
+  /** A fee the carrier paid: its receipt was brought, or an exception was approved. */
+  receiptOk?: boolean;
 }
 
 export interface TripForCalc {
@@ -79,7 +84,8 @@ export interface FeeLine {
   currency: string;
   deductFromCarrier: boolean;
   billedToCustomer: boolean;
-  paidBy: "company" | "customer";
+  paidBy: "company" | "customer" | "carrier";
+  receiptOk: boolean;
 }
 
 export interface TripCalc {
@@ -105,6 +111,8 @@ export interface TripCalc {
     demurrageDays: number;
     demurrage: string;
     feeDeductions: string;
+    /** Fees the driver paid, paid back on this trip. */
+    feeReimbursed: string;
     otherDeduction: string;
     /** Deductions kept by the company as income (job currency). */
     companyDeductions: string;
@@ -120,8 +128,10 @@ export interface TripCalc {
   };
   fees: FeeLine[];
   deductions: DeductionForCalc[];
-  /** All fees in the job currency that the company pays on this trip. */
+  /** Fees that are a cost of the job (job currency): paid by the company or the driver, and not on the customer's invoice. */
   feesTotal: string;
+  /** Fees on the customer's invoice (pass-through: not a job cost, not job revenue; owed by the customer until invoiced). */
+  feesToBill: string;
   /** Fees the customer paid directly and the carrier gives back: owed back to the customer. */
   customerFeeCredit: string;
   /** Company cost of the trip: carrier total + transporter cut + fees. */
@@ -190,17 +200,32 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   const feeLines: FeeLine[] = fees.map((f) => {
     const qty = f.basis === "per_trip" ? new D(1) : f.basis === "per_loaded_unit" ? loaded : net;
     const paidBy = f.paidBy ?? "company";
-    // A fee the customer paid directly is never billed to them again.
-    return { feeTypeId: f.feeTypeId, name: f.name, amount: toStr(r2(qty.times(dec(f.rate)))), currency: f.currency, deductFromCarrier: f.deductFromCarrier, billedToCustomer: paidBy === "company" && f.billedToCustomer, paidBy };
+    // A fee the customer paid directly is never billed to them again; a fee the customer pays back is not taken
+    // from the carrier as well; a fee the driver paid is paid back to him, never taken from him.
+    const billed = paidBy !== "customer" && f.billedToCustomer;
+    return {
+      feeTypeId: f.feeTypeId,
+      name: f.name,
+      amount: toStr(r2(qty.times(dec(f.rate)))),
+      currency: f.currency,
+      deductFromCarrier: paidBy !== "carrier" && !billed && f.deductFromCarrier,
+      billedToCustomer: billed,
+      paidBy,
+      receiptOk: paidBy !== "carrier" || (f.receiptOk ?? false),
+    };
   });
   const inCurrency = feeLines.filter((f) => f.currency === terms.currency);
   if (inCurrency.length !== feeLines.length) flags.push("fee_other_currency");
   const sum = (xs: FeeLine[]) => xs.reduce((a, f) => a.plus(dec(f.amount)), new D(0));
-  // The company's own fee cost: only what it paid. What the customer paid and the carrier gives back is owed back to the customer.
-  const feesTotal = sum(inCurrency.filter((f) => f.paidBy === "company"));
+  // The job's fee cost: what the company or the driver paid and the customer does not pay back. What the customer pays
+  // back is pass-through (owner's choice A). What the customer paid and the carrier gives back is owed to the customer.
+  const feesTotal = sum(inCurrency.filter((f) => f.paidBy !== "customer" && !f.billedToCustomer));
+  const feesToBill = sum(inCurrency.filter((f) => f.billedToCustomer));
   const customerFeeCredit = sum(inCurrency.filter((f) => f.paidBy === "customer" && f.deductFromCarrier));
   const feeDeductions = sum(inCurrency.filter((f) => f.deductFromCarrier));
-  const billedFees = sum(inCurrency.filter((f) => f.billedToCustomer));
+  const feeReimbursed = sum(inCurrency.filter((f) => f.paidBy === "carrier"));
+  const reimbursedBilled = sum(inCurrency.filter((f) => f.paidBy === "carrier" && f.billedToCustomer));
+  if (feeLines.some((f) => !f.receiptOk)) flags.push("fee_receipt_missing");
 
   const transporterCut = dec(trip.transporterCut);
   const cutKept = D.min(dec(trip.cutKept ?? "0"), transporterCut);
@@ -208,12 +233,14 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   const deductions = trip.deductions ?? [];
   if (deductions.some((d) => d.currency !== terms.currency)) flags.push("deduction_other_currency");
   const companyDeductions = deductions.filter((d) => d.currency === terms.currency).reduce((a, d) => a.plus(dec(d.amount)), new D(0));
-  const carrierTotal = freight.plus(reward).plus(commission).plus(fine).plus(carrierDemurrage).minus(feeDeductions).minus(otherDeduction).minus(companyDeductions).minus(transporterCut);
+  const carrierTotal = freight.plus(reward).plus(commission).plus(fine).plus(carrierDemurrage).minus(feeDeductions).plus(feeReimbursed).minus(otherDeduction).minus(companyDeductions).minus(transporterCut);
   const advance = dec(trip.advances[terms.currency] ?? "0");
   if (Object.keys(trip.advances).some((c) => c !== terms.currency && !dec(trip.advances[c]).isZero())) flags.push("advance_other_currency");
   if (terms.advanceMax !== null && advance.gt(dec(terms.advanceMax))) flags.push("advance_above_max");
   // The cut is a cost while it is held or given back; the part the company keeps is not.
-  const cost = carrierTotal.plus(transporterCut).minus(cutKept).plus(feesTotal).plus(customerFeeCredit);
+  // carrierTotal already holds the fees the driver paid (all of them); those on the invoice are taken out again.
+  const companyPaidCost = sum(inCurrency.filter((f) => f.paidBy === "company" && !f.billedToCustomer));
+  const cost = carrierTotal.plus(transporterCut).minus(cutKept).plus(companyPaidCost).plus(customerFeeCredit).minus(reimbursedBilled);
 
   // Customer side
   const custQty = terms.customerQtyBasis === "loaded" ? loaded : net;
@@ -224,7 +251,8 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   const custFineQty = custAllowance === null || terms.customerFinePrice === null ? new D(0) : beyondAllowance(shortage, custAllowance);
   const custFine = terms.customerFinePrice === null ? new D(0) : r2(custFineQty.times(dec(terms.customerFinePrice)));
   const custDemurrage = new D(days).times(dec(terms.customerDemurrageRate));
-  const customerTotal = revenue === null ? null : revenue.plus(custFine).plus(custDemurrage).plus(billedFees);
+  // Fees billed to the customer are pass-through: not in the job's revenue (they are owed by the customer separately).
+  const customerTotal = revenue === null ? null : revenue.plus(custFine).plus(custDemurrage);
 
   return {
     state: confirmed ? "confirmed" : "estimated",
@@ -246,6 +274,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
       demurrageDays: days,
       demurrage: toStr(carrierDemurrage),
       feeDeductions: toStr(feeDeductions),
+      feeReimbursed: toStr(feeReimbursed),
       otherDeduction: toStr(otherDeduction),
       companyDeductions: toStr(companyDeductions),
       transporterCut: toStr(transporterCut),
@@ -257,6 +286,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
     fees: feeLines,
     deductions,
     feesTotal: toStr(feesTotal),
+    feesToBill: toStr(feesToBill),
     customerFeeCredit: toStr(customerFeeCredit),
     cost: toStr(cost),
     customer: {
@@ -266,7 +296,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
       fineQty: toStr(custFineQty),
       fine: toStr(custFine),
       demurrage: toStr(custDemurrage),
-      billedFees: toStr(billedFees),
+      billedFees: toStr(feesToBill),
       total: customerTotal === null ? null : toStr(customerTotal),
     },
     margin: customerTotal === null ? null : toStr(customerTotal.minus(cost)),

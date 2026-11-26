@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, char, check, date, integer, numeric, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, char, check, date, integer, jsonb, numeric, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { accounts } from "./accounting";
 import { companies, currencies, users } from "./core";
 import { jobs } from "./jobs";
@@ -202,4 +202,26 @@ export const deductionTypes = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.companyId, t.name)],
+);
+
+/**
+ * Which kinds of fee go on the customer's invoice on a job (owner's rule, 2026-11), from a date: set at the start
+ * of the job, changed when the customer's terms change. Trips loaded on or after the date follow the version;
+ * before any version, each kind's own "billed to the customer" setting applies. A billed fee is pass-through money:
+ * not a job cost and not job revenue, but owed by the customer until invoiced.
+ */
+export const jobBilledFees = pgTable(
+  "job_billed_fees",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: uuid("company_id").notNull().references(() => companies.id),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    effectiveFrom: date("effective_from").notNull(),
+    /** The kinds of fee billed to the customer from that date (all others are costs of the job). */
+    feeTypeIds: jsonb("fee_type_ids").$type<string[]>().notNull(),
+    note: text("note"),
+    createdBy: uuid("created_by").notNull().references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.jobId, t.effectiveFrom)],
 );

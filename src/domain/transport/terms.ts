@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { accounts, ALLOWANCE_BASES, DEMURRAGE_METHODS, FEE_BASES, FEE_PAYERS, feeTypes, jobFees, jobRoutes, jobTerms, PRICE_BASES, QUANTITY_BASES, routePrices } from "@/db/schema";
+import { accounts, ALLOWANCE_BASES, DEMURRAGE_METHODS, FEE_BASES, FEE_PAYERS, feeTypes, jobBilledFees, jobFees, jobRoutes, jobTerms, PRICE_BASES, QUANTITY_BASES, routePrices } from "@/db/schema";
 import { defineCommand } from "@/server/command";
 import { NotFound, ValidationError } from "@/server/errors";
 import { amountString, currencyCode } from "../currency";
@@ -240,14 +240,15 @@ export const setJobFee = defineCommand({
 
 /** Everything on a job's rule card, loaded once (then resolved in memory for many trips). */
 export async function loadRuleCard(db: Db, companyId: string, jobId: string) {
-  const [terms, fees, types, routes, prices] = await Promise.all([
+  const [terms, fees, types, routes, prices, billed] = await Promise.all([
     db.select().from(jobTerms).where(eq(jobTerms.jobId, jobId)).orderBy(asc(jobTerms.effectiveFrom)),
     db.select().from(jobFees).where(eq(jobFees.jobId, jobId)).orderBy(asc(jobFees.effectiveFrom)),
     db.select().from(feeTypes).where(eq(feeTypes.companyId, companyId)).orderBy(asc(feeTypes.code)),
     db.select().from(jobRoutes).where(eq(jobRoutes.jobId, jobId)).orderBy(asc(jobRoutes.name)),
     db.select().from(routePrices).where(eq(routePrices.jobId, jobId)).orderBy(asc(routePrices.effectiveFrom)),
+    db.select().from(jobBilledFees).where(eq(jobBilledFees.jobId, jobId)).orderBy(asc(jobBilledFees.effectiveFrom)),
   ]);
-  return { terms, fees, feeTypes: types.filter((t) => fees.some((f) => f.feeTypeId === t.id)), allFeeTypes: types, routes, routePrices: prices };
+  return { terms, fees, feeTypes: types.filter((t) => fees.some((f) => f.feeTypeId === t.id)), allFeeTypes: types, routes, routePrices: prices, billedFees: billed };
 }
 export type RuleCard = Awaited<ReturnType<typeof loadRuleCard>>;
 
@@ -302,4 +303,45 @@ export const toCalcFee = (f: JobFee & { name: string }): FeeForCalc => ({
   currency: f.currency,
   deductFromCarrier: f.deductFromCarrier,
   billedToCustomer: f.billedToCustomer,
+});
+
+/**
+ * Is this kind of fee on the customer's invoice for a trip loaded on `date`? The job's version in force on that
+ * date decides; before any version (or without a date), the kind's own "billed to the customer" setting.
+ */
+export function billedOn(card: RuleCard, feeTypeId: string, date: string | null): boolean {
+  const v = date ? card.billedFees.filter((b) => b.effectiveFrom <= date).reduce<RuleCard["billedFees"][number] | null>((a, b) => (!a || b.effectiveFrom >= a.effectiveFrom ? b : a), null) : null;
+  if (v) return v.feeTypeIds.includes(feeTypeId);
+  return card.allFeeTypes.find((t) => t.id === feeTypeId)?.billedToCustomer ?? false;
+}
+
+/**
+ * Which kinds of fee go on the customer's invoice on this job, from a date (owner's rule, 2026-11): set at the start
+ * of the job and changed when the customer's terms change. Trips loaded from that date follow it. Setting the same
+ * date again replaces that line.
+ */
+export const setJobBilledFees = defineCommand({
+  name: "job_billed_fees.set",
+  permission: "job_terms.manage",
+  input: z.object({ jobId: uuid, effectiveFrom: isoDate, feeTypeIds: z.array(uuid).max(100), note: z.string().trim().max(500).nullish() }),
+  async handler({ tx, actor, audit }, input) {
+    const job = await getJob(tx, actor.companyId, input.jobId);
+    if (["financially_closed", "cancelled"].includes(job.status)) throw new ValidationError(`Job is ${job.status}`);
+    const ids = [...new Set(input.feeTypeIds)];
+    if (ids.length) {
+      const known = await tx.select({ id: feeTypes.id }).from(feeTypes).where(eq(feeTypes.companyId, actor.companyId));
+      const unknown = ids.find((id) => !known.some((k) => k.id === id));
+      if (unknown) throw new NotFound("fee_type", unknown);
+    }
+    const [prev] = await tx.select().from(jobBilledFees).where(and(eq(jobBilledFees.jobId, job.id), eq(jobBilledFees.effectiveFrom, input.effectiveFrom)));
+    let id: string;
+    if (prev) {
+      await tx.update(jobBilledFees).set({ feeTypeIds: ids, note: input.note ?? null }).where(eq(jobBilledFees.id, prev.id));
+      id = prev.id;
+    } else {
+      [{ id }] = await tx.insert(jobBilledFees).values({ companyId: actor.companyId, jobId: job.id, effectiveFrom: input.effectiveFrom, feeTypeIds: ids, note: input.note ?? null, createdBy: actor.userId }).returning({ id: jobBilledFees.id });
+    }
+    await audit({ action: "job_billed_fees.set", entityType: "job", entityId: job.id, before: prev ? { effectiveFrom: prev.effectiveFrom, feeTypeIds: prev.feeTypeIds } : undefined, after: { effectiveFrom: input.effectiveFrom, feeTypeIds: ids } });
+    return { id };
+  },
 });

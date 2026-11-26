@@ -25,6 +25,7 @@ export const SHEET_FIELDS = [
   "plate",
   "manifest",
   "loadedQty",
+  "customsQty",
   "dischargeDate",
   "dischargedQty",
   "carrierDeduction",
@@ -54,6 +55,7 @@ const FIELD_ALIASES: Record<SheetField, string[]> = {
   plate: ["ژ. سەیارە", "رقم السيارة", "plate"],
   manifest: ["رقم منفیست", "رقم المنفيست", "manifest", "manifest no"],
   loadedQty: ["بڕی بارکراو", "الكمية المحملة", "loaded", "loaded qty"],
+  customsQty: ["بڕی گومرگ", "تەنی گومرگ", "كمية الكمرك", "كمية الجمارك", "customs mt", "customs qty"],
   dischargeDate: ["بەرواری بەتاڵکردن", "تاريخ التفريغ", "discharge date"],
   dischargedQty: ["بڕی بەتاڵکراو", "الكمية المفرغة", "discharged", "discharged qty"],
   carrierDeduction: ["لێبڕینی ڤیزا - تآمین", "خصم فيزا تأمين", "visa insurance deduction"],
@@ -133,7 +135,7 @@ export function asText(v: unknown): string | undefined {
 }
 
 const DATE_FIELDS: SheetField[] = ["loadingDate", "dischargeDate"];
-const NUMBER_FIELDS: SheetField[] = ["carrierPrice", "reward", "transporterCommission", "advance", "loadedQty", "dischargedQty", "carrierDeduction", "transporterCut"];
+const NUMBER_FIELDS: SheetField[] = ["carrierPrice", "reward", "transporterCommission", "advance", "loadedQty", "customsQty", "dischargedQty", "carrierDeduction", "transporterCut"];
 
 /** Read the first sheet that has a recognisable header row (within its first 10 rows). */
 export async function parseTripSheet(data: ArrayBuffer): Promise<ParsedSheet> {

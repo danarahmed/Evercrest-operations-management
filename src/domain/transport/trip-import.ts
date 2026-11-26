@@ -400,6 +400,8 @@ export async function applyImportRows(ctx: CommandContext, imp: typeof tripImpor
           destination: val.dischargePlace ?? null,
           loadingDate: val.loadingDate,
           loadedQty: val.loadedQty,
+          // What customs counted, when the sheet has it and it differs from the loaded quantity.
+          customsQty: val.customsQty && val.loadedQty && !dec(val.customsQty).eq(dec(val.loadedQty)) ? val.customsQty : null,
           loadedUnit: unit,
           dischargeDate: val.dischargeDate ?? null,
           dischargedQty: val.dischargedQty ?? null,

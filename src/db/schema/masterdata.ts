@@ -44,6 +44,8 @@ export const PARTNER_ROLES = [
   "driver",
   "contractor",
   "service_provider",
+  /** The company's person at the border who pays the customs duty, paid by the company in lump sums. */
+  "customs_agent",
   "other",
 ] as const;
 export type PartnerRole = (typeof PARTNER_ROLES)[number];

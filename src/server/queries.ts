@@ -24,6 +24,7 @@ import { compareRemoteSettlement, getRemoteSettlement, listRemoteSettlements, ty
 import { billedTripIds, calculateSettlement, postedSettlement, type SettlementCalculation } from "@/domain/transport/settlement";
 import { type Actor, can, requirePermission } from "./authz";
 import { cutReleaseList, heldCuts } from "@/domain/transport/held-cuts";
+import { compareCustomsStatement, jobCustomsView } from "@/domain/transport/customs";
 import { getSetting } from "./settings";
 import { balanceSheet, profitAndLoss } from "@/domain/accounting/statements";
 import { trialBalance } from "@/domain/accounting/ledger";
@@ -449,6 +450,36 @@ export async function jobClaims(db: Db, actor: Actor, jobId: string) {
 export async function claimCheck(db: Db, actor: Actor, input: { jobId: string; manifests: string[]; bringing: string[]; feeReceipts?: boolean }) {
   requirePermission(actor, "claims.manage");
   return previewClaim(db, actor.companyId, input);
+}
+
+/** The job's customs: rate, agent, trucks and duty, payments to the agent, bookings, statements. */
+export async function jobCustomsData(db: Db, actor: Actor, jobId: string) {
+  requirePermission(actor, "jobs.view");
+  await getJob(db, actor.companyId, jobId);
+  const view = await jobCustomsView(db, actor.companyId, jobId);
+  const agents = await db
+    .select({ id: businessPartners.id, name: businessPartners.name })
+    .from(businessPartners)
+    .innerJoin(partnerRoles, and(eq(partnerRoles.partnerId, businessPartners.id), eq(partnerRoles.role, "customs_agent")))
+    .where(eq(businessPartners.companyId, actor.companyId))
+    .orderBy(businessPartners.name);
+  return {
+    ...view,
+    agents,
+    canSet: can(actor, "job_terms.manage"),
+    canPay: can(actor, "payments.create"),
+    canBook: can(actor, "claims.manage"),
+    canReverse: can(actor, "payments.reverse"),
+    canImport: can(actor, "trips.manage"),
+  };
+}
+
+/** The border person's statement compared with the system, truck by truck. */
+export async function customsStatementPage(db: Db, actor: Actor, statementId: string) {
+  requirePermission(actor, "jobs.view");
+  const cmp = await compareCustomsStatement(db, actor.companyId, statementId);
+  const job = await getJob(db, actor.companyId, cmp.statement.jobId);
+  return { ...cmp, job, canUse: can(actor, "trips.manage") };
 }
 
 /** Cuts held for transporters, and the releases (give-backs and closes) so far. */

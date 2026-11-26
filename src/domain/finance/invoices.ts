@@ -204,6 +204,8 @@ export interface Profitability {
   revenue: string;
   costs: string;
   profit: string;
+  /** By account (owner: each kind of cost on its own line, e.g. customs apart from fees): revenue lines, then cost lines. */
+  lines: { code: string; name: string; type: "income" | "expense"; amount: string }[];
 }
 
 /**
@@ -216,18 +218,22 @@ export async function jobProfitability(db: Db, jobId: string): Promise<Profitabi
     .select({
       currency: journalLines.currency,
       type: accounts.type,
+      code: accounts.code,
+      name: accounts.name,
       net: sql<string>`sum(${journalLines.credit} - ${journalLines.debit})`,
     })
     .from(journalLines)
     .innerJoin(accounts, eq(accounts.id, journalLines.accountId))
     .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
     .where(and(eq(journalLines.jobId, jobId), inArray(accounts.type, ["income", "expense"])))
-    .groupBy(journalLines.currency, accounts.type);
-  const byCur = new Map<string, { revenue: InstanceType<typeof D>; costs: InstanceType<typeof D> }>();
+    .groupBy(journalLines.currency, accounts.type, accounts.code, accounts.name);
+  const byCur = new Map<string, { revenue: InstanceType<typeof D>; costs: InstanceType<typeof D>; lines: Profitability["lines"] }>();
   for (const r of rows) {
-    const e = byCur.get(r.currency) ?? { revenue: new D(0), costs: new D(0) };
-    if (r.type === "income") e.revenue = e.revenue.plus(dec(r.net));
-    else e.costs = e.costs.plus(dec(r.net).neg());
+    const e = byCur.get(r.currency) ?? { revenue: new D(0), costs: new D(0), lines: [] };
+    const net = dec(r.net);
+    if (r.type === "income") e.revenue = e.revenue.plus(net);
+    else e.costs = e.costs.plus(net.neg());
+    if (!net.isZero()) e.lines.push({ code: r.code, name: r.name, type: r.type as "income" | "expense", amount: toStr(r.type === "income" ? net : net.neg()) });
     byCur.set(r.currency, e);
   }
   return [...byCur].sort(([a], [b]) => a.localeCompare(b)).map(([currency, e]) => ({
@@ -235,6 +241,7 @@ export async function jobProfitability(db: Db, jobId: string): Promise<Profitabi
     revenue: toStr(e.revenue),
     costs: toStr(e.costs),
     profit: toStr(e.revenue.minus(e.costs)),
+    lines: e.lines.sort((x, y) => (x.type === y.type ? x.code.localeCompare(y.code) : x.type === "income" ? -1 : 1)),
   }));
 }
 

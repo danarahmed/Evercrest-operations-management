@@ -57,10 +57,13 @@ describe("invoices and bills", () => {
       kind: "bill", billFrom: "supplier", partnerId: ids.transporter, currency: "IQD", invoiceDate: "2026-10-05",
       lines: [{ description: "Site fees", quantity: "1", unitPrice: "150000", accountId: ids["5100"], jobId: ids.job }],
     });
-    expect(await jobProfitability(env.db, ids.job)).toEqual([
+    const profit = await jobProfitability(env.db, ids.job);
+    expect(profit).toMatchObject([
       { currency: "IQD", revenue: "0", costs: "150000", profit: "-150000" },
       { currency: "USD", revenue: "3000", costs: "2100", profit: "900" },
     ]);
+    // Each kind of revenue and cost on its own line.
+    expect(profit[1].lines.map((l) => l.type)).toEqual(["income", "expense"]);
     expect(await partnerBalances(env.db, env.companyId, ids.customer)).toEqual({ USD: "3000" });
     expect(await partnerBalances(env.db, env.companyId, ids.transporter)).toEqual({ USD: "-2100", IQD: "-150000" });
     ids.inv = inv.id;

@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { claimItems, claims, cutReleaseLines, deductionTypes, fineWaivers, payments, tripDeductions, tripFees, trips } from "@/db/schema";
 import { dec } from "../money";
+import { type CustomsCard, customsRateOn, loadCustomsCard } from "./customs-rates";
 import { billedOn, loadRuleCard, type RuleCard, termsOn } from "./terms";
 import { calculateTrip, type DeductionForCalc, type FeeForCalc, type TripCalc } from "./trip-calc";
 
@@ -129,6 +130,8 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
     list.push({ feeTypeId: fee.feeTypeId, name: feeName.get(fee.feeTypeId) ?? "", rate: fee.rate, basis: fee.basis, currency: fee.currency, deductFromCarrier: fee.deductFromCarrier, billedToCustomer: billed, paidBy: fee.paidBy, receiptOk: fee.receiptReceived || fee.receiptWaived });
     feesBy.set(fee.tripId, list);
   }
+  const customsCards = new Map<string, CustomsCard>();
+  for (const id of new Set(rows.map((r) => r.jobId))) customsCards.set(id, await loadCustomsCard(db, id));
   const [advances, waivers, claimed, deductions, kept] = await Promise.all([advancesByTrip(db, ids), waiversByTrip(db, ids), claimsByTrip(db, ids), deductionsByTrip(db, ids), cutKeptByTrip(db, ids)]);
   const byPayee = new Map<string, Map<string, Record<string, string>>>();
   for (const trip of rows) {
@@ -150,6 +153,11 @@ export async function liveTrips(db: Db, companyId: string, rows: Trip[], preload
               fineWaived: waivers.get(trip.id) ?? "0",
               deductions: deductions.get(trip.id) ?? [],
               cutKept: kept.get(trip.id) ?? "0",
+              customs: (() => {
+                const cc = customsCards.get(trip.jobId)!;
+                const r = customsRateOn(cc, trip.routeId, trip.loadingDate);
+                return r ? { qty: trip.customsQty, rate: r.rate, currency: r.currency, billed: cc.billedToCustomer } : null;
+              })(),
             },
             terms,
             feesBy.get(trip.id) ?? [],

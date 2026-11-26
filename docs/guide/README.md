@@ -8,7 +8,7 @@ Live system: https://evercrest-erp.vercel.app
 
 | Chapter | Covers | Status |
 |---|---|---|
-| [1. Trips and claims](01-trips-and-claims.md) | Steps 1 and 2: kinds of fees, the job's team and rule card with prices by route, entering and importing trips, fees on trips, discharge, papers, fine waivers, claims, payments, site settlements, approvals, where the money shows | Ready for review |
+| [1. Trips and claims](01-trips-and-claims.md) | Steps 1 and 2: kinds of fees, customs at the border, the job's team and rule card with prices by route, entering and importing trips, fees on trips, discharge, papers, fine waivers, claims, payments, site settlements, approvals, where the money shows | Ready for review |
 | 2. Cash boxes, daily rate and exchangers | Step 3 | Not built yet |
 | 3. Automatic journals and the accountant's review | Step 4 | Not built yet |
 | 4. Customer invoicing and receivables | Step 5 | Not built yet |

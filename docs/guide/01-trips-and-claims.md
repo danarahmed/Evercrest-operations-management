@@ -507,6 +507,62 @@ Trips loaded, on the way (not discharged, figures estimated), discharged, still 
 
 ---
 
+### 7.7 Customs at the border
+
+Customs is a government charge per MT, usually the biggest cost after the carriers. It is kept apart from the trip fees everywhere: its own rate, its own quantity on each truck, its own account in the books (5600 "Customs duties") and its own line in the job's profit.
+
+**Where:** Job → **Customs** tab.
+
+![The Customs tab, before anything is set](img/cs-01-customs-empty.jpg)
+
+**1. The rate (once per job).** **Set the customs rate** → the date it starts, the rate per MT and the currency. Usually one rate for the whole job; choose a route only in the rare case it has its own rate. A new rate from a later date applies to trucks loaded from that date.
+
+![Setting the customs rate](img/cs-02-set-rate.jpg)
+
+**2. Your person at the border (once per job).** **Agent and who pays** → choose them, or type a new name (they are added as a customs agent). Leave "the customer pays the customs back" unticked: customs is a cost of the job. Tick it only when a contract makes the customer pay it back; then it is pass-through, like the fees on the invoice.
+
+![The agent](img/cs-03-agent.jpg)
+
+**3. Each truck.** The duty is the truck's **customs MT** × the rate. Customs MT is the loaded MT unless customs counted a different weight: then type their figure in **Customs MT** on the trip (empty = loaded). A truck whose customs MT differs is flagged. An imported sheet can carry a customs MT column (بڕی گومرگ / كمية الجمارك / Customs MT).
+
+![Customs MT on a trip](img/cs-04-trip-customs-mt.jpg)
+
+The trips grid shows the customs of each truck in its own column, with the customs MT under it when it differs:
+
+![The customs column](img/cs-05-trips-customs-column.jpg)
+
+**4. Paying the agent.** You do not clear truck by truck: you pay them lump sums (20,000 now, 10,000 later). **Pay the customs agent** → amount, cash box or bank, date. Above the payment limit it waits for approval. The money is then "with the agent" until the duty is booked against it.
+
+![Paying the agent](img/cs-06-pay-agent.jpg)
+
+The top of the tab shows the trucks, their customs MT and duty, what was paid to the agent, and the balance:
+
+![Before booking](img/cs-07-before-booking.jpg)
+
+**5. Booking the duty.** **Book customs** → a date: the duty of every truck loaded up to that date and not yet booked becomes a cost of the job, drawn from the money with the agent. Do it whenever you like (each week, at month end). A booked truck's customs MT is locked; **Reverse** a booking to correct it, then book again.
+
+![Booking customs](img/cs-08-book.jpg)
+
+The agent's balance is **still with the agent** (paid more than the duty so far: money for the next trucks) or **owed to the agent** (paid less):
+
+![After booking](img/cs-09-after-booking.jpg)
+
+**6. The agent's statement (on the jobs where he gives one).** **Import the agent's statement** → his sheet with the manifest and the MT customs counted (the amount too, if he gives it).
+
+![Importing the statement](img/cs-10-import-statement.jpg)
+
+Each truck is compared: **Match**, **MT differs**, **Amount differs**, or **No such manifest on this job**; the job's loaded trucks he did not mention are listed below. For trucks not yet booked, **Take the agent's MT** puts his figure on those trips (recorded in each trip's history).
+
+![The comparison](img/cs-11-compare.jpg)
+
+**In the job's profit.** The Overview's profit is shown by kind of cost, one line per account, so customs never hides inside "costs":
+
+![Profit by kind of cost](img/cs-12-profit-breakdown.jpg)
+
+(Revenue shows as 0 here because customer invoicing comes with step 5.)
+
+![The Customs tab in Arabic](img/cs-13-customs-arabic.jpg)
+
 ## 8. Discharge, corrections and how a trip is calculated
 
 ### 8.1 Import the storage's discharge list
@@ -793,7 +849,7 @@ The difference is what the site paid too much (positive) or too little (negative
 Side menu → **Approvals**. Everything waiting for a second person:
 
 - advances above a job's advance limit;
-- payments above the payment limit;
+- payments above the payment limit (also a payment to the customs agent);
 - fine waivers;
 - papers not coming;
 - fees the driver paid, paid back without the receipt;
@@ -815,6 +871,8 @@ The books hold only real events. While trips are loading, the system calculates 
 | Event | What the books record |
 |---|---|
 | Advance paid | Cash box down; advance owed by that driver or transporter |
+| Payment to the customs agent | Cash box down; 1350 "Customs paid to agents" up (the money is with the agent, for this job) |
+| Customs booked | 5600 "Customs duties" up (a job cost) — or 1160 "Customs to bill customers" when the customer pays it back; 1350 down (less money with the agent) |
 | Fees paid ("Pay fees") | Cash box down; each fee as a cost of its job on the fee's account (or the shared 5300 Permits and fees) — or, for a fee on the customer's invoice, owed by the customer in 1150 "Fees to bill customers" |
 | Claim pays back fees the driver paid | Claimant owed more; the fee's cost account — or 1150 "Fees to bill customers" when it is on the customer's invoice |
 | Invoice of fees to the customer (step 5) | 1150 down; customer receivable up |
@@ -857,6 +915,8 @@ Where to see it:
 | Cash box balances | Cash, bank & books |
 | Every booking | Journal |
 | Cash boxes, limits, papers, kinds of fees, contracts | Setup |
+| Customs rate, agent, payments, bookings, his statement | Job → Customs |
+| Profit by kind of cost | Job → Overview → Profitability |
 | Fees still to pay | Job → Trips → Pay fees |
 | Cuts held for transporters, give back, close old | Claims → Held cuts |
 | Kinds of deduction | Setup → Accounting & money |
@@ -883,6 +943,9 @@ The side menu is a strip of icons; move the mouse onto it to open it, or pin it 
 | A fee was ticked on the wrong trip | Untick it in the trip form. If it was already paid, reverse the fees payment first (on the payment), then untick. |
 | A fee the driver paid was entered as paid by the company (or the other way) | Before the claim: change **Paid by** on the trip. A fee already paid with "Pay fees" must have that payment reversed first. |
 | The fees on the customer's invoice were wrong from a date | Rule card → **Change from a date** with the right list and the same date: it replaces that line. Trips already claimed or fees already paid keep how they were booked. |
+| Customs counted a different MT on a truck | Type it in **Customs MT** on the trip, or take it from the agent's statement. If that truck's customs is already booked, reverse the booking first. |
+| Customs was booked with the wrong rate | Set the right rate (same date replaces it), reverse the booking, book again. |
+| A payment to the agent went from the wrong box | Reverse that payment (Cash, bank & books → the payment) and pay again from the right box. |
 | A fee was paid from the wrong box | Reverse the payment; the fees become unpaid again; pay them from the right box. |
 | A paper will never come | Paper not coming, with the reason, and approve it. |
 | A sheet is refused or columns are not read | The preview lists the columns it recognised. Rename the header to one of the recognised names, or ask for it to be added. |
@@ -936,7 +999,9 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 18. Claims → Held cuts: give back $60 of that cut in cash; approve as a second user; check the $15 kept, the cash box and the journal; then reverse it.
 19. On a job's rule card put the visa on the customer's invoice from today. Enter a trip whose visa the driver paid; try to claim it without the receipt, then with the receipts box ticked; read the claim's books (1150).
 20. On another trip, ask for "Pay back without the receipt" and approve it as a second user.
-21. Switch the language to Kurdish and Arabic and repeat one claim.
+21. On a job's Customs tab set the rate and your person at the border; enter three trucks, one with a different customs MT; pay the agent a lump sum; book customs; read the agent's balance and the Overview's profit by kind of cost.
+22. Import a statement from the agent with one truck at a different MT and one unknown manifest; read the comparison.
+23. Switch the language to Kurdish and Arabic and repeat one claim.
 
 ---
 
@@ -944,13 +1009,12 @@ From the owner's seat, so normal work stays quiet and exceptions stand out:
 
 | What | When |
 |---|---|
-| Counting cash boxes; site differences landing on the site's box; daily rate; exchangers; paying in the other currency | Step 3 |
+| Counting cash boxes; site differences landing on the site's box; daily rate; exchangers; paying in the other currency; **transporter accounts across jobs** (one payment against the whole balance, shared out to the oldest claims; offsets between jobs; one statement grouped by job) | Step 3 |
 | The accountant's review queue; the month-end accrual for trips waiting for papers | Step 4 |
 | Customer invoicing from the rule card, with the fees waiting in 1150 "Fees to bill customers" and the fees owed back to the customer (2400) as invoice lines; customer advances; receivables by age. The old "Invoice the customer" button uses the first draft's price list: do not rely on it for jobs with a rule card | Step 5 |
 | Roles rebuilt around your staff; "my work" lists; your owner board and phone view | Step 6 |
 | Storage, shared overheads, staff and payroll, several companies | Step 7 |
 | Accident or contamination recovery charged to a carrier | To be scheduled |
-| Paying part of a carrier's whole balance across several claims, oldest first | To be scheduled |
 | Merging two spellings of the same driver | To be scheduled |
 | Saved filter groups | Your decision pending |
 | Extra papers and costs for jobs abroad (question #43) | Your answer pending |

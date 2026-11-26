@@ -17,12 +17,12 @@ import { setSetting } from "./settings";
  * development seed, so both start from the same configuration.
  */
 export const STARTER_ACCOUNTS = [
-  ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"], ["1150", "Fees to bill customers", "asset"],
+  ["1011", "Cash USD", "asset", "USD"], ["1012", "Cash IQD", "asset", "IQD"], ["1100", "Customer receivables", "asset"], ["1150", "Fees to bill customers", "asset"], ["1160", "Customs to bill customers", "asset"], ["1350", "Customs paid to agents", "asset"],
   ["1300", "Advances to drivers/transporters", "asset"], ["1900", "Currency exchange", "asset"], ["2100", "Supplier payables", "liability"],
   ["2200", "Payables to transporters", "liability"], ["2300", "Payables to drivers", "liability"], ["2400", "Fees to return to customers", "liability"], ["2500", "Cuts held for transporters", "liability"], ["3000", "Capital", "equity"],
   ["4000", "Transport revenue", "income"], ["4100", "Shortage fines", "income"], ["4200", "Demurrage revenue", "income"], ["4300", "Product sales", "income"], ["4400", "Kept from transporter cuts", "income"], ["4500", "Claim deductions", "income"],
   ["5000", "Transport costs", "expense"], ["5010", "Transporter costs", "expense"], ["5100", "Field expenses", "expense"], ["5200", "Fuel and vehicle costs", "expense"],
-  ["5300", "Permits and fees", "expense"], ["5400", "Cost of goods purchased", "expense"], ["5500", "Labour and contractors", "expense"],
+  ["5300", "Permits and fees", "expense"], ["5400", "Cost of goods purchased", "expense"], ["5500", "Labour and contractors", "expense"], ["5600", "Customs duties", "expense"],
   ["5900", "Rounding differences", "expense"], ["5950", "Bad debts written off", "expense"],
 ] as const;
 
@@ -31,6 +31,7 @@ export const STARTER_POSTING_ACCOUNTS = {
   currency_exchange: "1900", driver_costs: "5000", transporter_costs: "5010", shortage_fines: "4100", transport_revenue: "4000",
   demurrage_revenue: "4200", rounding_differences: "5900", bad_debts: "5950", product_sales: "4300", trip_fees: "5300", customer_fee_credits: "2400",
   transporter_cuts_held: "2500", kept_transporter_cuts: "4400", claim_deductions: "4500", fees_to_bill: "1150",
+  customs_advances: "1350", customs_duties: "5600", customs_to_bill: "1160",
 };
 
 /** Fees the company meets on its jobs (from the diesel-to-Syria sheet); more are added in Setup. */

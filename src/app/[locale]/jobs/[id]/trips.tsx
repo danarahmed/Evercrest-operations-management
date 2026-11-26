@@ -49,11 +49,12 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
   const unit = lines.find((l) => l.calc)?.calc?.unit ?? "MT";
   const q = (x: string | null) => (x === null ? <span className="muted">—</span> : formatNumber(x, locale));
   const tableId = showJob ? "trips-all" : "trips-job";
+  const hasCustoms = lines.some((l) => !!l.calc?.customs);
   const pickable = [
     ...(showJob ? [{ key: "job", label: t("job") }] : []),
     { key: "date", label: t("date") }, { key: "route", label: t("route") }, { key: "driver", label: t("driver") }, { key: "transporter", label: t("transporter") }, { key: "plate", label: t("plate") },
     { key: "loaded", label: t("loaded") }, { key: "discharged", label: t("discharged") }, { key: "net", label: t("net") }, { key: "fine", label: t("fine") }, { key: "carrierPay", label: t("carrierPay") },
-    { key: "advance", label: t("advance") }, { key: "toPay", label: t("toPay") }, ...feeTypes.map((ft) => ({ key: feeKey(ft.id), label: ft.name })), { key: "cost", label: t("cost") },
+    { key: "advance", label: t("advance") }, { key: "toPay", label: t("toPay") }, ...(hasCustoms ? [{ key: "customs", label: t("customs") }] : []), ...feeTypes.map((ft) => ({ key: feeKey(ft.id), label: ft.name })), { key: "cost", label: t("cost") },
     ...(showProfit ? [{ key: "billed", label: t("billed") }, { key: "margin", label: t("margin") }] : []), { key: "state", label: t("state") },
   ];
   const href = (over: Partial<TripFilters>, extra: Record<string, string | undefined> = {}) => `${basePath}?${filterParams({ ...filters, page: 1, ...over }, { ...baseParams, ...extra })}`;
@@ -129,6 +130,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                 <ColumnHeader label={t("carrierPay")} col="carrierPay" align="num" {...hdr("carrierPay")} />
                 <ColumnHeader label={t("advance")} col="advance" align="num" {...hdr("advance")} />
                 <ColumnHeader label={t("toPay")} col="toPay" align="num" {...hdr("toPay")} />
+                {hasCustoms && <ColumnHeader label={t("customs")} col="customs" align="num" applyLabel={t("apply")} clearLabel={t("clear")} searchLabel={t("filterBy")} />}
                 {feeTypes.map((ft) => <ColumnHeader key={ft.id} label={ft.name} col={feeKey(ft.id)} align="num" applyLabel={t("apply")} clearLabel={t("clear")} searchLabel={t("filterBy")} />)}
                 <ColumnHeader label={t("cost")} col="cost" align="num" {...hdr("cost")} />
                 {showProfit && <><ColumnHeader label={t("billed")} col="billed" align="num" {...hdr("billed")} /><ColumnHeader label={t("margin")} col="margin" align="num" {...hdr("margin")} /></>}
@@ -153,6 +155,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                     <td className="num" data-col="carrierPay">{c ? m(c.carrier.total, c.currency) : <span className="muted">—</span>}</td>
                     <td className="num" data-col="advance">{Object.keys(l.advances).length ? Object.entries(l.advances).map(([cur, amt]) => <div key={cur}>{formatMoney(amt, cur, locale)}</div>) : <span className="muted">—</span>}</td>
                     <td className="num" data-col="toPay"><strong>{c ? money(c.carrier.toPay, c.currency, true) : <span className="muted">—</span>}</strong></td>
+                    {hasCustoms && <td className="num" data-col="customs">{c?.customs ? <>{formatMoney(c.customs.amount, c.customs.currency, locale)}{c.customs.differs && <div className="cell-sub warn">{q(c.customs.qty)}</div>}</> : <span className="muted">—</span>}</td>}
                     {feeTypes.map((ft) => { const fee = c?.fees.find((x) => x.feeTypeId === ft.id); return <td key={ft.id} className="num" data-col={feeKey(ft.id)}>{fee && fee.amount !== "0" ? formatMoney(fee.amount, fee.currency, locale) : <span className="muted">—</span>}</td>; })}
                     <td className="num" data-col="cost">{c ? m(c.cost, c.currency) : <span className="muted">—</span>}</td>
                     {showProfit && <><td className="num" data-col="billed">{c ? m(c.customer.total, c.currency) : <span className="muted">—</span>}</td><td className="num" data-col="margin">{c ? money(c.margin, c.currency, true) : <span className="muted">—</span>}</td></>}
@@ -172,6 +175,7 @@ export async function TripsSection({ locale, basePath, baseParams, view, filters
                   <td className="num" data-col="carrierPay"><strong>{formatMoney(s.carrierTotal, s.currency, locale)}</strong></td>
                   <td className="num" data-col="advance"><strong>{formatMoney(s.advances, s.currency, locale)}</strong></td>
                   <td className="num" data-col="toPay"><strong>{formatMoney(s.carrierToPay, s.currency, locale)}</strong></td>
+                  {hasCustoms && <td className="num" data-col="customs"><strong>{formatMoney(s.customs, s.currency, locale)}</strong></td>}
                   {feeTypes.map((ft) => <td key={ft.id} className="num" data-col={feeKey(ft.id)}><strong>{formatMoney(s.feeByType[ft.id] ?? "0", s.currency, locale)}</strong></td>)}
                   <td className="num" data-col="cost"><strong>{formatMoney(s.cost, s.currency, locale)}</strong></td>
                   {showProfit && <><td className="num" data-col="billed"><strong>{formatMoney(s.customerTotal, s.currency, locale)}</strong></td><td className="num" data-col="margin"><strong>{formatMoney(s.margin, s.currency, locale)}</strong></td></>}

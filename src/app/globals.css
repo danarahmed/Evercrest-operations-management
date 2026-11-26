@@ -509,3 +509,5 @@ details.inline-reverse[open] { padding: 8px; border: 1px solid var(--color-slate
 .fee-rows { display: grid; gap: 0.5rem; flex: 1 1 100%; }
 .fee-row { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; }
 .fee-row > label.check { padding-bottom: 0.55rem; }
+/* A currency heading inside a breakdown table (e.g. the job's profit by kind of cost). */
+tr.row-group td { background: var(--color-slate-50, #f8f7f4); font-size: 12px; letter-spacing: 0.02em; }

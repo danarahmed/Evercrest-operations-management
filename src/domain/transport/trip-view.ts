@@ -63,6 +63,8 @@ export interface JobTripTotals {
   carrierToPay: string;
   fees: string;
   feesToBill: string;
+  /** Customs duty on these trips (only the trips with customs in this currency). */
+  customs: string;
   /** Fees by fee type id (job currency only), so a grid can show one column per fee. */
   feeByType: Record<string, string>;
   cost: string;
@@ -271,6 +273,7 @@ export async function tripLines(db: Db, companyId: string, f: TripFilters): Prom
       fees: sum((c) => c.feesTotal),
       /** Fees on the customer's invoice (pass-through, owed by the customer). */
       feesToBill: sum((c) => c.feesToBill ?? "0"),
+      customs: sum((c) => (c.customs && c.customs.currency === currency ? c.customs.amount : "0")),
       feeByType: Object.fromEntries(feeTypes.map((ft) => [ft.id, toStr(ls.reduce((a, l) => a.plus(l.calc!.fees.filter((x) => x.feeTypeId === ft.id && x.currency === currency).reduce((b, x) => b.plus(dec(x.amount)), new D(0))), new D(0)))])),
       cost: sum((c) => c.cost),
       customerTotal: toStr(priced.reduce((a, l) => a.plus(dec(l.calc!.customer.total!)), new D(0))),

@@ -47,6 +47,10 @@ The words the system uses, in the three languages, exactly as they appear on the
 | Fee receipt | إيصال الرسم | پسوولەی خەرجی | The paper that proves the driver paid a fee. Without it the fee is paid back only after an approved exception. |
 | Fees on the customer's invoice | رسوم على فاتورة الزبون | خەرجییەکانی سەر پسوولەی کڕیار | The kinds of fee the customer pays back on a job, set on its rule card from a date. |
 | Fees to bill customers | رسوم تُفوتر للزبائن | خەرجی بۆ فاتورەکردنی کڕیاران | Account 1150: fees on the customer's invoice, waiting to be invoiced. Pass-through money, not a cost and not revenue. |
+| Customs duty | الرسوم الجمركية | باجی گومرگ | The government charge at the border: customs MT × the job's rate. Its own line in the job's profit. |
+| Customs MT | كمية الجمارك | بڕی گومرگ | The weight customs counted for a truck; empty = the loaded MT. |
+| Customs agent | وكيل جمركي | بریکاری گومرگ | Your person at the border for a job, paid in lump sums; the trucks' duty is booked against that money. |
+| Book customs | تسجيل الجمارك | تۆمارکردنی گومرگ | Posting the duty of the trucks not yet booked as a cost of the job, against the money with the agent. |
 | Cut held for the transporter | مقتطع محتجز للناقل | بڕاوی گیراو بۆ ناقل | An amount cut from a driver on a trip and held until a transporter asks for it. Given back (all or part, after approval) or closed into income. |
 | Held cuts | المقتطعات المحتجزة | بڕاوە گیراوەکان | The list of trips with a cut still held, under Claims. |
 | Give back | إعادة | گەڕاندنەوە | Paying a transporter part or all of the held cuts he asks for, in cash or to his account; the rest of each trip's cut becomes the company's income. |

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { eq } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { Badge, Card, EmptyState, Facts, PageHeader, StatusBadge, Tabs } from "@
 import { summarize } from "@/domain/management/history";
 import { describe, formatMoney, intlLocale } from "@/lib/format";
 import { can } from "@/server/authz";
-import { claimCheck, formOptions, jobClaims, jobHistoryView, jobRuleCard, jobTripsLive, jobUnpaidFees, jobWorkspace, tripDetail } from "@/server/queries";
+import { claimCheck, formOptions, jobClaims, jobHistoryView, jobRuleCard, jobTripsLive, jobUnpaidFees, jobWorkspace, tripDetail, jobCustomsData } from "@/server/queries";
 import { parseTripFilters } from "@/lib/trip-filters";
 import { currentActor } from "@/server/session";
 import { Shell } from "../../shell";
@@ -18,6 +19,7 @@ import { ActivitiesSection } from "./activities";
 import { CostActions, DocumentAction, JobSettingsActions } from "./forms";
 import { DeliveriesSection, WorkOrdersSection } from "./operations";
 import { RuleCardSection } from "./rules";
+import { CustomsSection } from "./customs-section";
 import { SettlementSection } from "./settlement";
 import { TripsSection } from "./trips";
 import { FeeTools } from "./fee-tools";
@@ -26,7 +28,7 @@ import { ClaimsSection } from "./claims";
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "rules" | "steps" | "trips" | "claims" | "work" | "deliveries" | "money" | "documents" | "history";
+type TabKey = "overview" | "rules" | "steps" | "trips" | "customs" | "claims" | "work" | "deliveries" | "money" | "documents" | "history";
 
 /**
  * The job workspace (CLAUDE.md §29): one place for everything about a job.
@@ -59,6 +61,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const live = transport || w.trips.length > 0 ? await jobTripsLive(db, actor, filters) : null;
   const card = transport ? await jobRuleCard(db, actor, id) : null;
   const claimsData = transport && sp.tab === "claims" ? await jobClaims(db, actor, id) : null;
+  const customsData = transport && sp.tab === "customs" ? await jobCustomsData(db, actor, id) : null;
   // The New claim step: the manifests typed are checked before anything is created.
   const draftManifests = typeof sp.m === "string" ? sp.m : "";
   const claimDraft = claimsData && typeof sp.claimant === "string" && draftManifests
@@ -77,6 +80,7 @@ export default async function JobPage({ params, searchParams }: { params: Promis
     { key: "steps", label: t("tabSteps"), show: w.activities.length > 0 || manage, count: w.activities.filter((a) => a.a.status === "open").length },
     { key: "trips", label: t("tabTrips"), show: !!live, count: w.trips.length },
     { key: "rules", label: t("tabRules"), show: !!card, count: card?.terms.length ? undefined : 0 },
+    { key: "customs", label: t("tabCustoms"), show: transport },
     { key: "claims", label: t("tabClaims"), show: transport && (can(actor, "claims.manage") || w.trips.length > 0) },
     { key: "work", label: t("tabWork"), show: caps.includes("field_work"), count: w.workOrders.length },
     { key: "deliveries", label: t("tabDeliveries"), show: caps.includes("products"), count: w.deliveries.length },
@@ -94,13 +98,17 @@ export default async function JobPage({ params, searchParams }: { params: Promis
   const profitCard = showMoney && (
     <Card title={t("profit")} icon="trendingUp" flush>
       {w.profitability!.length === 0 ? <EmptyState icon="chart" title={t("noMoney")} /> : (
-        <div className="table-wrap"><table>
-          <thead><tr><th>{t("currency")}</th><th className="num">{t("revenue")}</th><th className="num">{t("costs")}</th><th className="num">{t("profitCol")}</th></tr></thead>
+        <div className="table-wrap"><table className="dense">
           <tbody>{w.profitability!.map((p) => (
-            <tr key={p.currency}>
-              <td><strong>{p.currency}</strong></td><td className="num">{m(p.revenue, p.currency)}</td><td className="num">{m(p.costs, p.currency)}</td>
-              <td className={`num ${p.profit.startsWith("-") ? "neg" : "money-pos"}`}><strong>{m(p.profit, p.currency)}</strong></td>
-            </tr>
+            <Fragment key={p.currency}>
+              <tr className="row-group"><td colSpan={2}><strong>{p.currency}</strong></td></tr>
+              {p.lines.filter((l) => l.type === "income").map((l) => <tr key={`i${l.code}`}><td><span className="ltr muted">{l.code}</span> {l.name}</td><td className="num">{m(l.amount, p.currency)}</td></tr>)}
+              <tr><td><strong>{t("revenue")}</strong></td><td className="num"><strong>{m(p.revenue, p.currency)}</strong></td></tr>
+              {p.lines.filter((l) => l.type === "expense").map((l) => <tr key={`e${l.code}`}><td><span className="ltr muted">{l.code}</span> {l.name}</td><td className="num">−{m(l.amount, p.currency)}</td></tr>)}
+              <tr><td><strong>{t("costs")}</strong></td><td className="num"><strong>−{m(p.costs, p.currency)}</strong></td></tr>
+              <tr className="net"><td><strong>{t("profitCol")}</strong>{p.revenue !== "0" && <span className="muted small"> · {t("marginPct", { pct: ((Number(p.profit) / Number(p.revenue)) * 100).toFixed(1) })}</span>}</td>
+                <td className={`num ${p.profit.startsWith("-") ? "neg" : "money-pos"}`}><strong>{m(p.profit, p.currency)}</strong></td></tr>
+            </Fragment>
           ))}</tbody>
         </table></div>
       )}
@@ -217,6 +225,8 @@ export default async function JobPage({ params, searchParams }: { params: Promis
           <SettlementSection locale={locale} jobId={w.job.id} trips={w.trips} canSettle={can(actor, "settlements.create")} canBill={can(actor, "billing.create") && caps.includes("billing")} />
         </>
       )}
+
+      {tab === "customs" && customsData && card && <CustomsSection locale={locale} jobId={w.job.id} unit={card.terms[0]?.unit ?? "MT"} data={customsData} routes={card.routes} moneyAccounts={options.moneyAccounts} />}
 
       {tab === "claims" && claimsData && <ClaimsSection locale={locale} basePath={base} data={claimsData} options={options} check={check} draft={claimDraft} />}
 

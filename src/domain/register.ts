@@ -10,6 +10,7 @@ import "./transport/claims";
 import "./transport/remote";
 import "./transport/held-cuts";
 import "./transport/deductions";
+import "./transport/customs";
 import "./jobs/activities";
 import "./jobs/custom-fields";
 import "./field/work-orders";

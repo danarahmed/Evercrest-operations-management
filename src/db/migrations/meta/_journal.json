@@ -211,6 +211,13 @@
       "when": 1795681130265,
       "tag": "0029_driver_paid_fees",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795690967032,
+      "tag": "0030_customs",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import { getJob } from "../jobs/commands";
 import { normalizeName } from "../masterdata/partners";
 import { dec } from "../money";
 import { nextNumber } from "../sequences";
+import { customsBooked } from "./customs-rates";
 import { deductionChoice, setTripDeductionsTx } from "./deductions";
 import { feeChoice, setTripFeesTx } from "./fees";
 import { loadRuleCard, routeByName, termsOn } from "./terms";
@@ -38,6 +39,8 @@ const tripInput = z.object({
   routeName: z.string().trim().max(120).nullish(),
   loadingDate: isoDate.nullish(),
   loadedQty: optAmount,
+  /** What customs counted (owner's rule); empty = the loaded quantity. */
+  customsQty: optAmount,
   arrivalDate: isoDate.nullish(),
   dischargeDate: isoDate.nullish(),
   dischargedQty: optAmount,
@@ -87,7 +90,7 @@ export async function partnerByNameOrId(tx: Db, companyId: string, role: "driver
   return p.id;
 }
 
-const TRACKED = ["manifestNo", "routeId", "loadingDate", "loadedQty", "loadedUnit", "arrivalDate", "dischargeDate", "dischargedQty", "dischargedUnit", "driverId", "transporterId", "truckId", "plateText", "carrierPriceOverride", "rewardOverride", "transporterCut", "carrierDeduction", "notes", "status"] as const;
+const TRACKED = ["manifestNo", "routeId", "loadingDate", "loadedQty", "loadedUnit", "customsQty", "arrivalDate", "dischargeDate", "dischargedQty", "dischargedUnit", "driverId", "transporterId", "truckId", "plateText", "carrierPriceOverride", "rewardOverride", "transporterCut", "carrierDeduction", "notes", "status"] as const;
 type Tracked = (typeof TRACKED)[number];
 
 export const saveTrip = defineCommand({
@@ -154,6 +157,16 @@ export const saveTrip = defineCommand({
     const priceOverride = input.carrierPriceOverride === undefined ? (existing?.carrierPriceOverride ?? null) : same(input.carrierPriceOverride, terms?.carrierPrice) ? null : input.carrierPriceOverride;
     const rewardOverride = input.rewardOverride === undefined ? (existing?.rewardOverride ?? null) : same(input.rewardOverride, terms?.rewardPerTrip) ? null : input.rewardOverride;
 
+    // Customs quantity: empty or equal to the loaded quantity = follows the loaded quantity.
+    const customsGiven = input.customsQty === undefined ? (existing?.customsQty ?? null) : input.customsQty;
+    const customsQty = customsGiven !== null && loadedQty !== null && dec(customsGiven).eq(dec(loadedQty)) ? null : customsGiven;
+    if (customsQty !== null && !dec(customsQty).gt(0)) throw new ValidationError("Customs quantity must be above zero");
+    if (existing && (await customsBooked(tx, existing.id))) {
+      const was = existing.customsQty ?? existing.loadedQty;
+      const now = customsQty ?? loadedQty;
+      if (was !== now && !(was !== null && now !== null && dec(was).eq(dec(now)))) throw new Conflict("This trip's customs is already booked; reverse that customs booking first to change its quantity");
+    }
+
     const status: (typeof trips.$inferSelect)["status"] = dischargedQty !== null ? "discharged" : loadedQty !== null && loadingDate ? "loaded" : "planned";
     const values = {
       manifestNo,
@@ -162,6 +175,7 @@ export const saveTrip = defineCommand({
       loadingDate,
       loadedQty,
       loadedUnit: loadedQty !== null ? unit : null,
+      customsQty,
       arrivalDate,
       dischargeDate,
       dischargedQty,
@@ -185,7 +199,7 @@ export const saveTrip = defineCommand({
       for (const k of TRACKED) {
         const a = existing[k] === null || existing[k] === undefined ? null : String(existing[k]);
         const b = values[k] === null || values[k] === undefined ? null : String(values[k]);
-        const numeric = ["loadedQty", "dischargedQty", "carrierPriceOverride", "rewardOverride", "transporterCut", "carrierDeduction"].includes(k);
+        const numeric = ["loadedQty", "customsQty", "dischargedQty", "carrierPriceOverride", "rewardOverride", "transporterCut", "carrierDeduction"].includes(k);
         const equal = a === b || (numeric && a !== null && b !== null && dec(a).eq(dec(b)));
         if (!equal) {
           before[k] = a;

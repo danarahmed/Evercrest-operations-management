@@ -68,6 +68,8 @@ export interface TripForCalc {
   deductions?: DeductionForCalc[];
   /** Part of the transporter's cut the company kept (given back for less, or closed): no longer a cost. */
   cutKept?: string;
+  /** Customs duty (owner's rule): the quantity customs counted (empty = loaded) and the job's rate on the loading date. */
+  customs?: { qty: string | null; rate: string; currency: string; billed: boolean } | null;
 }
 
 export interface DeductionForCalc {
@@ -128,6 +130,8 @@ export interface TripCalc {
   };
   fees: FeeLine[];
   deductions: DeductionForCalc[];
+  /** Customs duty on this trip, apart from the fees (null when the job has no customs rate for the trip's date). */
+  customs: { qty: string; rate: string; amount: string; currency: string; differs: boolean; billed: boolean } | null;
   /** Fees that are a cost of the job (job currency): paid by the company or the driver, and not on the customer's invoice. */
   feesTotal: string;
   /** Fees on the customer's invoice (pass-through: not a job cost, not job revenue; owed by the customer until invoiced). */
@@ -238,9 +242,18 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
   if (Object.keys(trip.advances).some((c) => c !== terms.currency && !dec(trip.advances[c]).isZero())) flags.push("advance_other_currency");
   if (terms.advanceMax !== null && advance.gt(dec(terms.advanceMax))) flags.push("advance_above_max");
   // The cut is a cost while it is held or given back; the part the company keeps is not.
+  // Customs duty: what customs counted (or the loaded quantity) × the job's rate; a job cost unless the customer pays it back.
+  let customs: TripCalc["customs"] = null;
+  if (trip.customs) {
+    const qty = trip.customs.qty !== null ? dec(trip.customs.qty) : loaded;
+    customs = { qty: toStr(qty), rate: trip.customs.rate, amount: toStr(r2(qty.times(dec(trip.customs.rate)))), currency: trip.customs.currency, differs: trip.customs.qty !== null && !qty.eq(loaded), billed: trip.customs.billed };
+    if (customs.differs) flags.push("customs_qty_differs");
+    if (customs.currency !== terms.currency) flags.push("customs_other_currency");
+  }
+  const customsCost = customs && !customs.billed && customs.currency === terms.currency ? dec(customs.amount) : new D(0);
   // carrierTotal already holds the fees the driver paid (all of them); those on the invoice are taken out again.
   const companyPaidCost = sum(inCurrency.filter((f) => f.paidBy === "company" && !f.billedToCustomer));
-  const cost = carrierTotal.plus(transporterCut).minus(cutKept).plus(companyPaidCost).plus(customerFeeCredit).minus(reimbursedBilled);
+  const cost = carrierTotal.plus(transporterCut).minus(cutKept).plus(companyPaidCost).plus(customerFeeCredit).minus(reimbursedBilled).plus(customsCost);
 
   // Customer side
   const custQty = terms.customerQtyBasis === "loaded" ? loaded : net;
@@ -285,6 +298,7 @@ export function calculateTrip(trip: TripForCalc, terms: TermsForCalc, fees: FeeF
     },
     fees: feeLines,
     deductions,
+    customs,
     feesTotal: toStr(feesTotal),
     feesToBill: toStr(feesToBill),
     customerFeeCredit: toStr(customerFeeCredit),

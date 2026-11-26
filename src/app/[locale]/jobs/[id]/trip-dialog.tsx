@@ -61,6 +61,7 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                 <label>{t("orNewRoute")}<input name="routeName" /></label>
                 <label>{t("loadingDate")}<input type="date" name="loadingDate" defaultValue={trip?.loadingDate ?? new Date().toISOString().slice(0, 10)} /></label>
                 <label>{t("loadedQty")} <span className="hint">{line?.calc?.unit ?? trip?.loadedUnit ?? "MT"}</span><input name="loadedQty" inputMode="decimal" dir="ltr" defaultValue={trip?.loadedQty ? String(Number(trip.loadedQty)) : ""} /></label>
+                <label>{t("customsQty")} <span className="hint">{t("customsQtyHint")}</span><input name="customsQty" inputMode="decimal" dir="ltr" defaultValue={trip?.customsQty ? String(Number(trip.customsQty)) : ""} /></label>
               </div>
             </fieldset>
             <fieldset disabled={locked}>
@@ -172,6 +173,7 @@ export async function TripDialog({ locale, jobId, detail, closeHref, options, ro
                   <div className="amount-line total"><span>{tr("carrierPay")}</span><span className="num">{m(c.carrier.total, c.currency)}</span></div>
                   <div className="amount-line"><span>{tr("advance")}</span><span className="num">−{m(c.carrier.advance, c.currency)}</span></div>
                   <div className="amount-line total"><span>{tr("toPay")}</span><span className="num">{m(c.carrier.toPay, c.currency)}</span></div>
+                  {c.customs && <><div className="divider" /><div className="amount-line"><span>{t("customsLine", { qty: formatQty(c.customs.qty, c.unit, locale) })}{c.customs.billed && <span className="muted small"> · {t("onInvoice")}</span>}</span><span className="num">{formatMoney(c.customs.amount, c.customs.currency, locale)}</span></div></>}
                   {c.fees.length > 0 && <div className="divider" />}
                   {c.fees.map((fee) => (
                     <div key={fee.feeTypeId} className="amount-line muted">

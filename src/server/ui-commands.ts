@@ -33,6 +33,7 @@ import { saveTrip } from "@/domain/transport/trip-edit";
 import { cancelClaim, createClaim, payClaim, waiveFine } from "@/domain/transport/claims";
 import { approveRemoteSettlement, discardRemoteSettlement } from "@/domain/transport/remote";
 import { defineDeductionType } from "@/domain/transport/deductions";
+import { bookCustoms, payCustomsAgent, reverseCustomsBooking, setCustomsRate, setJobCustoms, useStatementQuantities } from "@/domain/transport/customs";
 import { closeHeldCuts, giveBackCuts, reverseCutRelease } from "@/domain/transport/held-cuts";
 import type { Actor } from "./authz";
 import { setSetting } from "./settings";
@@ -134,6 +135,12 @@ export const UI_COMMANDS: Record<string, { command: Command<any, any>; prepare?:
     command: addFeeToTrips,
     prepare: async (_d, _a, i) => ({ ...i, amount: i.amount || null, manifests: String(i.manifests ?? "").split(/[\n,;،]+/).map((x) => x.trim()).filter(Boolean) }),
   },
+  "customs_rates.set": { command: setCustomsRate, prepare: async (_d, _a, i) => ({ ...i, routeId: i.routeId || null, note: i.note || null }) },
+  "job_customs.set": { command: setJobCustoms, prepare: async (_d, _a, i) => ({ jobId: i.jobId, agentId: i.agentId || null, agentName: i.agentName || null, billedToCustomer: i.billedToCustomer === "on" }) },
+  "customs.pay_agent": { command: payCustomsAgent, prepare: async (_d, _a, i) => ({ ...i, reference: i.reference || null }) },
+  "customs.book": { command: bookCustoms },
+  "customs.reverse_booking": { command: reverseCustomsBooking },
+  "customs_statements.use_quantities": { command: useStatementQuantities, prepare: async (_d, _a, i) => ({ statementId: i.statementId, tripIds: (i.tripIds as string[] | undefined) ?? [] }) },
   "job_billed_fees.set": { command: setJobBilledFees, prepare: async (_d, _a, i) => ({ ...i, feeTypeIds: (i.feeTypeIds as string[] | undefined) ?? [], note: i.note || null }) },
   "trip_fees.receipt_waive": { command: waiveFeeReceipt },
   "deduction_types.define": { command: defineDeductionType, prepare: async (_d, _a, i) => ({ ...i, id: i.id || undefined, active: i.active === "on" }) },

@@ -207,7 +207,7 @@ describe("customer billing and job close", () => {
 
     await run(changeJobStatus, { jobId, status: "financially_closed" });
     expect(job.customerId).toBe(ids.customer);
-    expect(await jobProfitability(env.db, jobId)).toEqual([{ currency: "IQD", revenue: "1666250", costs: "1190000", profit: "476250" }]);
+    expect(await jobProfitability(env.db, jobId)).toMatchObject([{ currency: "IQD", revenue: "1666250", costs: "1190000", profit: "476250" }]);
   });
 
   it("keeps the ledger balanced in each currency", async () => {

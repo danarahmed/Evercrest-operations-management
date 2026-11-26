@@ -44,6 +44,9 @@ export const SETTINGS = {
       kept_transporter_cuts: z.string().optional(),
       claim_deductions: z.string().optional(),
       fees_to_bill: z.string().optional(),
+      customs_advances: z.string().optional(),
+      customs_duties: z.string().optional(),
+      customs_to_bill: z.string().optional(),
       bad_debts: z.string(),
       product_sales: z.string(),
     })
